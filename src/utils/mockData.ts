@@ -1,0 +1,65 @@
+export const MOCK_STORIES = [
+    { id: 1, title: "Dưới Bóng Hoa Anh Đào", author: "Ngọc Linh", penName: "LinhnhưGió", cover: "linear-gradient(145deg,#f8b4d9,#e88eb5,#c9638a)", genre: "Romance", tags: ["Tình yêu", "Lãng mạn", "Nhật Bản"], rating: 4.8, reviewCount: 1240, reads: "2.3M", chapters: 48, description: "Câu chuyện về tình yêu nở rộ giữa hai trái tim cô đơn dưới những cánh hoa anh đào rơi nhẹ trong buổi chiều tà Tokyo.", status: "done", featured: true, excerpt: "Chiều hôm ấy, những cánh hoa anh đào rơi như tuyết trắng...", views: 2300000, favorites: 45000 },
+    { id: 2, title: "Bóng Tối Thành Phố", author: "Tuấn Anh", penName: "ThámTửĐêm", cover: "linear-gradient(145deg,#1a1a2e,#16213e,#0f3460)", genre: "Thriller", tags: ["Hình sự", "Bí ẩn", "Đô thị"], rating: 4.6, reviewCount: 876, reads: "1.1M", chapters: 62, description: "Một thám tử trẻ phải đối mặt với mạng lưới tội phạm ngầm sâu rễ nhất thành phố.", status: "ongoing", featured: true, excerpt: "Cơn mưa tháng Mười xối xả trên những mái nhà cao tầng...", views: 1100000, favorites: 22000 },
+    { id: 3, title: "Vùng Đất Vĩnh Cửu", author: "Hoa Trần", penName: "PhùThủyBắc", cover: "linear-gradient(145deg,#2d5016,#4a7c2f,#6aab42)", genre: "Fantasy", tags: ["Ma thuật", "Phiêu lưu", "Thế giới khác"], rating: 4.9, reviewCount: 2100, reads: "4.7M", chapters: 95, description: "Một cô gái bình thường bị cuốn vào thế giới phép thuật cổ đại nơi bốn vương quốc đang bên bờ vực chiến tranh.", status: "done", featured: false, excerpt: "Khi cánh cổng mở ra, Aria không hiểu rằng đó là cánh cổng cuối cùng...", views: 4700000, favorites: 98000 },
+    { id: 4, title: "Ký Ức Mùa Hè", author: "Mai Phương", penName: "MưaHèMiền", cover: "linear-gradient(145deg,#ff9a3c,#f7c377,#ffde7d)", genre: "Contemporary", tags: ["Tuổi thơ", "Hoài niệm", "Gia đình"], rating: 4.5, reviewCount: 543, reads: "890K", chapters: 30, description: "Những mùa hè thần tiên ở làng quê Bắc Bộ qua góc nhìn của cô bé tám tuổi.", status: "done", featured: false, excerpt: "Cái nắng tháng Sáu như đổ lửa xuống con sân gạch đỏ...", views: 890000, favorites: 18000 },
+    { id: 5, title: "Tiếng Gọi Biển Đêm", author: "Quang Minh", penName: "SóngVỗBờ", cover: "linear-gradient(145deg,#0f4c75,#1b6ca8,#3490dc)", genre: "Mystery", tags: ["Biển", "Huyền bí", "Tâm lý"], rating: 4.3, reviewCount: 321, reads: "430K", chapters: 22, description: "Một nhà văn rời bỏ thành phố về sống tại ngôi làng chài, phát hiện bí ẩn chưa được giải đáp 30 năm.", status: "ongoing", featured: false, excerpt: "Đêm thứ ba liên tiếp, Nam nghe thấy tiếng gõ cửa...", views: 430000, favorites: 9000 },
+    { id: 6, title: "Người Giữ Lửa", author: "Thu Hà", penName: "NhânThầm", cover: "linear-gradient(145deg,#6b21a8,#7c3aed,#a855f7)", genre: "Sci-Fi", tags: ["Tương lai", "Công nghệ", "Nhân tính"], rating: 4.7, reviewCount: 689, reads: "1.5M", chapters: 55, description: "Năm 2087, khi AI kiểm soát mọi quyết định của nhân loại, một kỹ sư trẻ tìm ra lỗ hổng duy nhất.", status: "ongoing", featured: false, excerpt: "Màn hình hiển thị chuỗi code màu xanh lét...", views: 1500000, favorites: 31000 },
+    { id: 7, title: "Bức Thư Chưa Gửi", author: "Lan Phạm", penName: "MưaVàNắng", cover: "linear-gradient(145deg,#d4a5a5,#c9b5c9,#9b89ab)", genre: "Contemporary", tags: ["Tình cảm", "Thư tín", "Ký ức"], rating: 4.4, reviewCount: 412, reads: "620K", chapters: 18, description: "Những bức thư tình chưa bao giờ được gửi đi — câu chuyện về tình yêu, hối tiếc và sự tha thứ.", status: "done", featured: false, excerpt: "Bức thư đầu tiên tôi viết cho anh vào một buổi chiều mưa...", views: 620000, favorites: 14000 },
+    { id: 8, title: "Đêm Trắng Hà Nội", author: "Văn Dũng", penName: "PhốXưa36", cover: "linear-gradient(145deg,#1a1a2e,#4a3728,#8b6914)", genre: "Literary", tags: ["Hà Nội", "Đêm", "Văn học"], rating: 4.6, reviewCount: 533, reads: "780K", chapters: 28, description: "Bức tranh Hà Nội qua đêm trắng của một nhà văn trẻ đang tìm kiếm bản thân giữa thành phố đổi thay.", status: "done", featured: false, excerpt: "Những con phố Hà Nội về đêm có linh hồn riêng của nó...", views: 780000, favorites: 17500 },
+];
+export const MOCK_CHAPTERS = [
+    { id: 1, title: "Chương 1: Ngày Đầu Tiên", words: 2100, readTime: "8 phút", publishedAt: "01/01/2025" },
+    { id: 2, title: "Chương 2: Gặp Gỡ Dưới Mưa", words: 2800, readTime: "11 phút", publishedAt: "05/01/2025" },
+    { id: 3, title: "Chương 3: Bí Mật Trong Vườn", words: 3200, readTime: "13 phút", publishedAt: "10/01/2025" },
+    { id: 4, title: "Chương 4: Cánh Hoa Rơi [VIP]", words: 1900, readTime: "7 phút", publishedAt: "15/01/2025", locked: true, price: 10 },
+    { id: 5, title: "Chương 5: Khoảnh Khắc Vĩnh Cửu [VIP]", words: 3500, readTime: "14 phút", publishedAt: "20/01/2025", locked: true, price: 15 },
+];
+export const CHAPTER_TEXTS = {
+    0: ["Chiều hôm ấy, những cánh hoa anh đào rơi như tuyết trắng xuống con phố nhỏ ở Shinjuku. Yuki đứng lặng người nhìn — đôi mắt đen sâu thẳm phản chiếu từng cánh hoa hồng nhạt bay lơ lửng trong không trung, như những giấc mơ mỏng manh sắp tan vỡ.", "Cô không ngờ rằng ngày hôm đó sẽ thay đổi tất cả.", "Tiếng bước chân vội vàng phía sau khiến cô giật mình quay lại — một chàng trai cao gầy đang cúi nhặt chiếc ví mà cô vô tình đánh rơi.", "\"Của bạn phải không?\" — Giọng anh trầm ấm, như tiếng gió thổi qua những tán tre làng quê xa xôi nào đó.", "Yuki lắp bắp cảm ơn, đôi má ửng hồng. Anh mỉm cười — một nụ cười hiếm hoi, không hoàn hảo, nhưng thật đến lạ."],
+    1: ["Buổi sáng hôm sau, Yuki lại thấy anh tại cùng con phố đó. Lần này anh đang ăn bánh mì và đọc cuốn sách nhỏ.", "\"Lại bạn,\" anh nói khi nhìn thấy cô. Không ngạc nhiên, không vồn vã — chỉ là một câu nói nhẹ nhàng như gió buổi sáng.", "Yuki không biết tại sao mình lại ngồi xuống chiếc băng ghế bên cạnh. Có lẽ vì hoa anh đào hôm nay đẹp hơn mọi ngày.", "\"Anh thường đến đây không?\" cô hỏi, giọng hơi run run.", "Anh nhìn lên bầu trời, suy nghĩ một lúc: \"Mỗi khi tôi cần tìm lại bản thân mình.\""],
+    2: ["Ba tuần trôi qua. Họ gặp nhau mỗi chiều dưới những tán hoa anh đào dần tàn. Mỗi ngày ít hoa hơn, nhưng câu chuyện của họ lại đầy hơn.", "Haruto kể về thời thơ ấu ở Kyoto, về người cha làm thợ gốm, về ước mơ viết văn chưa bao giờ dám nói với ai.", "Yuki kể về nỗi cô đơn của một người con gái lớn lên giữa thành phố lớn mà không có ký ức nào đáng nhớ.", "\"Sau này khi hoa tàn hết, anh có còn đến đây không?\" cô hỏi vào một buổi chiều gần tối.", "Haruto không trả lời ngay. Anh chỉ nhìn vào mắt cô — và trong khoảnh khắc đó, cô hiểu rằng câu trả lời không cần lời."],
+};
+export const MOCK_REVIEWS = [
+    { id: 1, user: "Ngọc Bảo", avatar: "NB", avatarColor: "#c23d3f", isReviewer: true, rating: 5, date: "12/01/2025", chapter: 48, content: "Tác giả xây dựng nhân vật cực kỳ tốt! Yuki và Haruto có chemistry tự nhiên không gượng ép. Kết truyện bất ngờ nhưng hợp lý và cảm xúc.", likes: 124, aspects: { plot: 5, characters: 5, writing: 5, pacing: 4 } },
+    { id: 2, user: "Trọng Khải", avatar: "TK", avatarColor: "#1a6fa3", isReviewer: false, rating: 4, date: "05/01/2025", chapter: 30, content: "Văn phong đẹp, giàu hình ảnh. Tuy nhiên nhịp truyện ở chương 2-3 hơi chậm. Mong tác giả đẩy mạnh xung đột hơn.", likes: 89, aspects: { plot: 4, characters: 4, writing: 5, pacing: 3 } },
+    { id: 3, user: "Lan Anh", avatar: "LA", avatarColor: "#9a7020", isReviewer: true, rating: 5, date: "28/12/2024", chapter: 48, content: "Đọc một hơi không nghỉ. Câu chuyện chạm đúng vào nỗi cô đơn và khao khát được kết nối của người trẻ hiện đại.", likes: 201, aspects: { plot: 5, characters: 5, writing: 4, pacing: 5 } },
+];
+export const MOCK_PENDING = [
+    { id: 101, title: "Mưa Tháng Tư", author: "Khánh Vân", penName: "MưaVànhKhuyên", genre: "Romance", submitted: "20/02/2025", cover: "linear-gradient(145deg,#a8c8f0,#6fa8dc,#4a88c0)", excerpt: "Tháng Tư về, mang theo những cơn mưa bất chợt và ký ức về một người con gái anh chưa kịp nói lời yêu...", chapters: 3, words: 8400, content: "Chương 1: Mưa Về\n\nMưa đến không báo trước, như mọi điều tốt đẹp trong cuộc đời Minh.\n\nAnh đứng trước quán cà phê nhỏ ở góc phố Trần Hưng Đạo, nhìn những giọt nước rơi lộp độp trên mặt hồ nhỏ phía trước." },
+    { id: 102, title: "Lửa Trong Bóng Tối", author: "Đức Huy", penName: "LửaHồng", genre: "Action", submitted: "18/02/2025", cover: "linear-gradient(145deg,#7c2d12,#b45309,#d97706)", excerpt: "Trong thế giới hậu tận thế, chỉ những kẻ đủ mạnh mới được sống sót...", chapters: 2, words: 6200, content: "Chương 1: Ngày Tàn\n\nMặt trời đã không mọc trong ba năm qua.\n\nRong đứng trên đỉnh tòa nhà đổ nát, nhìn bầu trời màu chì xám." },
+    { id: 103, title: "Tiếng Piano Cuối Cùng", author: "Lan Chi", penName: "NốtNhạcXanh", genre: "Literary", submitted: "15/02/2025", cover: "linear-gradient(145deg,#1a1a2e,#2d2b55,#4b3f8c)", excerpt: "Cô giáo dạy piano già nhất thành phố quyết định tổ chức buổi biểu diễn cuối cùng...", chapters: 5, words: 12000, content: "Chương 1: Lời Mời\n\nPhong bì trắng nằm trên bàn phím đàn từ sáng sớm.\n\nBà Hương nhìn nó một lúc lâu trước khi mở ra." },
+];
+export const MOCK_EDITOR_TASKS = [
+    { id: 201, type: "edit", title: "Dưới Bóng Hoa Anh Đào", author: "Ngọc Linh", penName: "LinhnhưGió", cover: "linear-gradient(145deg,#f8b4d9,#e88eb5,#c9638a)", genre: "Romance", deadline: "05/03/2025", reward: 150, wordCount: 48000, description: "Sửa lỗi chính tả, ngữ pháp và chỉnh văn phong toàn bộ tác phẩm (48 chương).", status: "open" },
+    { id: 202, type: "chapter", title: "Vùng Đất Vĩnh Cửu", author: "Hoa Trần", penName: "PhùThủyBắc", cover: "linear-gradient(145deg,#2d5016,#4a7c2f,#6aab42)", genre: "Fantasy", deadline: "28/02/2025", reward: 80, wordCount: 3000, description: "Viết 2 chương ngoại truyện về nhân vật phụ Zara. Giữ đúng văn phong và thế giới quan gốc.", status: "open" },
+    { id: 203, type: "edit", title: "Bóng Tối Thành Phố", author: "Tuấn Anh", penName: "ThámTửĐêm", cover: "linear-gradient(145deg,#1a1a2e,#16213e,#0f3460)", genre: "Thriller", deadline: "10/03/2025", reward: 120, wordCount: 32000, description: "Rà soát tính nhất quán cốt truyện và sửa lỗi logic trong timeline.", status: "claimed", claimedBy: "Minh Tuấn" },
+    { id: 204, type: "chapter", title: "Người Giữ Lửa", author: "Thu Hà", penName: "NhânThầm", cover: "linear-gradient(145deg,#6b21a8,#7c3aed,#a855f7)", genre: "Sci-Fi", deadline: "15/03/2025", reward: 100, wordCount: 4500, description: "Viết 3 chương mở rộng về thế giới AI 2087 theo brief chi tiết của tác giả.", status: "open" },
+];
+export const MOCK_NOTIFICATIONS = [
+    { id: 1, type: "review", title: "Đánh giá mới", body: "Ngọc Bảo đã đánh giá 5⭐ cho \"Dưới Bóng Hoa Anh Đào\"", time: "5 phút trước", read: false, storyId: 1 },
+    { id: 2, type: "approve", title: "Tác phẩm được duyệt", body: "\"Mưa Tháng Tư\" đã được Reviewer phê duyệt và đăng tải", time: "2 giờ trước", read: false },
+    { id: 3, type: "coin", title: "Nhận coin thưởng", body: "Bạn nhận được 20🪙 cho việc duyệt tác phẩm", time: "3 giờ trước", read: true },
+    { id: 4, type: "task", title: "Nhiệm vụ mới", body: "Có nhiệm vụ edit mới phù hợp với kỹ năng của bạn", time: "5 giờ trước", read: true },
+    { id: 5, type: "system", title: "Cập nhật hệ thống", body: "Nền tảng vừa ra mắt tính năng Coin Shop mới!", time: "1 ngày trước", read: true },
+];
+export const COIN_TRANSACTIONS = [
+    { id: 1, type: "earn", amount: 20, reason: "Duyệt tác phẩm: Mưa Tháng Tư", date: "20/02/2025" },
+    { id: 2, type: "earn", amount: 10, reason: "Từ chối tác phẩm: Ngày Hè", date: "19/02/2025" },
+    { id: 3, type: "earn", amount: 150, reason: "Hoàn thành nhiệm vụ edit", date: "18/02/2025" },
+    { id: 4, type: "spend", amount: 50, reason: "Mở khóa chương VIP", date: "17/02/2025" },
+    { id: 5, type: "earn", amount: 80, reason: "Viết chapter cho Fantasy story", date: "15/02/2025" },
+];
+export const GENRES = ["Romance", "Thriller", "Fantasy", "Contemporary", "Mystery", "Sci-Fi", "Action", "Literary", "Horror", "Poetry"];
+export const GENRE_META = {
+    "Romance": { color: "#be185d", bg: "linear-gradient(135deg,#fbcfe8,#f9a8d4)", icon: "💕", count: 234 },
+    "Thriller": { color: "#1c1512", bg: "linear-gradient(135deg,#1a1a2e,#16213e)", icon: "🔍", count: 156 },
+    "Fantasy": { color: "#166534", bg: "linear-gradient(135deg,#2d5016,#4a7c2f)", icon: "✨", count: 312 },
+    "Contemporary": { color: "#92400e", bg: "linear-gradient(135deg,#fbbf24,#f59e0b)", icon: "🌻", count: 189 },
+    "Mystery": { color: "#1e3a5f", bg: "linear-gradient(135deg,#0f4c75,#1b6ca8)", icon: "🕵️", count: 143 },
+    "Sci-Fi": { color: "#4c1d95", bg: "linear-gradient(135deg,#6b21a8,#7c3aed)", icon: "🚀", count: 98 },
+    "Action": { color: "#7c2d12", bg: "linear-gradient(135deg,#7c2d12,#b45309)", icon: "⚔️", count: 127 },
+    "Literary": { color: "#1e1b4b", bg: "linear-gradient(135deg,#1a1a2e,#2d2b55)", icon: "📖", count: 76 },
+    "Horror": { color: "#450a0a", bg: "linear-gradient(135deg,#450a0a,#991b1b)", icon: "👻", count: 89 },
+    "Poetry": { color: "#701a75", bg: "linear-gradient(135deg,#701a75,#a21caf)", icon: "🌸", count: 54 },
+};

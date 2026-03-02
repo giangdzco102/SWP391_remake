@@ -1,0 +1,53 @@
+.button-core {
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      45deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      transparent 100%
+    );
+    transition: left 0.5s ease;
+  }
+
+  &:hover::before {
+    left: 100%;
+  }
+}
+// Outline button style
+.button-core.btn-outline {
+  background-color: #d9e5ff;
+  color: var(--primary);
+}
+// Primary button style
+.button-core.btn-primary {
+  background-color: #3964fe;
+  color: #fff;
+}
+// Primary button style
+.button-core.btn-bg-transparent {
+  background-color: transparent;
+  color: #3964fe;
+}
+
+// Border
+.button-core.btn-border {
+  background-color: transparent;
+  color: inherit;
+  border: 1px solid #000;
+  box-shadow: none;
+}
