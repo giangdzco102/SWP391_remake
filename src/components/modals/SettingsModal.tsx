@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Ico } from "../Icons";
 import { GENRES } from "../../utils/mockData";
 
-export function SettingsModal({ user, setUser, onClose, show }) {
+export function SettingsModal({ user, onClose, show }: any) {
     const [tab, setTab] = useState("account");
     const [currentPw, setCurrentPw] = useState("");
     const [newPw, setNewPw] = useState("");

@@ -31,8 +31,8 @@ const NotiAuth = () => {
         Vui lòng đăng nhập để sử dụng tính năng này
       </p>
       <div className="flex gap-4">
-        <ButtonCore className="hero-left">Đăng nhập</ButtonCore>
-        <ButtonCore variant="outline" className="hero-left">
+        <ButtonCore className="flex-1">Đăng nhập</ButtonCore>
+        <ButtonCore variant="outline" className="flex-1">
           Đăng ký
         </ButtonCore>
       </div>

@@ -9,11 +9,10 @@ import {
   DataSignin,
   DataGetMe,
   PayloadLogout,
+  verifyOtp,
 } from "@/types/auth";
 import { Response } from "@/types/global";
 import useHttpClient from "./useHttpClient";
-import { signInWithPopup } from "firebase/auth";
-import { auth, provider } from "@/config/firebase";
 // Định nghĩa kiểu dữ liệu trả về cho các hàm conversation
 
 export type ResultAuthService = {
@@ -21,14 +20,18 @@ export type ResultAuthService = {
   signup: (payload: PayloadSignup) => Promise<any>;
   signout: (payload: PayloadLogout) => Promise<any>;
   getMe: () => Promise<any>;
-  siginWithGoogle: () => Promise<any>;
-  login: (payload: PayloadSignin) => Promise<DataSignin | undefined>;
+  login: (payload: PayloadSignin) => Promise<DataGetMe | undefined>;
   logout: (payload: PayloadLogout) => void;
-}; 
+  verifyOtp?: (payload: verifyOtp) => Promise<any>;
+};
 
 const useAuthService = (): ResultAuthService => {
   const { setUser } = useAuthStore();
   const httpClient = useHttpClient();
+
+  const verifyOtp = (payload: verifyOtp): Promise<any> => {
+    return httpClient.post(APP_CONFIG.AUTH.VERIFY_OTP, payload);
+  };
 
   const signin = (payload: PayloadSignin): Promise<Response<DataSignin>> => {
     const requestBody: RequestSignin = {
@@ -39,17 +42,25 @@ const useAuthService = (): ResultAuthService => {
   };
 
   const signup = (payload: PayloadSignup) => {
-    const { email, password: hashed_password, full_name } = payload;
-    const requestBody: RequestSignup = {
-      user_name: email,
-      hashed_password,
-      full_name,
-      avatar: null,
-      date_of_birth: null,
+    const {
       email,
-      phone_number: null,
-      address: null,
-      role_id: null,
+      password,
+      confirmPassword,
+      fullName,
+      phone,
+      dateOfBirth,
+      gender,
+      location,
+    } = payload;
+    const requestBody: RequestSignup = {
+      email,
+      password,
+      confirmPassword,
+      fullName,
+      phone,
+      dateOfBirth,
+      gender,
+      location,
     };
 
     return httpClient.post(APP_CONFIG.AUTH.SIGNUP, requestBody);
@@ -79,45 +90,11 @@ const useAuthService = (): ResultAuthService => {
 
       if (responseGetMe && responseGetMe.data && responseGetMe.status) {
         // Lưu thông tin người dùng vào localStorage hoặc cookie
-
         setUser(responseGetMe.data);
         return responseGetMe.data;
-        // localStorage.setItem("user_info", JSON.stringify(responseGetMe.data));
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
-      throw error; // Rethrow the error to be handled by the caller
-    }
-  };
-
-  const siginWithGoogle = async () => {
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      const response = await httpClient.post<Response<DataSignin>>(
-        APP_CONFIG.AUTH.SIGNIN_WITH_GOOGLE,
-        {
-          email: user.email || "",
-          full_name: user.displayName || "",
-        },
-      );
-      if (response && response.data && response.status) {
-        // Lưu token vào localStorage hoặc cookie
-        if (typeof window !== "undefined") {
-          localStorage.setItem(
-            APP_CONFIG.ACCESS_TOKEN,
-            response.data.accessToken,
-          );
-          localStorage.setItem(
-            APP_CONFIG.REFRESH_TOKEN,
-            response.data.refreshToken,
-          );
-        }
-        const responseGetMe = await getMe();
-        return responseGetMe; // Trả về thông tin người dùng
-      }
-    } catch (error) {
-      console.error("Google login error:", error);
       throw error; // Rethrow the error to be handled by the caller
     }
   };
@@ -130,15 +107,16 @@ const useAuthService = (): ResultAuthService => {
         if (typeof window !== "undefined") {
           localStorage.setItem(
             APP_CONFIG.ACCESS_TOKEN,
-            responseSigin.accessToken,
+            responseSigin.data.accessToken,
           );
           localStorage.setItem(
             APP_CONFIG.REFRESH_TOKEN,
-            responseSigin.refreshToken,
+            responseSigin.data.refreshToken,
           );
         }
-        setUser(responseSigin);
-        return responseSigin; // Trả về thông tin người dùng
+        const responseGetMe = await getMe();
+        setUser(responseGetMe); // Cập nhật thông tin người dùng vào store
+        return responseGetMe; // Trả về thông tin người dùng
       }
     } catch (error) {
       console.error("Login failed:", error);
@@ -165,9 +143,9 @@ const useAuthService = (): ResultAuthService => {
     signin,
     signup,
     getMe,
-    siginWithGoogle,
     login,
     logout,
+    verifyOtp,
   };
 };
 

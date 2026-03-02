@@ -1,19 +1,28 @@
 export type RequestSignup = {
-  user_name: string;
-  hashed_password: string;
-  full_name: string | null;
-  date_of_birth: string | null;
+  email: string | null;
+  password: string | null;
+  confirmPassword: string | null;
+  fullName: string | null;
+  phone: string | null;
+  dateOfBirth: string | null;
+  gender: string | null;
+  location: string;
+};
+
+export type verifyOtp = {
   email: string;
-  phone_number: string | null;
-  avatar: string | null;
-  role_id: number | null;
-  address?: string | null;
+  otp: string;
 };
 
 export type PayloadSignup = {
   email: string;
   password: string;
-  full_name: string;
+  confirmPassword: string;
+  fullName: string;
+  phone: string;
+  dateOfBirth: string;
+  gender: string;
+  location: string;
 };
 
 export type PayloadSignin = {
@@ -36,20 +45,23 @@ export type DataSignin = {
 };
 
 export interface DataGetMe {
-  // id: number;
-  // is_active: boolean;
-  // bs_code: string;
-  // created_at: string;
-  // updated_at: string;
-  // user_name: string;
-  // full_name: string;
-  // date_of_birth: string;
-  // email_address: string;
-  // phone_number: string;
-  // avatar: string;
-  // role: Role;
-  accessToken: string;
-  refreshToken: string;
+  id: number;
+  email: string;
+  fullName: string;
+  roles: string[];
+  provider: string;
+  enabled: boolean;
+  avatarUrl: string | null;
+  bio: string | null;
+  phone: string;
+  dateOfBirth: string;
+  gender: "MALE" | "FEMALE" | string;
+  location: string;
+  walletBalance: number;
+  totalFollowedStories: number;
+  totalPurchasedChapters: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Role {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { TOAST_KEYS, TOAST_CODES } from "@/config/toast-messages";
@@ -13,9 +14,14 @@ interface LoginFormData {
 }
 
 interface RegisterFormData {
-  name: string;
   email: string;
   password: string;
+  confirmPassword: string;
+  fullName: string;
+  phone: string;
+  dateOfBirth: string;
+  gender: string;
+  location: string;
 }
 
 const Auth = () => {
@@ -23,7 +29,8 @@ const Auth = () => {
   const router = useRouter();
   const isLogin = searchParams.get("login") !== null;
   const isRegister = searchParams.get("register") !== null;
-
+  const [step, setStep] = React.useState<"register" | "verify">("register");
+  const [registerEmail, setRegisterEmail] = React.useState<string>("");
   const handleClose = () => {
     router.push("/");
   };
@@ -47,7 +54,21 @@ const Auth = () => {
               ? "Chào mừng quay lại!"
               : "Tham gia cộng đồng — sau khi đăng ký, chọn vai trò Tác giả, Reviewer hoặc Editor."}
           </p>
-          {isRegister ? <RegisterForm /> : <LoginForm />}
+          {isLogin && <LoginForm />}
+
+          {isRegister && step === "register" && (
+            <RegisterForm
+              onSuccess={(email) => {
+                console.log("SWITCH TO VERIFY");
+                setRegisterEmail(email);
+                setStep("verify");
+              }}
+            />
+          )}
+
+          {isRegister && step === "verify" && (
+            <VerifyOtpForm email={registerEmail} />
+          )}
         </div>
       </div>
     </div>
@@ -69,21 +90,16 @@ const LoginForm = () => {
   } = useForm<LoginFormData>({
     defaultValues: {
       email: "giangxauzai0303@gmail.com",
-      password: "Giangdzco1023@",
+      password: "Giangdzco102@",
     },
   });
 
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
     try {
-      console.log("DATA SUBMIT:", data);
-      const response = await login(data);
-      if (response) {
-        toast.showByCode(TOAST_KEYS.LOGIN, TOAST_CODES.SUCCESS);
-        router.push("/");
-      } else {
-        toast.showByCode(TOAST_KEYS.LOGIN, TOAST_CODES.UNPROCESSABLE);
-      }
+      await login(data);
+      toast.showByCode(TOAST_KEYS.LOGIN, TOAST_CODES.SUCCESS);
+      router.push("/");
     } catch (error) {
       console.error("Login error:", error);
       toast.showByCode(TOAST_KEYS.LOGIN, TOAST_CODES.UNPROCESSABLE);
@@ -174,21 +190,31 @@ const LoginForm = () => {
   );
 };
 
-// render content register
-const RegisterForm = () => {
-  const { signup, login } = useAuthService();
+const RegisterForm = ({
+  onSuccess,
+}: {
+  onSuccess: (email: string) => void;
+}) => {
+  const { signup } = useAuthService();
   const { setLoading } = useAppStore();
   const toast = useToast();
   const router = useRouter();
+  const [serverError, setServerError] = React.useState("");
   const {
     control,
     handleSubmit,
     formState: { errors },
+    watch,
   } = useForm<RegisterFormData>({
     defaultValues: {
-      name: "",
       email: "",
       password: "",
+      confirmPassword: "",
+      fullName: "",
+      phone: "",
+      dateOfBirth: "",
+      gender: "",
+      location: "",
     },
   });
 
@@ -196,21 +222,25 @@ const RegisterForm = () => {
     setLoading(true);
     try {
       const response = await signup({
-        full_name: data.name || data.email,
         email: data.email,
         password: data.password,
+        confirmPassword: data.confirmPassword,
+        fullName: data.fullName,
+        phone: data.phone,
+        dateOfBirth: data.dateOfBirth,
+        gender: data.gender,
+        location: data.location,
       });
 
-      if (response.statusCode === 200) {
-        login({ email: data.email, password: data.password });
-        toast.showByCode(TOAST_KEYS.LOGIN, TOAST_CODES.SUCCESS);
-        router.push("/");
-      } else {
-        toast.showByCode(TOAST_KEYS.LOGIN, TOAST_CODES.SUCCESS);
+      if (response.email) {
+        toast.success(response.message);
+        onSuccess(data.email);
+        console.log("Signup successful, email:", data.email);
       }
-    } catch (error) {
-      console.error("Login error:", error);
-      toast.showByCode(TOAST_KEYS.LOGIN, TOAST_CODES.UNPROCESSABLE);
+    } catch (error: any) {
+      const message = error?.response?.data?.message || "Đăng ký thất bại";
+      setServerError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -223,22 +253,27 @@ const RegisterForm = () => {
   return (
     <div className="modal-sections">
       <form onSubmit={handleSubmit(onSubmit)}>
+        {/* Họ tên */}
         <div className="form-group">
           <label className="form-label-bold">Họ và tên</label>
           <Controller
-            name="name"
+            name="fullName"
             control={control}
+            rules={{ required: "Họ và tên là bắt buộc" }}
             render={({ field }) => (
               <input
                 {...field}
                 className="form-input"
                 placeholder="Nguyễn Văn A"
-                type="text"
               />
             )}
           />
+          {errors.fullName && (
+            <p className="error">{errors.fullName.message}</p>
+          )}
         </div>
 
+        {/* Email */}
         <div className="form-group">
           <label className="form-label-bold">Email</label>
           <Controller
@@ -254,19 +289,84 @@ const RegisterForm = () => {
             render={({ field }) => (
               <input
                 {...field}
+                type="email"
                 className="form-input"
                 placeholder="email@example.com"
-                type="email"
               />
             )}
           />
-          {errors.email && (
-            <div style={{ color: "#c23d3f", fontSize: 13, marginTop: 4 }}>
-              {errors.email.message}
-            </div>
+          {errors.email && <p className="error">{errors.email.message}</p>}
+        </div>
+
+        {/* SĐT */}
+        <div className="form-group">
+          <label className="form-label-bold">Số điện thoại</label>
+          <Controller
+            name="phone"
+            control={control}
+            rules={{ required: "Số điện thoại là bắt buộc" }}
+            render={({ field }) => (
+              <input
+                {...field}
+                className="form-input"
+                placeholder="0886xxxxxx"
+              />
+            )}
+          />
+          {errors.phone && <p className="error">{errors.phone.message}</p>}
+        </div>
+
+        {/* Ngày sinh */}
+        <div className="form-group">
+          <label className="form-label-bold">Ngày sinh</label>
+          <Controller
+            name="dateOfBirth"
+            control={control}
+            rules={{ required: "Ngày sinh là bắt buộc" }}
+            render={({ field }) => (
+              <input {...field} type="date" className="form-input" />
+            )}
+          />
+          {errors.dateOfBirth && (
+            <p className="error">{errors.dateOfBirth.message}</p>
           )}
         </div>
 
+        {/* Giới tính */}
+        <div className="form-group">
+          <label className="form-label-bold">Giới tính</label>
+          <Controller
+            name="gender"
+            control={control}
+            rules={{ required: "Vui lòng chọn giới tính" }}
+            render={({ field }) => (
+              <select {...field} className="form-input">
+                <option value="">-- Chọn giới tính --</option>
+                <option value="MALE">Nam</option>
+                <option value="FEMALE">Nữ</option>
+              </select>
+            )}
+          />
+          {errors.gender && <p className="error">{errors.gender.message}</p>}
+        </div>
+
+        {/* Địa chỉ */}
+        <div className="form-group">
+          <label className="form-label-bold">Địa chỉ</label>
+          <Controller
+            name="location"
+            control={control}
+            rules={{ required: "Địa chỉ là bắt buộc" }}
+            render={({ field }) => (
+              <input {...field} className="form-input" placeholder="Hà Nội" />
+            )}
+          />
+          {errors.location && (
+            <p className="error">{errors.location.message}</p>
+          )}
+        </div>
+
+        {/* Mật khẩu */}
         <div className="form-group">
           <label className="form-label-bold">Mật khẩu</label>
           <Controller
@@ -274,24 +374,34 @@ const RegisterForm = () => {
             control={control}
             rules={{
               required: "Mật khẩu là bắt buộc",
-              minLength: {
-                value: 6,
-                message: "Mật khẩu phải có ít nhất 6 ký tự",
-              },
+              minLength: { value: 6, message: "Ít nhất 6 ký tự" },
             }}
             render={({ field }) => (
-              <input
-                {...field}
-                className="form-input"
-                placeholder="Ít nhất 6 ký tự"
-                type="password"
-              />
+              <input {...field} type="password" className="form-input" />
             )}
           />
           {errors.password && (
-            <div style={{ color: "#c23d3f", fontSize: 13, marginTop: 4 }}>
-              {errors.password.message}
-            </div>
+            <p className="error">{errors.password.message}</p>
+          )}
+        </div>
+
+        {/* Xác nhận mật khẩu */}
+        <div className="form-group">
+          <label className="form-label-bold">Xác nhận mật khẩu</label>
+          <Controller
+            name="confirmPassword"
+            control={control}
+            rules={{
+              required: "Vui lòng xác nhận mật khẩu",
+              validate: (value) =>
+                value === watch("password") || "Mật khẩu không khớp",
+            }}
+            render={({ field }) => (
+              <input {...field} type="password" className="form-input" />
+            )}
+          />
+          {errors.confirmPassword && (
+            <p className="error">{errors.confirmPassword.message}</p>
           )}
         </div>
 
@@ -299,6 +409,9 @@ const RegisterForm = () => {
           Đăng ký
         </button>
       </form>
+      {serverError && (
+        <p style={{ color: "#c23d3f", marginTop: 8 }}>{serverError}</p>
+      )}
 
       <div
         style={{
@@ -317,5 +430,79 @@ const RegisterForm = () => {
         </span>
       </div>
     </div>
+  );
+};
+
+const VerifyOtpForm = ({ email }: { email: string }) => {
+  const { verifyOtp } = useAuthService();
+  const { setLoading } = useAppStore();
+  const toast = useToast();
+  const router = useRouter();
+  const [serverError, setServerError] = React.useState("");
+
+  const { control, handleSubmit } = useForm<{ otp: string }>();
+
+  const onSubmit = async (data: { otp: string }) => {
+    setLoading(true);
+    setServerError("");
+
+    try {
+      const response = await verifyOtp({
+        email,
+        otp: data.otp,
+      });
+
+      if (response.enabled) {
+        toast.success("Đăng ký thành công!");
+        router.push("/");
+      }
+    } catch (error: any) {
+      setServerError(
+        error?.response?.data?.message || "OTP không hợp lệ hoặc đã hết hạn",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      {/* Email hiển thị nhưng không cho sửa */}
+      <div className="form-group">
+        <label className="form-label-bold">Email</label>
+        <input value={email} disabled className="form-input" />
+      </div>
+
+      {/* Nhập OTP */}
+      <div className="form-group">
+        <label className="form-label-bold">Mã OTP</label>
+        <Controller
+          name="otp"
+          control={control}
+          rules={{
+            required: "Vui lòng nhập OTP",
+            minLength: { value: 6, message: "OTP phải đủ 6 số" },
+            maxLength: { value: 6, message: "OTP phải đủ 6 số" },
+          }}
+          render={({ field }) => (
+            <input
+              {...field}
+              className="form-input"
+              placeholder="Nhập 6 số OTP"
+            />
+          )}
+        />
+      </div>
+
+      {serverError && (
+        <p className="error" style={{ marginTop: 8 }}>
+          {serverError}
+        </p>
+      )}
+
+      <button type="submit" className="btn-full btn-red-full mt-4">
+        Xác nhận OTP
+      </button>
+    </form>
   );
 };

@@ -1,16 +1,19 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { Ico } from '../Icons';
-import { AvatarComp, NotificationPanel } from '../ui';
-import { GENRES, GENRE_META } from '../../utils/mockData';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { Ico } from "../Icons";
+import { AvatarComp, NotificationPanel } from "../ui";
+import { GENRES, GENRE_META } from "../../utils/mockData";
+import { useAuthStore } from "@/stores";
+import { useToast } from "@/hooks/use-toast";
+import useAuthService from "@/api/useAuth.service";
+import APP_CONFIG from "@/config/app-config";
 
 export function Header({
-  user,
   setUser,
   page,
   navTo,
   openModal,
-  setAuthMode,
   unreadCount,
   notifications,
   handleMarkAllRead,
@@ -26,6 +29,7 @@ export function Header({
   darkMode,
   setDarkMode,
 }: any) {
+  const { user } = useAuthStore();
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -37,34 +41,85 @@ export function Header({
   const [showNotif, setShowNotif] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showSearchDrop, setShowSearchDrop] = useState(false);
+  const primaryRole = user?.roles?.[0] || "READER";
+
+  const { setLoading } = useAuthStore();
+  const { logout } = useAuthService();
+  const toast = useToast();
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-        if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node))
-            setShowUserMenu(false);
-        if (notifRef.current && !notifRef.current.contains(e.target as Node))
-            setShowNotif(false);
-        if (searchRef.current && !searchRef.current.contains(e.target as Node))
-            setShowSearchDrop(false);
-        if (catMenuRef.current && !catMenuRef.current.contains(e.target as Node))
-            setShowCatMenu(false);
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(e.target as Node)
+      )
+        setShowUserMenu(false);
+      if (notifRef.current && !notifRef.current.contains(e.target as Node))
+        setShowNotif(false);
+      if (searchRef.current && !searchRef.current.contains(e.target as Node))
+        setShowSearchDrop(false);
+      if (catMenuRef.current && !catMenuRef.current.contains(e.target as Node))
+        setShowCatMenu(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const navLinks = useMemo(() => [
+  const handleLogout = async () => {
+    setLoading(true);
+
+    try {
+      logout({
+        refreshToken: localStorage.getItem(APP_CONFIG.REFRESH_TOKEN) || "",
+      });
+      toast.success("Đăng xuất thành công!");
+    } catch (error) {
+      toast.error("Đăng xuất không thành công");
+      console.error("Lỗi đăng xuất:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const navLinks = useMemo(
+    () => [
       { label: "Trang chủ", page: "home" },
       { label: "Bảng xếp hạng", page: "rankings" },
       { label: "Thể loại", page: "categories", isCat: true },
       { label: "Yêu thích", page: "favorites" },
-      ...(user?.role === "reviewer" ? [{ label: "Kiểm duyệt", page: "reviewer-dash", badge: pending?.length }] : []),
-      ...(user?.role === "editor" ? [{ label: "Nhiệm vụ", page: "editor-dash" }] : []),
-      ...(user?.role === "author" ? [{ label: "Tác phẩm của tôi", page: "my-stories" }] : []),
-  ], [user?.role, pending?.length]);
 
-  const ROLE_LABEL: any = { reviewer: "Reviewer", author: "Tác giả", editor: "Editor", reader: "Độc giả" };
-  const ROLE_CHIP_CLASS: any = { reviewer: "chip-role-reviewer", author: "chip-role-author", editor: "chip-role-editor", reader: "chip-role-reader" };
+      ...(user?.roles.includes("REVIEWER")
+        ? [
+            {
+              label: "Kiểm duyệt",
+              page: "reviewer-dash",
+              badge: pending?.length,
+            },
+          ]
+        : []),
+
+      ...(user?.roles.includes("EDITOR")
+        ? [{ label: "Nhiệm vụ", page: "editor-dash" }]
+        : []),
+
+      ...(user?.roles.includes("AUTHOR")
+        ? [{ label: "Tác phẩm của tôi", page: "my-stories" }]
+        : []),
+    ],
+    [user?.roles, pending?.length],
+  );
+  const ROLE_LABEL: any = {
+    reviewer: "Reviewer",
+    author: "Tác giả",
+    editor: "Editor",
+    reader: "Độc giả",
+  };
+  const ROLE_CHIP_CLASS: any = {
+    reviewer: "chip-role-reviewer",
+    author: "chip-role-author",
+    editor: "chip-role-editor",
+    reader: "chip-role-reader",
+  };
 
   return (
     <>
@@ -108,15 +163,17 @@ export function Header({
               <div className="mobile-user-card">
                 <AvatarComp user={user} size={42} />
                 <div className="mobile-user-info">
-                  <div className="mobile-user-name">{user.name}</div>
+                  <div className="mobile-user-name">{user.fullName}</div>
                   <div className="mobile-user-email">{user.email}</div>
                   <span
-                    className={`dropdown-role-chip ${ROLE_CHIP_CLASS[user.role] || "chip-role-reader"}`}
+                    className={`dropdown-role-chip ${
+                      ROLE_CHIP_CLASS[primaryRole] || "chip-role-reader"
+                    }`}
                   >
-                    {ROLE_LABEL[user.role] || "Độc giả"}
+                    {ROLE_LABEL[primaryRole] || "Độc giả"}
                   </span>
                 </div>
-                {(user.role === "reviewer" || user.role === "editor") && (
+                {(primaryRole === "reviewer" || primaryRole === "editor") && (
                   <div
                     style={{
                       fontSize: 13,
@@ -129,7 +186,7 @@ export function Header({
                       whiteSpace: "nowrap",
                     }}
                   >
-                    🪙 {user.coins}
+                    🪙 {user.walletBalance}
                   </div>
                 )}
               </div>
@@ -192,7 +249,7 @@ export function Header({
               </div>
             ) : (
               <>
-                {user.role === "reader" && (
+                {user.roles.includes("reader") && (
                   <>
                     <button
                       className="mobile-nav-link"
@@ -478,12 +535,13 @@ export function Header({
           ) : (
             <>
               {/* Coins */}
-              {(user.role === "reviewer" || user.role === "editor") && (
+              {(user.roles.includes("reviewer") ||
+                user.roles.includes("editor")) && (
                 <div
                   className="inline-flex cursor-pointer items-center gap-1 rounded-full border-[1.5px] border-[#fcd34d] bg-[#fffbeb] px-2.5 py-1 text-[12px] font-bold text-[#92400e] transition-all duration-150 hover:bg-[#fef3c7]"
                   onClick={() => navTo("coin-shop")}
                 >
-                  🪙 {user.coins}
+                  🪙 {user.walletBalance}
                 </div>
               )}
 
@@ -546,20 +604,22 @@ export function Header({
                         <AvatarComp user={user} size={38} />
                         <div>
                           <div className="dropdown-user-name">
-                            {user.name}
+                            {user.fullName}
                           </div>
                           <div className="dropdown-email">{user.email}</div>
                           <span
-                            className={`dropdown-role-chip ${ROLE_CHIP_CLASS[user.role] || "chip-role-reader"}`}
+                            className={`dropdown-role-chip ${
+                              ROLE_CHIP_CLASS[primaryRole] || "chip-role-reader"
+                            }`}
                           >
-                            {ROLE_LABEL[user.role] || "Độc giả"}
+                            {ROLE_LABEL[primaryRole] || "Độc giả"}
                           </span>
                         </div>
                       </div>
                     </div>
                     <div className="coin-display">
                       <Ico.Coin />
-                      🪙 {user.coins} coin ·{" "}
+                      🪙 {user.walletBalance} coin ·{" "}
                       <span
                         style={{
                           fontWeight: 400,
@@ -610,7 +670,7 @@ export function Header({
                         </span>
                       )}
                     </button>
-                    {user.role === "author" && (
+                    {user.roles.includes("author") && (
                       <button
                         className="dropdown-item"
                         onClick={() => {
@@ -622,7 +682,7 @@ export function Header({
                         Tác phẩm của tôi
                       </button>
                     )}
-                    {user.role === "reviewer" && (
+                    {user.roles.includes("reviewer") && (
                       <button
                         className="dropdown-item"
                         onClick={() => {
@@ -648,7 +708,7 @@ export function Header({
                         )}
                       </button>
                     )}
-                    {user.role === "editor" && (
+                    {user.roles.includes("editor") && (
                       <button
                         className="dropdown-item"
                         onClick={() => {
@@ -661,7 +721,7 @@ export function Header({
                       </button>
                     )}
                     <div className="dropdown-divider" />
-                    {user.role === "reader" && (
+                    {user.roles.includes("reader") && (
                       <>
                         <button
                           className="dropdown-item"
@@ -706,10 +766,7 @@ export function Header({
                     <button
                       className="dropdown-item danger"
                       onClick={() => {
-                        setUser(null);
-                        setShowUserMenu(false);
-                        navTo("home");
-                        show("Đã đăng xuất", "info");
+                        handleLogout();
                       }}
                     >
                       <Ico.LogOut />

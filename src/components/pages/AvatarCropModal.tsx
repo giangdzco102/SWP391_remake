@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
-export function AvatarCropModal({ user, setUser, show, onClose }) {
+export function AvatarCropModal({ user, show, onClose }: any) {
     const [step, setStep] = useState("drop");
     const [imageSrc, setImageSrc] = useState(null);
     const [scale, setScale] = useState(1);
@@ -93,13 +93,13 @@ export function AvatarCropModal({ user, setUser, show, onClose }) {
         ctx.drawImage(img, sx, sy, sw, sh, 0, 0, size, size);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
         
-        setUser((u) => ({ ...u, avatarUrl: dataUrl }));
+        // setUser((u) => ({ ...u, avatarUrl: dataUrl }));
         show('🎉 Cập nhật ảnh đại diện thành công!', 'success');
         onClose();
     };
 
     const handleRemove = () => {
-        setUser((u) => ({ ...u, avatarUrl: undefined }));
+        // setUser((u) => ({ ...u, avatarUrl: undefined }));
         show('Đã xóa ảnh đại diện.', 'info');
         onClose();
     };

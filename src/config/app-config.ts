@@ -2,21 +2,22 @@ export default class APP_CONFIG {
   static ACCESS_TOKEN = "access_token";
   static REFRESH_TOKEN = "refresh_token";
   static API_URL = process.env.NEXT_PUBLIC_BASE_URL;
-  static FIREBASE = {
-    APIKEY: "AIzaSyDxto9TSGB6gyLIrO_TPNUj671ajdi5SHg",
-    AUTH_DOMAIN: "affiliate-e80ad.firebaseapp.com",
-    PROJECT_ID: "affiliate-e80ad",
-    STORAGE_BUCKET: "affiliate-e80ad.firebasestorage.app",
-    MESSAGING_SENDER_ID: "450519252584",
-    APP_ID: "1:450519252584:web:76292245d3cf8652cdc5dd",
-    MEASUREMENT_ID: "G-KN34PM1725",
-  };
+  // static FIREBASE = {
+  //   APIKEY: "AIzaSyDxto9TSGB6gyLIrO_TPNUj671ajdi5SHg",
+  //   AUTH_DOMAIN: "affiliate-e80ad.firebaseapp.com",
+  //   PROJECT_ID: "affiliate-e80ad",
+  //   STORAGE_BUCKET: "affiliate-e80ad.firebasestorage.app",
+  //   MESSAGING_SENDER_ID: "450519252584",
+  //   APP_ID: "1:450519252584:web:76292245d3cf8652cdc5dd",
+  //   MEASUREMENT_ID: "G-KN34PM1725",
+  // };
 
   static AUTH = {
-    SIGNUP: "/account",
+    VERIFY_OTP: "/auth/sign-up/verify-otp",
+    SIGNUP: "/auth/sign-up",
     SIGNIN: "/auth/login",
-    GETME: "/account/me",
-    SIGNIN_WITH_GOOGLE: "/authorization/system/google/login",
+    GETME: "/users/me",
+    // SIGNIN_WITH_GOOGLE: "/authorization/system/google/login",
     LOGOUT: "/auth/logout",
   };
 
