@@ -10,6 +10,7 @@ import Loading from "./loading";
 import { ToastProvider } from "@/utils/toast-provider";
 import AuthProvider from "@/components/AuthProvider";
 import { Layout } from "antd";
+import Header from "@/components/ui/Header";
 
 // Extract metadata configuration for better maintainability
 const SITE_METADATA = {
@@ -83,6 +84,7 @@ export default function RootLayout({
                     <AuthProvider>
                       <div className=" overflow-hidden flex flex-col">
                         {/* header */}
+                        <Header />
                         {children}
                       </div>
                     </AuthProvider>

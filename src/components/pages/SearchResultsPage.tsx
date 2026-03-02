@@ -1,7 +1,4 @@
 import { StoryCard } from './StoryCard';
-import React, { useState, useEffect } from 'react';
-import { Ico } from '../Icons';
-import { StarRating, AvatarComp, Toast } from '../ui';
 export function SearchResultsPage({ query, results, onStory }) {
     return (<div className="section fade-in">
       <div className="page-title">🔍 Kết quả tìm kiếm</div>

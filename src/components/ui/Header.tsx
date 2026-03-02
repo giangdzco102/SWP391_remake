@@ -1,3 +1,4 @@
+"use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -12,7 +13,6 @@ import APP_CONFIG from "@/config/app-config";
 export function Header({
   setUser,
   page,
-  navTo,
   openModal,
   unreadCount,
   notifications,
@@ -83,10 +83,10 @@ export function Header({
 
   const navLinks = useMemo(
     () => [
-      { label: "Trang chủ", page: "home" },
-      { label: "Bảng xếp hạng", page: "rankings" },
-      { label: "Thể loại", page: "categories", isCat: true },
-      { label: "Yêu thích", page: "favorites" },
+      { label: "Trang chủ", page: "/homePage" },
+      { label: "Bảng xếp hạng", page: "/rankingsPage" },
+      { label: "Thể loại", page: "/categoriesPage", isCat: true },
+      { label: "Yêu thích", page: "/favoritesPage" },
 
       ...(user?.roles.includes("REVIEWER")
         ? [
@@ -196,7 +196,7 @@ export function Header({
               <button
                 key={l.label}
                 className={`mobile-nav-link${page === l.page ? " active" : ""}`}
-                onClick={() => l.page && navTo(l.page)}
+                onClick={() => l.page && router.push(l.page)}
               >
                 {l.label}
                 {l.badge ? (
@@ -284,7 +284,7 @@ export function Header({
                   className="mobile-nav-link"
                   onClick={() => {
                     setShowMobileMenu(false);
-                    navTo("profile");
+                    router.push("/profile");
                   }}
                 >
                   👤 Hồ sơ của tôi
@@ -374,7 +374,7 @@ export function Header({
                           className="nav-cat-item"
                           onClick={() => {
                             setActiveGenre(g);
-                            navTo("home");
+                            router.push("/homePage");
                             setShowCatMenu(false);
                           }}
                         >
@@ -405,7 +405,7 @@ export function Header({
               <button
                 key={l.label}
                 className={`nav-link${page === l.page ? " active" : ""}`}
-                onClick={() => l.page && navTo(l.page)}
+                onClick={() => l.page && router.push(l.page)}
               >
                 {l.label}
                 {l.badge ? (
@@ -640,7 +640,7 @@ export function Header({
                       className="dropdown-item"
                       onClick={() => {
                         setShowUserMenu(false);
-                        navTo("profile");
+                        router.push("/profilePage");
                       }}
                     >
                       <Ico.User />

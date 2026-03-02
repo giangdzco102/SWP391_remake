@@ -1,31 +1,26 @@
-import { StoryCard } from "./StoryCard";
-import { GENRES, GENRE_META, MOCK_CHAPTERS } from "../../utils/mockData";
-import React, { useState, useEffect } from "react";
-import { Ico } from "../Icons";
-import { StarRating, AvatarComp, Toast } from "../ui";
-export function HomePage({
-  stories,
-  allStories,
-  activeGenre,
-  setActiveGenre,
-  onStory,
-  user,
-  openModal,
-  show,
-  likedStories,
-  toggleLike,
-  navTo,
-}) {
-  const featured = allStories.filter((s) => s.featured);
-  const [heroIdx, setHeroIdx] = useState(0);
-  useEffect(() => {
-    const t = setInterval(
-      () => setHeroIdx((i) => (i + 1) % featured.length),
-      5000,
-    );
-    return () => clearInterval(t);
-  }, [featured.length]);
-  const h = featured[heroIdx] || featured[0];
+"use client";
+import { StoryCard } from "@/components/pages/StoryCard";
+import { GENRES } from "@/utils/mockData";
+import { Ico } from "@/components/Icons";
+import { useStoryStore } from "@/stores/storyStore";
+import { useNavStore } from "@/stores/navStore";
+
+export function HomePage() {
+  const {
+    stories,
+    allStories,
+    activeGenre,
+    setActiveGenre,
+    likedStories,
+    toggleLike,
+  } = useStoryStore();
+  const { navTo, gotoStory } = useNavStore();
+
+  const filteredStories =
+    activeGenre === "all"
+      ? stories
+      : stories.filter((s) => s.genre === activeGenre);
+
   return (
     <div className="fade-in">
       {/* Genre filter */}
@@ -56,17 +51,17 @@ export function HomePage({
             Xem tất cả →
           </button>
         </div>
-        {stories.length === 0 ? (
+        {filteredStories.length === 0 ? (
           <div className="empty-state">
             Không có tác phẩm nào<p>Thể loại này chưa có tác phẩm.</p>
           </div>
         ) : (
           <div className="story-grid">
-            {stories.map((s) => (
+            {filteredStories.map((s) => (
               <StoryCard
                 key={s.id}
                 story={s}
-                onStory={() => onStory(s)}
+                onStory={() => gotoStory(s)}
                 liked={likedStories.includes(s.id)}
                 onLike={() => toggleLike(s.id)}
               />
@@ -75,13 +70,13 @@ export function HomePage({
         )}
       </div>
 
-      {/* ⚡ Newly Updated Section (Creative) */}
+      {/* Newly Updated Section */}
       <div className="section" style={{ paddingTop: 20 }}>
         <div className="sec-head">
           <div>
             <div className="sec-title">Tác phẩm mới cập nhật</div>
             <div className="sec-sub">
-              Đừng bỏ lỡ những chương truyện mới nhất vừa `&quot;`ra lò`&quot;`
+              Đừng bỏ lỡ những chương truyện mới nhất vừa ra lò
             </div>
           </div>
           <button className="see-all" onClick={() => navTo("categories")}>
@@ -96,7 +91,7 @@ export function HomePage({
               <StoryCard
                 key={s.id}
                 story={s}
-                onStory={() => onStory(s)}
+                onStory={() => gotoStory(s)}
                 liked={likedStories.includes(s.id)}
                 onLike={() => toggleLike(s.id)}
               />
@@ -120,7 +115,7 @@ export function HomePage({
             .sort((a, b) => parseFloat(b.reads) - parseFloat(a.reads))
             .slice(0, 5)
             .map((s, i) => (
-              <div key={s.id} className="rank-row" onClick={() => onStory(s)}>
+              <div key={s.id} className="rank-row" onClick={() => gotoStory(s)}>
                 <span
                   className={`rank-num ${i === 0 ? "rank-1" : i === 1 ? "rank-2" : i === 2 ? "rank-3" : "rank-num-other"}`}
                 >
@@ -153,3 +148,5 @@ export function HomePage({
     </div>
   );
 }
+
+export default HomePage;

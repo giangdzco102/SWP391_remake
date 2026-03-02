@@ -19,13 +19,12 @@ import {
   MOCK_NOTIFICATIONS,
   COIN_TRANSACTIONS,
 } from "../utils/mockData";
-import { HomePage } from "./pages/HomePage";
 import { RankingsPage } from "./pages/RankingsPage";
 import { CategoriesPage } from "./pages/CategoriesPage";
 import { FavoritesPage } from "./pages/FavoritesPage";
 import { StoryDetailPage } from "./pages/StoryDetailPage";
 import { ReaderPage } from "./pages/ReaderPage";
-import { ProfilePage } from "./pages/ProfilePage";
+import { ProfilePage } from "../../app/profilePage/page";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { CoinShopPage } from "./pages/CoinShopPage";
 import { MyStoriesPage } from "./pages/MyStoriesPage";
@@ -35,7 +34,6 @@ import { SearchResultsPage } from "./pages/SearchResultsPage";
 import { SubmitStoryModal } from "./modals/SubmitStoryModal";
 import { AddChapterModal } from "./modals/AddChapterModal";
 import { RejectModal } from "./modals/RejectModal";
-import Header from "./ui/Header";
 import { useAuthStore } from "@/stores";
 
 export function StoryPlatform() {
@@ -47,7 +45,6 @@ export function StoryPlatform() {
   const [selectedChapter, setSelectedChapter] = useState(0);
   const [toast, setToast] = useState(null);
   const toastRef = useRef(null);
-  const [darkMode, setDarkMode] = useState(false);
   // Data state
   const [stories, setStories] = useState(MOCK_STORIES);
   const [reviews, setReviews] = useState(MOCK_REVIEWS);
@@ -105,19 +102,19 @@ export function StoryPlatform() {
     window.scrollTo(0, 0);
   };
   // Like toggle
-  const toggleLike = (id) => {
-    requireAuth(() => {
-      setLikedStories((l) =>
-        l.includes(id) ? l.filter((x) => x !== id) : [...l, id],
+  toggleLike: (id, showFn) =>
+    set((state) => {
+      const isLiked = state.likedStories.includes(id);
+      showFn?.(
+        isLiked ? "Đã bỏ yêu thích" : "Đã thêm vào yêu thích ❤",
+        isLiked ? "info" : "success",
       );
-      show(
-        likedStories.includes(id)
-          ? "Đã bỏ yêu thích"
-          : "Đã thêm vào yêu thích ❤",
-        likedStories.includes(id) ? "info" : "success",
-      );
+      return {
+        likedStories: isLiked
+          ? state.likedStories.filter((x) => x !== id)
+          : [...state.likedStories, id],
+      };
     });
-  };
   // Reviewer actions
   const handleApprove = (id) => {
     const item = pending.find((p) => p.id === id);
@@ -204,7 +201,9 @@ export function StoryPlatform() {
     if (!user) return;
     setEditorTasks((t) =>
       t.map((x) =>
-        x.id === id ? { ...x, status: "claimed", claimedBy: (user as any).fullName } : x,
+        x.id === id
+          ? { ...x, status: "claimed", claimedBy: (user as any).fullName }
+          : x,
       ),
     );
     const task = editorTasks.find((t) => t.id === id);
@@ -370,33 +369,11 @@ export function StoryPlatform() {
     },
     [stories],
   );
-  const handleViewAllNotifs = useCallback(() => {
-    navTo("notifications");
-  }, []);
   return (
     <div className="platform">
-      <Header
-        page={page}
-        navTo={navTo}
-        openModal={openModal}
-        unreadCount={unreadCount}
-        notifications={notifications}
-        handleMarkAllRead={handleMarkAllRead}
-        handleMarkOneRead={handleMarkOneRead}
-        handleViewAllNotifs={handleViewAllNotifs}
-        pending={pending}
-        show={show}
-        setActiveGenre={setActiveGenre}
-        searchQ={searchQ}
-        setSearchQ={setSearchQ}
-        searchResults={searchResults}
-        gotoStory={gotoStory}
-        darkMode={darkMode}
-        setDarkMode={setDarkMode}
-      />
 
       {/* ── PROMO BANNER ── */}
-      {user?.role === "reader" && (
+      {user?.roles.includes("reader") && (
         <div
           className="promo-banner"
           style={{ background: "#fff8e7", borderBottomColor: "#e8d080" }}
@@ -477,21 +454,6 @@ export function StoryPlatform() {
       )}
 
       {/* ── PAGES ── */}
-      {page === "home" && (
-        <HomePage
-          stories={filteredStories}
-          allStories={stories}
-          activeGenre={activeGenre}
-          setActiveGenre={setActiveGenre}
-          onStory={gotoStory}
-          user={user}
-          openModal={openModal}
-          show={show}
-          likedStories={likedStories}
-          toggleLike={toggleLike}
-          navTo={navTo}
-        />
-      )}
       {page === "story" && selectedStory && (
         <StoryDetailPage
           story={selectedStory}
@@ -550,17 +512,7 @@ export function StoryPlatform() {
           openModal={openModal}
         />
       )}
-      {page === "profile" && user && (
-        <ProfilePage
-          user={user}
-          stories={stories.filter((s) => s.author === user.name)}
-          likedStories={likedStories}
-          reviews={reviews.filter((r) => r.user === (user as any).fullName)}
-          coinTxs={coinTxs}
-          navTo={navTo}
-          show={show}
-        />
-      )}
+      {page === "profile" && user && <ProfilePage />}
       {page === "notifications" && (
         <NotificationsPage
           notifications={notifications}
@@ -570,11 +522,7 @@ export function StoryPlatform() {
         />
       )}
       {page === "coin-shop" && user && (
-        <CoinShopPage
-          user={user}
-          coinTxs={coinTxs}
-          show={show}
-        />
+        <CoinShopPage user={user} coinTxs={coinTxs} show={show} />
       )}
       {page === "reviewer-dash" && user?.roles?.includes("REVIEWER") && (
         <ReviewerDashboard
@@ -603,7 +551,7 @@ export function StoryPlatform() {
       {page === "my-stories" && user?.roles?.includes("AUTHOR") && (
         <MyStoriesPage
           user={user}
-          stories={stories.filter((s) => s.author === user.name)}
+          stories={stories.filter((s) => s.author === user.fullName)}
           myChapters={myChapters}
           openModal={openModal}
           show={show}
@@ -663,11 +611,7 @@ export function StoryPlatform() {
         />
       )}
       {modal === "settings" && (
-        <SettingsModal
-          user={user}
-          onClose={closeModal}
-          show={show}
-        />
+        <SettingsModal user={user} onClose={closeModal} show={show} />
       )}
 
       <Toast toast={toast} />

@@ -1,6 +1,8 @@
-import React from "react";
+"use client";
+import { useAuthStore } from "@/stores";
 
 export function ProfilePage() {
+  const { user } = useAuthStore();
   return (
     <div className="profile-wrap fade-in">
       <div className="profile-header">
@@ -24,15 +26,11 @@ export function ProfilePage() {
               marginBottom: 4,
             }}
           >
-            Tên người dùng
-          </div>
-
-          <div style={{ fontSize: 14, opacity: 0.7, marginBottom: 4 }}>
-            ✒ Bút danh
+            {user?.fullName || "Người dùng"}
           </div>
 
           <div style={{ fontSize: 13, opacity: 0.6, marginBottom: 12 }}>
-            email@example.com · Tham gia 01/01/2026
+            {user?.email}· Tham gia 01/01/2026
           </div>
 
           <div
@@ -123,3 +121,5 @@ export function ProfilePage() {
     </div>
   );
 }
+
+export default ProfilePage;

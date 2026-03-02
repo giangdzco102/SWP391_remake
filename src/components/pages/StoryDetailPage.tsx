@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Ico } from '../Icons';
-import { StarRating, AvatarComp, Toast } from '../ui';
+import { StarRating } from '../ui';
 export function StoryDetailPage({ story, user, chapters, reviews, setReviews, onBack, onRead, openModal, show, requireAuth, likedStories, toggleLike, stories, navTo, unlockedChapters, unlockChapter }) {
     const [userRating, setUserRating] = useState(0);
     const [hoverRating, setHoverRating] = useState(0);
