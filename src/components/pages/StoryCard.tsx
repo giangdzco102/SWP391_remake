@@ -1,23 +1,58 @@
 import React, { useState, useEffect } from 'react';
 import { Ico } from '../Icons';
-import { StarRating, AvatarComp, Toast } from '../ui';
 export function StoryCard({ story, onStory, liked, onLike }) {
-    return (<div className="story-card" onClick={onStory}>
-      <div className="story-cover">
-        <div className="story-cover-img" style={{ background: story.cover }}/>
-        <span className={`absolute left-[9px] top-[9px] rounded-[5px] px-2 py-[3px] text-[10px] font-bold uppercase tracking-[0.4px] ${story.status === "done" ? "badge-done" : story.status === "ongoing" ? "badge-ongoing" : "badge-pending"}`}>{story.status === "done" ? "✓ Hoàn thành" : story.status === "ongoing" ? "Đang cập nhật" : "Chờ duyệt"}</span>
-        <button style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,.35)", border: "none", borderRadius: "50%", width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: liked ? "#c23d3f" : "white" }} onClick={e => { e.stopPropagation(); onLike(); }}>
-          <Ico.Heart f={liked}/>
+  return (
+    <div
+      className="group flex cursor-pointer flex-col gap-3 transition-transform duration-200 hover:-translate-y-1"
+      onClick={onStory}
+    >
+      {/* Cover Image Section */}
+      <div className="relative aspect-[1/1.35] w-full overflow-hidden rounded-xl">
+        <div
+          className="h-full w-full transition-transform duration-300 group-hover:scale-105"
+          style={{ background: story.cover, backgroundSize: 'cover', backgroundPosition: 'center' }}
+        />
+
+        {/* Like Button */}
+        <button
+          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border-none bg-black/35 transition-transform active:scale-90"
+          style={{ color: liked ? "#c23d3f" : "white" }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onLike();
+          }}
+        >
+          <Ico.Heart f={liked} />
         </button>
       </div>
-      <div className="story-info">
-        <div className="story-title">{story.title}</div>
-        <div className="story-author">bởi <span>{story.penName}</span></div>
-        <div className="story-meta">
-          <div className="story-stars"><Ico.Star f s={12}/>{story.rating > 0 ? story.rating.toFixed(1) : "Mới"}</div>
-          <div className="story-reads"><Ico.Eye />{story.reads}</div>
+
+      {/* Info Section */}
+      <div className="flex flex-col">
+        <div className="line-clamp-2 min-h-[2em] font-playfair text-sm font-bold leading-tight text-[#1c1512] transition-colors group-hover:text-[#c23d3f]">
+          {story.title}
         </div>
-        <div className="story-genre-tag">{story.genre}</div>
+
+        <div className="mt-1 text-[12px] text-[#9e8e82]">
+          bởi <span className="font-medium text-[#c23d3f]">{story.penName}</span>
+        </div>
+
+        <div className="mt-2 flex items-center justify-between">
+          <div className="flex items-center gap-1 text-[12px] text-[#b8921e]">
+            <Ico.Star f s={12} />
+            {story.rating > 0 ? story.rating.toFixed(1) : "Mới"}
+          </div>
+          <div className="flex items-center gap-1 text-[11px] text-[#b0a096]">
+            <Ico.Eye />
+            {story.reads}
+          </div>
+        </div>
+
+        <div className="mt-2">
+          <span className="inline-flex items-center justify-center rounded-full bg-[#f4ebe1] px-3 py-1 text-[12px] font-medium leading-none text-[#8b6a54]">
+            {story.genre}
+          </span>
+        </div>
       </div>
-    </div>);
+    </div>
+  );
 }
