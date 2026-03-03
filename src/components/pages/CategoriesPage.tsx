@@ -1,5 +1,5 @@
 import { StoryCard } from './StoryCard';
-import { GENRES, GENRE_META, MOCK_CHAPTERS } from '../../utils/mockData';
+import { GENRES, GENRE_META, MOCK_CHAPTERS } from '@/utils/mockData';
 import React, { useState, useEffect } from 'react';
 import { Ico } from '../Icons';
 import { StarRating, AvatarComp, Toast } from '../ui';

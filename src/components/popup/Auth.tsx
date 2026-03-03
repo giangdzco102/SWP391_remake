@@ -29,8 +29,11 @@ const Auth = () => {
   const router = useRouter();
   const isLogin = searchParams.get("login") !== null;
   const isRegister = searchParams.get("register") !== null;
-  const [step, setStep] = React.useState<"register" | "verify">("register");
+  const [step, setStep] = React.useState<
+    "register" | "verify" | "forgot" | "reset"
+  >("register");
   const [registerEmail, setRegisterEmail] = React.useState<string>("");
+  const [forgotEmail, setForgotEmail] = React.useState<string>("");
   const handleClose = () => {
     router.push("/");
   };
@@ -42,32 +45,51 @@ const Auth = () => {
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-title">
-            {isLogin ? "Đăng nhập" : "Tạo tài khoản"}
+            {isLogin && step !== "forgot" && step !== "reset" && "Đăng nhập"}
+            {step === "forgot" && "Quên mật khẩu"}
+            {step === "reset" && "Đặt lại mật khẩu"}
+            {isRegister && step === "register" && "Tạo tài khoản"}
+            {isRegister && step === "verify" && "Xác nhận OTP"}
           </div>
           <button className="modal-close" onClick={handleClose}>
             <Ico.X />
           </button>
         </div>
         <div className="modal-body">
-          <p className="modal-desc">
-            {isLogin
-              ? "Chào mừng quay lại!"
-              : "Tham gia cộng đồng — sau khi đăng ký, chọn vai trò Tác giả, Reviewer hoặc Editor."}
-          </p>
-          {isLogin && <LoginForm />}
-
+          {isLogin && step === "forgot" && (
+            <ForgotPasswordForm
+              onSuccess={(email) => {
+                setForgotEmail(email);
+                setStep("reset");
+              }}
+              onBack={() => setStep("register")}
+            />
+          )}
+          {isLogin && step === "reset" && (
+            <ResetPasswordForm
+              email={forgotEmail}
+              onSuccess={() => {
+                setStep("register");
+                router.push("?login");
+              }}
+            />
+          )}
+          {isLogin && step !== "forgot" && step !== "reset" && (
+            <LoginForm onForgot={() => setStep("forgot")} />
+          )}
           {isRegister && step === "register" && (
             <RegisterForm
               onSuccess={(email) => {
-                console.log("SWITCH TO VERIFY");
                 setRegisterEmail(email);
                 setStep("verify");
               }}
             />
           )}
-
           {isRegister && step === "verify" && (
-            <VerifyOtpForm email={registerEmail} />
+            <VerifyOtpForm
+              email={registerEmail}
+              onSuccess={() => setStep("register")}
+            />
           )}
         </div>
       </div>
@@ -78,7 +100,7 @@ const Auth = () => {
 export default Auth;
 
 // render content login
-const LoginForm = () => {
+const LoginForm = ({ onForgot }: { onForgot?: () => void }) => {
   const { login } = useAuthService();
   const { setLoading } = useAppStore();
   const toast = useToast();
@@ -99,7 +121,7 @@ const LoginForm = () => {
     try {
       await login(data);
       toast.showByCode(TOAST_KEYS.LOGIN, TOAST_CODES.SUCCESS);
-      router.push("/");
+      router.push("/homePage");
     } catch (error) {
       console.error("Login error:", error);
       toast.showByCode(TOAST_KEYS.LOGIN, TOAST_CODES.UNPROCESSABLE);
@@ -185,6 +207,13 @@ const LoginForm = () => {
         >
           Đăng ký ngay
         </span>
+        <br />
+        <span
+          style={{ color: "#c23d3f", cursor: "pointer", fontWeight: 600 }}
+          onClick={onForgot}
+        >
+          Quên mật khẩu
+        </span>
       </div>
     </div>
   );
@@ -231,9 +260,10 @@ const RegisterForm = ({
         gender: data.gender,
         location: data.location,
       });
+      console.log("response:", response);
 
-      if (response.email) {
-        toast.success(response.message);
+      if (response.status === 200) {
+        toast.success(response.data.message);
         onSuccess(data.email);
         console.log("Signup successful, email:", data.email);
       }
@@ -241,6 +271,7 @@ const RegisterForm = ({
       const message = error?.response?.data?.message || "Đăng ký thất bại";
       setServerError(message);
       toast.error(message);
+      console.log("error:", error);
     } finally {
       setLoading(false);
     }
@@ -433,7 +464,13 @@ const RegisterForm = ({
   );
 };
 
-const VerifyOtpForm = ({ email }: { email: string }) => {
+const VerifyOtpForm = ({
+  email,
+  onSuccess,
+}: {
+  email: string;
+  onSuccess: () => void;
+}) => {
   const { verifyOtp } = useAuthService();
   const { setLoading } = useAppStore();
   const toast = useToast();
@@ -452,9 +489,10 @@ const VerifyOtpForm = ({ email }: { email: string }) => {
         otp: data.otp,
       });
 
-      if (response.enabled) {
+      if (response.status === 200) {
         toast.success("Đăng ký thành công!");
-        router.push("/");
+        router.push("/homePage");
+        onSuccess();
       }
     } catch (error: any) {
       setServerError(
@@ -504,5 +542,193 @@ const VerifyOtpForm = ({ email }: { email: string }) => {
         Xác nhận OTP
       </button>
     </form>
+  );
+};
+
+const ForgotPasswordForm = ({
+  onSuccess,
+  onBack,
+}: {
+  onSuccess: (email: string) => void;
+  onBack: () => void;
+}) => {
+  const { forgotPassword } = useAuthService();
+  const { setLoading } = useAppStore();
+  const toast = useToast();
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<{ email: string }>();
+
+  const onSubmit = async (data: { email: string }) => {
+    setLoading(true);
+    try {
+      await forgotPassword({ email: data.email });
+      toast.success("Đã gửi OTP về email!");
+      onSuccess(data.email);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Gửi OTP thất bại");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal-sections">
+      <p className="modal-desc">
+        Nhập email tài khoản, chúng tôi sẽ gửi mã OTP về email đó.
+      </p>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="form-group">
+          <label className="form-label-bold">Email</label>
+          <Controller
+            name="email"
+            control={control}
+            rules={{
+              required: "Email là bắt buộc",
+              pattern: {
+                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                message: "Email không hợp lệ",
+              },
+            }}
+            render={({ field }) => (
+              <input
+                {...field}
+                type="email"
+                className="form-input"
+                placeholder="email@example.com"
+              />
+            )}
+          />
+          {errors.email && <p className="error">{errors.email.message}</p>}
+        </div>
+        <button type="submit" className="btn-full btn-red-full mt-4">
+          Gửi OTP
+        </button>
+      </form>
+      <div style={{ textAlign: "center", marginTop: 12, fontSize: 13 }}>
+        <span
+          style={{ color: "#c23d3f", cursor: "pointer", fontWeight: 600 }}
+          onClick={onBack}
+        >
+          ← Quay lại đăng nhập
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const ResetPasswordForm = ({
+  email,
+  onSuccess,
+}: {
+  email: string;
+  onSuccess: () => void;
+}) => {
+  const { resetPassword } = useAuthService();
+  const { setLoading } = useAppStore();
+  const toast = useToast();
+  const {
+    control,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm<{
+    otp: string;
+    newPassword: string;
+    confirmNewPassword: string;
+  }>();
+
+  const onSubmit = async (data: {
+    otp: string;
+    newPassword: string;
+    confirmNewPassword: string;
+  }) => {
+    setLoading(true);
+    try {
+      await resetPassword({ email, ...data });
+      toast.success("Đặt lại mật khẩu thành công!");
+      onSuccess();
+    } catch (error: any) {
+      toast.error(
+        error?.response?.data?.message || "OTP không hợp lệ hoặc đã hết hạn",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal-sections">
+      <p className="modal-desc">
+        Nhập mã OTP đã gửi về <strong>{email}</strong> và mật khẩu mới.
+      </p>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="form-group">
+          <label className="form-label-bold">Mã OTP</label>
+          <Controller
+            name="otp"
+            control={control}
+            rules={{
+              required: "Vui lòng nhập OTP",
+              minLength: { value: 6, message: "OTP phải đủ 6 số" },
+              maxLength: { value: 6, message: "OTP phải đủ 6 số" },
+            }}
+            render={({ field }) => (
+              <input
+                {...field}
+                className="form-input"
+                placeholder="Nhập 6 số OTP"
+              />
+            )}
+          />
+          {errors.otp && <p className="error">{errors.otp.message}</p>}
+        </div>
+        <div className="form-group">
+          <label className="form-label-bold">Mật khẩu mới</label>
+          <Controller
+            name="newPassword"
+            control={control}
+            rules={{
+              required: "Mật khẩu là bắt buộc",
+              minLength: { value: 6, message: "Ít nhất 6 ký tự" },
+            }}
+            render={({ field }) => (
+              <input
+                {...field}
+                type="password"
+                className="form-input"
+                placeholder="Ít nhất 6 ký tự"
+              />
+            )}
+          />
+          {errors.newPassword && (
+            <p className="error">{errors.newPassword.message}</p>
+          )}
+        </div>
+        <div className="form-group">
+          <label className="form-label-bold">Xác nhận mật khẩu mới</label>
+          <Controller
+            name="confirmNewPassword"
+            control={control}
+            rules={{
+              required: "Vui lòng xác nhận mật khẩu",
+              validate: (value) =>
+                value === watch("newPassword") || "Mật khẩu không khớp",
+            }}
+            render={({ field }) => (
+              <input {...field} type="password" className="form-input" />
+            )}
+          />
+          {errors.confirmNewPassword && (
+            <p className="error">{errors.confirmNewPassword.message}</p>
+          )}
+        </div>
+        <button type="submit" className="btn-full btn-red-full mt-4">
+          Đặt lại mật khẩu
+        </button>
+      </form>
+    </div>
   );
 };

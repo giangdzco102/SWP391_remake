@@ -13,6 +13,9 @@ export default class APP_CONFIG {
   // };
 
   static AUTH = {
+    FORGOT_PASSWORD: "/auth/forgot-password",
+    RESET_PASSWORD: "/auth/reset-password",
+    CHANGE_PASSWORD: "/users/me/change-password",
     VERIFY_OTP: "/auth/sign-up/verify-otp",
     SIGNUP: "/auth/sign-up",
     SIGNIN: "/auth/login",

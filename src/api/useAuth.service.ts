@@ -10,6 +10,9 @@ import {
   DataGetMe,
   PayloadLogout,
   verifyOtp,
+  PayloadChangePassword,
+  PayloadForgotPassword,
+  PayloadResetPassword,
 } from "@/types/auth";
 import { Response } from "@/types/global";
 import useHttpClient from "./useHttpClient";
@@ -23,6 +26,9 @@ export type ResultAuthService = {
   login: (payload: PayloadSignin) => Promise<DataGetMe | undefined>;
   logout: (payload: PayloadLogout) => void;
   verifyOtp?: (payload: verifyOtp) => Promise<any>;
+  changePassword?: (payload: PayloadChangePassword) => Promise<any>;
+  forgotPassword?: (payload: PayloadForgotPassword) => Promise<any>;
+  resetPassword?: (payload: PayloadResetPassword) => Promise<any>;
 };
 
 const useAuthService = (): ResultAuthService => {
@@ -31,6 +37,18 @@ const useAuthService = (): ResultAuthService => {
 
   const verifyOtp = (payload: verifyOtp): Promise<any> => {
     return httpClient.post(APP_CONFIG.AUTH.VERIFY_OTP, payload);
+  };
+
+  const forgotPassword = (payload: PayloadForgotPassword): Promise<any> => {
+    return httpClient.post(APP_CONFIG.AUTH.FORGOT_PASSWORD, payload);
+  };
+
+  const resetPassword = (payload: PayloadResetPassword): Promise<any> => {
+    return httpClient.post(APP_CONFIG.AUTH.RESET_PASSWORD, payload);
+  };
+
+  const changePassword = (payload: PayloadChangePassword): Promise<any> => {
+    return httpClient.post(APP_CONFIG.AUTH.CHANGE_PASSWORD, payload);
   };
 
   const signin = (payload: PayloadSignin): Promise<Response<DataSignin>> => {
@@ -146,6 +164,9 @@ const useAuthService = (): ResultAuthService => {
     login,
     logout,
     verifyOtp,
+    changePassword,
+    forgotPassword,
+    resetPassword,
   };
 };
 

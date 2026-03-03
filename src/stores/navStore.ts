@@ -6,18 +6,15 @@ interface NavStore {
   page: string;
   selectedStory: any | null;
   navTo: (page: string) => void;
-  gotoStory: (story: any) => void;
+  setSelectedStory: (story: any) => void;
 }
 
 export const useNavStore = create<NavStore>((set) => ({
-  page: "home",
+  page: "homePage",
   selectedStory: null,
   navTo: (page) => {
     set({ page });
     window.scrollTo(0, 0);
   },
-  gotoStory: (story) => {
-    set({ selectedStory: story, page: "story" });
-    window.scrollTo(0, 0);
-  },
+  setSelectedStory: (story) => set({ selectedStory: story }),
 }));

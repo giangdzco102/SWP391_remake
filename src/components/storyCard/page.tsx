@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Ico } from '../Icons';
+"use client";
+import { Ico } from "@/components/Icons";
 export function StoryCard({ story, onStory, liked, onLike }) {
   return (
     <div
@@ -10,7 +10,11 @@ export function StoryCard({ story, onStory, liked, onLike }) {
       <div className="relative aspect-[1/1.35] w-full overflow-hidden rounded-xl">
         <div
           className="h-full w-full transition-transform duration-300 group-hover:scale-105"
-          style={{ background: story.cover, backgroundSize: 'cover', backgroundPosition: 'center' }}
+          style={{
+            background: story.cover,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
         />
 
         {/* Like Button */}
@@ -33,7 +37,8 @@ export function StoryCard({ story, onStory, liked, onLike }) {
         </div>
 
         <div className="mt-1 text-[12px] text-[#9e8e82]">
-          bởi <span className="font-medium text-[#c23d3f]">{story.penName}</span>
+          bởi{" "}
+          <span className="font-medium text-[#c23d3f]">{story.penName}</span>
         </div>
 
         <div className="mt-2 flex items-center justify-between">

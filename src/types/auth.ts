@@ -9,6 +9,23 @@ export type RequestSignup = {
   location: string;
 };
 
+export interface PayloadForgotPassword {
+  email: string;
+}
+
+export interface PayloadResetPassword {
+  email: string;
+  otp: string;
+  newPassword: string;
+  confirmNewPassword: string;
+}
+
+export interface PayloadChangePassword {
+  currentPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+}
+
 export type verifyOtp = {
   email: string;
   otp: string;

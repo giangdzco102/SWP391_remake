@@ -1,9 +1,11 @@
 "use client";
-import { StoryCard } from "@/components/pages/StoryCard";
 import { GENRES } from "@/utils/mockData";
 import { Ico } from "@/components/Icons";
 import { useStoryStore } from "@/stores/storyStore";
 import { useNavStore } from "@/stores/navStore";
+import { useToast } from "@/hooks/use-toast";
+import { useGotoStory } from "@/hooks/useGotoStory";
+import { StoryCard } from "../../src/components/storyCard/page";
 
 export function HomePage() {
   const {
@@ -14,7 +16,9 @@ export function HomePage() {
     likedStories,
     toggleLike,
   } = useStoryStore();
-  const { navTo, gotoStory } = useNavStore();
+  const { navTo } = useNavStore();
+  const gotoStory = useGotoStory();
+  const toast = useToast();
 
   const filteredStories =
     activeGenre === "all"
@@ -63,7 +67,14 @@ export function HomePage() {
                 story={s}
                 onStory={() => gotoStory(s)}
                 liked={likedStories.includes(s.id)}
-                onLike={() => toggleLike(s.id)}
+                onLike={() => {
+                  toggleLike(s.id);
+                  toast.success(
+                    likedStories.includes(s.id)
+                      ? "Đã bỏ yêu thích"
+                      : "Đã thêm vào yêu thích ❤",
+                  );
+                }}
               />
             ))}
           </div>

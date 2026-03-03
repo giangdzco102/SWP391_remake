@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState } from "react";
+import { useState } from "react";
+import { Modal } from "antd";
 import { Ico } from "../Icons";
-import { GENRES } from "../../utils/mockData";
-import useAuthService from "@/api/useAuth.service";
+import { GENRES } from "@/utils/mockData";
 import { useToast } from "@/hooks/use-toast";
 
-export function SettingsModal({ user, onClose, show }: any) {
+// ── BECOME AUTHOR ──
+export function SettingsModal({ onClose }: any) {
   const [tab, setTab] = useState("account");
   const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
@@ -18,10 +19,9 @@ export function SettingsModal({ user, onClose, show }: any) {
   const [notifReview, setNotifReview] = useState(true);
   const [notifCoin, setNotifCoin] = useState(true);
   const [language, setLanguage] = useState("vi");
-  const { changePassword } = useAuthService();
   const toast = useToast();
 
-  const handleChangePassword = async () => {
+  const handleChangePassword = () => {
     setPwError("");
     if (!currentPw) {
       setPwError("Vui lòng nhập mật khẩu hiện tại.");
@@ -35,31 +35,18 @@ export function SettingsModal({ user, onClose, show }: any) {
       setPwError("Mật khẩu xác nhận không khớp.");
       return;
     }
-
-    try {
-      const res = await changePassword({
-        currentPassword: currentPw,
-        newPassword: newPw,
-        confirmNewPassword: confirmPw,
-      });
-      console.log("changePassword res:", res);
-      setCurrentPw("");
-      setNewPw("");
-      setConfirmPw("");
-      toast.success("✅ Đổi mật khẩu thành công!");
-    } catch (error: any) {
-      console.log("changePassword error:", error);
-      setPwError(error?.response?.data?.message || "Đổi mật khẩu thất bại");
-    }
+    setCurrentPw("");
+    setNewPw("");
+    setConfirmPw("");
+    toast.success("✅ Đổi mật khẩu thành công!");
   };
-
   const handleDeleteAccount = () => {
     if (
       window.confirm(
         "Bạn có chắc muốn xóa tài khoản? Hành động này không thể hoàn tác.",
       )
     ) {
-      show("Tài khoản đã được xóa.", "info");
+      toast.success("✅ Tài khoản đã được xóa.");
       onClose();
     }
   };
@@ -339,9 +326,8 @@ export function SettingsModal({ user, onClose, show }: any) {
                         key={k}
                         onClick={() => {
                           setDarkPref(k === "dark");
-                          show(
+                          toast.info(
                             `Đã chuyển sang giao diện ${k === "dark" ? "tối" : "sáng"}.`,
-                            "info",
                           );
                         }}
                         style={{
@@ -399,7 +385,7 @@ export function SettingsModal({ user, onClose, show }: any) {
                         key={k}
                         onClick={() => {
                           setFontSize(k);
-                          show(`Cỡ chữ: ${label}`, "info");
+                          toast.info(`Cỡ chữ: ${label}`);
                         }}
                         style={{
                           flex: 1,
@@ -510,9 +496,8 @@ export function SettingsModal({ user, onClose, show }: any) {
                         const nextVal = !val;
                         setter(nextVal);
                         const msgTitle = title.replace(/^.\s?/, ""); // Remove emoji + possible space
-                        show(
+                        toast.info(
                           `${nextVal ? "Bật" : "Tắt"} thông báo: ${msgTitle}`,
-                          "info",
                         );
                       }}
                       style={{
@@ -544,7 +529,7 @@ export function SettingsModal({ user, onClose, show }: any) {
                 ))}
                 <button
                   onClick={() => {
-                    show("Đã lưu cài đặt thông báo!", "success");
+                    toast.success("Đã lưu cài đặt thông báo!");
                     onClose();
                   }}
                   style={{

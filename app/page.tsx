@@ -1,7 +1,6 @@
 "use client";
-
-import { StoryPlatform } from "@/components/StoryPlatform";
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  return <StoryPlatform />;
+  redirect("/homePage");
 }

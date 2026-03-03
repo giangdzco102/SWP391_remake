@@ -9,27 +9,27 @@ import { useAuthStore } from "@/stores";
 import { useToast } from "@/hooks/use-toast";
 import useAuthService from "@/api/useAuth.service";
 import APP_CONFIG from "@/config/app-config";
+import { useNavStore } from "@/stores/navStore";
+import { useStoryStore } from "@/stores/storyStore";
+import { useNotificationStore } from "@/stores/notificationStore";
+import { useGotoStory } from "@/hooks/useGotoStory";
+import {
+  BecomeAuthorModal,
+  BecomeReviewerModal,
+  BecomeEditorModal,
+  SettingsModal,
+} from "@/components/popup/BecomeModal";
+import { useModalStore } from "@/stores/modalStore";
 
-export function Header({
-  setUser,
-  page,
-  openModal,
-  unreadCount,
-  notifications,
-  handleMarkAllRead,
-  handleMarkOneRead,
-  handleViewAllNotifs,
-  pending,
-  show,
-  setActiveGenre,
-  searchQ,
-  setSearchQ,
-  searchResults,
-  gotoStory,
-  darkMode,
-  setDarkMode,
-}: any) {
+export function Header({ pending, darkMode, setDarkMode }: any) {
+  const { openModal, closeModal } = useModalStore();
   const { user } = useAuthStore();
+  const { navTo, page } = useNavStore();
+  const gotoStory = useGotoStory();
+  const { setActiveGenre, searchQ, setSearchQ, stories } = useStoryStore();
+  const { notifications, unreadCount, markAllRead, markOneRead } =
+    useNotificationStore();
+
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -41,11 +41,22 @@ export function Header({
   const [showNotif, setShowNotif] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showSearchDrop, setShowSearchDrop] = useState(false);
-  const primaryRole = user?.roles?.[0] || "READER";
 
+  const primaryRole = user?.roles?.[0] || "READER";
   const { setLoading } = useAuthStore();
   const { logout } = useAuthService();
   const toast = useToast();
+
+  // Search results computed locally
+  const searchResults =
+    (searchQ ?? "").trim().length > 1
+      ? stories.filter(
+          (s) =>
+            s.title.toLowerCase().includes(searchQ.toLowerCase()) ||
+            s.penName.toLowerCase().includes(searchQ.toLowerCase()) ||
+            s.genre.toLowerCase().includes(searchQ.toLowerCase()),
+        )
+      : [];
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -67,7 +78,6 @@ export function Header({
 
   const handleLogout = async () => {
     setLoading(true);
-
     try {
       logout({
         refreshToken: localStorage.getItem(APP_CONFIG.REFRESH_TOKEN) || "",
@@ -87,7 +97,6 @@ export function Header({
       { label: "Bảng xếp hạng", page: "/rankingsPage" },
       { label: "Thể loại", page: "/categoriesPage", isCat: true },
       { label: "Yêu thích", page: "/favoritesPage" },
-
       ...(user?.roles.includes("REVIEWER")
         ? [
             {
@@ -97,17 +106,16 @@ export function Header({
             },
           ]
         : []),
-
       ...(user?.roles.includes("EDITOR")
         ? [{ label: "Nhiệm vụ", page: "editor-dash" }]
         : []),
-
       ...(user?.roles.includes("AUTHOR")
         ? [{ label: "Tác phẩm của tôi", page: "my-stories" }]
         : []),
     ],
     [user?.roles, pending?.length],
   );
+
   const ROLE_LABEL: any = {
     reviewer: "Reviewer",
     author: "Tác giả",
@@ -158,7 +166,6 @@ export function Header({
               </button>
             </div>
 
-            {/* ── User info card (khi đã login) ── */}
             {user && (
               <div className="mobile-user-card">
                 <AvatarComp user={user} size={42} />
@@ -166,9 +173,7 @@ export function Header({
                   <div className="mobile-user-name">{user.fullName}</div>
                   <div className="mobile-user-email">{user.email}</div>
                   <span
-                    className={`dropdown-role-chip ${
-                      ROLE_CHIP_CLASS[primaryRole] || "chip-role-reader"
-                    }`}
+                    className={`dropdown-role-chip ${ROLE_CHIP_CLASS[primaryRole] || "chip-role-reader"}`}
                   >
                     {ROLE_LABEL[primaryRole] || "Độc giả"}
                   </span>
@@ -216,9 +221,11 @@ export function Header({
                 ) : null}
               </button>
             ))}
+
             <div
               style={{ borderTop: "1.5px solid #f0ebe3", margin: "8px 0" }}
             />
+
             {!user ? (
               <div
                 style={{
@@ -249,13 +256,17 @@ export function Header({
               </div>
             ) : (
               <>
-                {user.roles.includes("reader") && (
+                {user.roles.includes("READER") && (
                   <>
                     <button
                       className="mobile-nav-link"
                       onClick={() => {
                         setShowMobileMenu(false);
-                        openModal("become-author");
+                        openModal(BecomeAuthorModal, {
+                          onSuccess: (penName: string) => {
+                            closeModal();
+                          },
+                        });
                       }}
                     >
                       ✒ Trở thành Tác giả
@@ -264,7 +275,7 @@ export function Header({
                       className="mobile-nav-link"
                       onClick={() => {
                         setShowMobileMenu(false);
-                        openModal("become-reviewer");
+                        openModal(BecomeReviewerModal);
                       }}
                     >
                       🛡 Trở thành Reviewer
@@ -273,7 +284,7 @@ export function Header({
                       className="mobile-nav-link"
                       onClick={() => {
                         setShowMobileMenu(false);
-                        openModal("become-editor");
+                        openModal(BecomeEditorModal);
                       }}
                     >
                       ✏ Trở thành Editor
@@ -284,7 +295,7 @@ export function Header({
                   className="mobile-nav-link"
                   onClick={() => {
                     setShowMobileMenu(false);
-                    router.push("/profile");
+                    router.push("/profilePage");
                   }}
                 >
                   👤 Hồ sơ của tôi
@@ -293,7 +304,7 @@ export function Header({
                   className="mobile-nav-link"
                   onClick={() => {
                     setShowMobileMenu(false);
-                    navTo("coin-shop");
+                    router.push("/coinShopPage");
                   }}
                 >
                   🪙 Coin Shop
@@ -323,19 +334,14 @@ export function Header({
                   )}
                 </button>
                 <div
-                  style={{
-                    borderTop: "1.5px solid #f0ebe3",
-                    margin: "8px 0",
-                  }}
+                  style={{ borderTop: "1.5px solid #f0ebe3", margin: "8px 0" }}
                 />
                 <button
                   className="mobile-nav-link"
                   style={{ color: "#c23d3f" }}
                   onClick={() => {
-                    setUser(null);
+                    handleLogout();
                     setShowMobileMenu(false);
-                    navTo("home");
-                    show("Đã đăng xuất", "info");
                   }}
                 >
                   <Ico.LogOut /> Đăng xuất
@@ -348,7 +354,7 @@ export function Header({
 
       {/* ── NAV ── */}
       <nav className="nav">
-        <div className="logo" onClick={() => navTo("home")}>
+        <div className="logo" onClick={() => router.push("/homePage")}>
           <div className="logo-icon">T</div>
           Truyện<span className="logo-dot">Hay</span>
         </div>
@@ -391,7 +397,7 @@ export function Header({
                         }}
                         onClick={() => {
                           setActiveGenre("all");
-                          navTo("categories");
+                          router.push("/categoriesPage");
                           setShowCatMenu(false);
                         }}
                       >
@@ -437,7 +443,7 @@ export function Header({
           >
             <Ico.Search />
             <input
-              placeholder="Input search..."
+              placeholder="Tìm kiếm..."
               value={searchQ}
               onChange={(e) => {
                 setSearchQ(e.target.value);
@@ -446,7 +452,7 @@ export function Header({
               onFocus={() => setShowSearchDrop(true)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && searchQ.trim()) {
-                  navTo("search-results");
+                  router.push("/searchResultsPage");
                   setShowSearchDrop(false);
                 }
               }}
@@ -485,7 +491,7 @@ export function Header({
                       cursor: "pointer",
                     }}
                     onClick={() => {
-                      navTo("search-results");
+                      router.push("/searchResultsPage");
                       setShowSearchDrop(false);
                     }}
                   >
@@ -496,7 +502,7 @@ export function Header({
             )}
           </div>
 
-          {/* Dark mode toggle */}
+          {/* Dark mode */}
           <button
             className={`dark-toggle${darkMode ? " on" : ""}`}
             onClick={() => setDarkMode((d: boolean) => !d)}
@@ -511,17 +517,13 @@ export function Header({
             <>
               <button
                 className="btn-nav btn-primary"
-                onClick={() => {
-                  router.push("?login");
-                }}
+                onClick={() => router.push("?login")}
               >
                 Đăng nhập
               </button>
               <button
                 className="btn-nav btn-secondary-nav"
-                onClick={() => {
-                  router.push("?register");
-                }}
+                onClick={() => router.push("?register")}
               >
                 Đăng ký
               </button>
@@ -534,7 +536,6 @@ export function Header({
             </>
           ) : (
             <>
-              {/* Coins */}
               {(user.roles.includes("reviewer") ||
                 user.roles.includes("editor")) && (
                 <div
@@ -545,7 +546,6 @@ export function Header({
                 </div>
               )}
 
-              {/* Notifications – dùng NotificationPanel component */}
               <div className="notif-wrap" ref={notifRef}>
                 <button
                   className="relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border-[1.5px] border-[#e8e0d6] bg-white transition-all duration-150 hover:border-[#c23d3f] hover:bg-[#fdf7f5]"
@@ -563,14 +563,13 @@ export function Header({
                   <NotificationPanel
                     notifications={notifications}
                     unreadCount={unreadCount}
-                    onMarkAll={handleMarkAllRead}
-                    onMarkOne={handleMarkOneRead}
-                    onViewAll={handleViewAllNotifs}
+                    onMarkAll={markAllRead}
+                    onMarkOne={markOneRead}
+                    onViewAll={() => navTo("notifications")}
                   />
                 )}
               </div>
 
-              {/* User menu – upgraded with role chip + email */}
               <div
                 className="user-menu-wrap"
                 ref={userMenuRef}
@@ -608,9 +607,7 @@ export function Header({
                           </div>
                           <div className="dropdown-email">{user.email}</div>
                           <span
-                            className={`dropdown-role-chip ${
-                              ROLE_CHIP_CLASS[primaryRole] || "chip-role-reader"
-                            }`}
+                            className={`dropdown-role-chip ${ROLE_CHIP_CLASS[primaryRole] || "chip-role-reader"}`}
                           >
                             {ROLE_LABEL[primaryRole] || "Độc giả"}
                           </span>
@@ -630,7 +627,7 @@ export function Header({
                         }}
                         onClick={() => {
                           setShowUserMenu(false);
-                          navTo("coin-shop");
+                          router.push("/coinShopPage");
                         }}
                       >
                         Coin Shop →
@@ -643,8 +640,7 @@ export function Header({
                         router.push("/profilePage");
                       }}
                     >
-                      <Ico.User />
-                      Hồ sơ của tôi
+                      <Ico.User /> Hồ sơ của tôi
                     </button>
                     <button
                       className="dropdown-item"
@@ -653,8 +649,7 @@ export function Header({
                         navTo("notifications");
                       }}
                     >
-                      <Ico.Bell />
-                      Thông báo
+                      <Ico.Bell /> Thông báo
                       {unreadCount > 0 && (
                         <span
                           style={{
@@ -670,7 +665,7 @@ export function Header({
                         </span>
                       )}
                     </button>
-                    {user.roles.includes("author") && (
+                    {user.roles.includes("AUTHOR") && (
                       <button
                         className="dropdown-item"
                         onClick={() => {
@@ -678,11 +673,10 @@ export function Header({
                           navTo("my-stories");
                         }}
                       >
-                        <Ico.Pen />
-                        Tác phẩm của tôi
+                        <Ico.Pen /> Tác phẩm của tôi
                       </button>
                     )}
-                    {user.roles.includes("reviewer") && (
+                    {user.roles.includes("REVIEWER") && (
                       <button
                         className="dropdown-item"
                         onClick={() => {
@@ -690,9 +684,8 @@ export function Header({
                           navTo("reviewer-dash");
                         }}
                       >
-                        <Ico.Shield />
-                        Bảng kiểm duyệt{" "}
-                        {pending.length > 0 && (
+                        <Ico.Shield /> Bảng kiểm duyệt{" "}
+                        {pending?.length > 0 && (
                           <span
                             style={{
                               marginLeft: "auto",
@@ -708,7 +701,7 @@ export function Header({
                         )}
                       </button>
                     )}
-                    {user.roles.includes("editor") && (
+                    {user.roles.includes("EDITOR") && (
                       <button
                         className="dropdown-item"
                         onClick={() => {
@@ -716,18 +709,22 @@ export function Header({
                           navTo("editor-dash");
                         }}
                       >
-                        <Ico.Edit />
-                        Bảng nhiệm vụ
+                        <Ico.Edit /> Bảng nhiệm vụ
                       </button>
                     )}
                     <div className="dropdown-divider" />
-                    {user.roles.includes("reader") && (
+                    {user.roles.includes("READER") && (
                       <>
                         <button
                           className="dropdown-item"
                           onClick={() => {
                             setShowUserMenu(false);
-                            openModal("become-author");
+                            openModal(BecomeAuthorModal, {
+                              onSuccess: (penName: string) => {
+                                closeModal();
+                                // xử lý thêm: gọi API, toast...
+                              },
+                            });
                           }}
                         >
                           ✒ Trở thành Tác giả
@@ -736,7 +733,12 @@ export function Header({
                           className="dropdown-item"
                           onClick={() => {
                             setShowUserMenu(false);
-                            openModal("become-reviewer");
+                            openModal(BecomeReviewerModal, {
+                              onSuccess: (reviewerInfo: any) => {
+                                closeModal();
+                                // xử lý thêm: gọi API, toast...
+                              },
+                            });
                           }}
                         >
                           🛡 Trở thành Reviewer
@@ -745,7 +747,12 @@ export function Header({
                           className="dropdown-item"
                           onClick={() => {
                             setShowUserMenu(false);
-                            openModal("become-editor");
+                            openModal(BecomeEditorModal, {
+                              onSuccess: (editorInfo: any) => {
+                                closeModal();
+                                // xử lý thêm: gọi API, toast...
+                              },
+                            });
                           }}
                         >
                           ✏ Trở thành Editor
@@ -757,20 +764,16 @@ export function Header({
                       className="dropdown-item"
                       onClick={() => {
                         setShowUserMenu(false);
-                        openModal("settings");
+                        openModal(SettingsModal);
                       }}
                     >
-                      <Ico.Settings />
-                      Cài đặt
+                      <Ico.Settings /> Cài đặt
                     </button>
                     <button
                       className="dropdown-item danger"
-                      onClick={() => {
-                        handleLogout();
-                      }}
+                      onClick={handleLogout}
                     >
-                      <Ico.LogOut />
-                      Đăng xuất
+                      <Ico.LogOut /> Đăng xuất
                     </button>
                   </div>
                 )}
