@@ -114,10 +114,6 @@ export function ProfilePage() {
           <span>0 coin</span>
         </div>
       </div>
-
-      <div className="fade-in">
-        <div className="empty-state">Nội dung sẽ hiển thị tại đây</div>
-      </div>
     </div>
   );
 }

@@ -1,6 +1,11 @@
 // stores/storyStore.ts
 import { create } from "zustand";
-import { MOCK_CHAPTERS, MOCK_REVIEWS, MOCK_STORIES } from "@/utils/mockData";
+import {
+  CHAPTER_TEXTS,
+  MOCK_CHAPTERS,
+  MOCK_REVIEWS,
+  MOCK_STORIES,
+} from "@/utils/mockData";
 
 interface Story {
   id: number;
@@ -54,11 +59,13 @@ interface StoryStore {
   readProgress: Record<string, number>;
   searchQ: string;
   reviews: Review[];
-  setReviews: (reviews: Review[]) => void;
-
   chapters: Chapter[];
+  unlockedChapters: number[];
+  fontSize: number;
+  selectedChapter: number;
+  chapterTexts: Record<number, string[]>;
 
-  unlockedChapters: Set<number>;
+  setReviews: (reviews: Review[]) => void;
   unlockChapter: (chapterId: number, price: number) => void;
   setSearchQ: (q: string) => void;
   setReadProgress: (chapterId: string, progress: number) => void;
@@ -68,6 +75,8 @@ interface StoryStore {
     id: number,
     showFn?: (msg: string, type: string) => void,
   ) => void;
+  setFontSize: (size: number) => void;
+  setSelectedChapter: (idx: number) => void;
 }
 
 export const useStoryStore = create<StoryStore>((set) => ({
@@ -78,12 +87,16 @@ export const useStoryStore = create<StoryStore>((set) => ({
   readProgress: {},
   searchQ: "",
   reviews: MOCK_REVIEWS,
-  setReviews: (reviews) => set({ reviews }),
   chapters: MOCK_CHAPTERS,
-  unlockedChapters: new Set(),
-  unlockChapter: (chapterId, price) =>
+  unlockedChapters: [],
+  fontSize: 18,
+  selectedChapter: 0,
+  chapterTexts: CHAPTER_TEXTS,
+
+  setReviews: (reviews) => set({ reviews }),
+  unlockChapter: (chapterId) =>
     set((state) => ({
-      unlockedChapters: new Set([...state.unlockedChapters, chapterId]),
+      unlockedChapters: [...state.unlockedChapters, chapterId],
     })),
   setSearchQ: (q) => set({ searchQ: q }),
   setReadProgress: (chapterId, progress) =>
@@ -105,4 +118,6 @@ export const useStoryStore = create<StoryStore>((set) => ({
           : [...state.likedStories, id],
       };
     }),
+  setFontSize: (size) => set({ fontSize: size }),
+  setSelectedChapter: (idx) => set({ selectedChapter: idx }),
 }));

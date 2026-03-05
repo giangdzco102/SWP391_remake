@@ -96,7 +96,7 @@ export function StoryDetailPage() {
     <div className="fade-in">
       <div className="detail-wrap">
         <div className="mobile-user-info">
-          <button className="back-btn" onClick={() => navTo("home")}>
+          <button className="back-btn" onClick={() => router.push("/homePage")}>
             <Ico.Back />
             Quay lại
           </button>
@@ -176,7 +176,7 @@ export function StoryDetailPage() {
                 <button
                   className="btn-hero btn-hero-primary"
                   style={{ fontSize: 14 }}
-                  onClick={() => requireAuth(() => navTo("read"))}
+                  onClick={() => requireAuth(() => router.push("/readerPage"))}
                 >
                   <Ico.Book />
                   Đọc từ đầu
@@ -208,7 +208,7 @@ export function StoryDetailPage() {
           </div>
           <div className="chapters-list">
             {chapters.map((ch, i) => {
-              const isLocked = ch.locked && !unlockedChapters?.has(ch.id);
+              const isLocked = ch.locked && !unlockedChapters?.includes(ch.id);
               return (
                 <div
                   key={ch.id}

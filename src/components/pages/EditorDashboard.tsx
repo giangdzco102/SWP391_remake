@@ -146,7 +146,8 @@ export function EditorDashboard({
       {editorTab === "mine" &&
         (myTasks.length === 0 ? (
           <div className="empty-state">
-            Chưa có nhiệm vụ đang làm<p>Nhận nhiệm vụ từ tab "Mở".</p>
+            Chưa có nhiệm vụ đang làm
+            <p>Nhận nhiệm vụ từ tab `&quot;`Mở`&quot;`.</p>
           </div>
         ) : (
           myTasks.map((task) => (
