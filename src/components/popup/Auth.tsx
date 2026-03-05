@@ -41,8 +41,8 @@ const Auth = () => {
   if (!isLogin && !isRegister) return null;
 
   return (
-    <div className="modal-overlay" onClick={handleClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
+      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-title">
             {isLogin && step !== "forgot" && step !== "reset" && "Đăng nhập"}

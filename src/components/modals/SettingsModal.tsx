@@ -69,11 +69,11 @@ export function SettingsModal({ user, onClose, show }: any) {
     ["notifications", "🔔", "Thông báo"],
   ];
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div
         className="modal modal-wide"
         style={{ maxWidth: 540 }}
-        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="modal-header">
           <div className="modal-title">
@@ -574,8 +574,8 @@ export function BecomeAuthorModal({ onClose, onSuccess }) {
   const [genre, setGenre] = useState("");
   const [bio, setBio] = useState("");
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-title">
             <Ico.Pen />
@@ -650,8 +650,8 @@ export function BecomeReviewerModal({ onClose, onSuccess }) {
   const [experience, setExperience] = useState("");
   const [agreed, setAgreed] = useState(false);
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-title">
             <Ico.Shield />
@@ -750,8 +750,8 @@ export function BecomeEditorModal({ onClose, onSuccess }) {
   const toggle = (s) =>
     setSkills((p) => (p.includes(s) ? p.filter((x) => x !== s) : [...p, s]));
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-title">
             <Ico.Edit />
