@@ -9,13 +9,8 @@ export function StoryCard({ story, onStory, liked, onLike }) {
       {/* Cover Image Section */}
       <div className="relative aspect-[1/1.35] w-full overflow-hidden rounded-xl">
         <div
-          className="h-full w-full transition-transform duration-300 group-hover:scale-105"
-          style={{
-            backgroundImage: `url(${story.cover})`,
-            backgroundPosition: "center",
-            backgroundSize: "cover",
-            backgroundRepeat: "no-repeat",
-          }}
+          className="h-full w-full bg-center bg-cover bg-no-repeat transition-transform duration-300 group-hover:scale-105"
+          style={{ background: story.cover }}
         />
 
         {/* Like Button */}
