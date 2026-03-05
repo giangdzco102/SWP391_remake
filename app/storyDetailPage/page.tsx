@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Ico } from "@/components/Icons";
 import { StarRating } from "@/components/ui";
 import { useStoryStore } from "@/stores/storyStore";
@@ -7,6 +7,7 @@ import { useNavStore } from "@/stores/navStore";
 import { useAuthStore } from "@/stores";
 import { useRouter } from "next/navigation";
 import { useGotoStory } from "@/hooks/useGotoStory";
+import useChapterService from "@/api/useChapter.service";
 
 export function StoryDetailPage() {
   const {
@@ -18,11 +19,45 @@ export function StoryDetailPage() {
     reviews,
     setReviews,
     chapters,
+    setChapters,
   } = useStoryStore();
-  const { selectedStory: story, navTo } = useNavStore();
+  const { selectedStory: story, navTo, setSelectedChapterId } = useNavStore();
   const gotoStory = useGotoStory();
   const { user } = useAuthStore();
   const router = useRouter();
+  const { getChaptersByStory } = useChapterService();
+
+  // Fetch chapters from API when story changes
+  useEffect(() => {
+    if (!story?.id) return;
+    getChaptersByStory(story.id)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((res: any) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const list: any[] = res?.data ?? res ?? [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mapped = list.map((ch: any) => {
+          const wordCount = ch.content
+            ? ch.content.trim().split(/\s+/).length
+            : 0;
+          const mins = Math.max(1, Math.ceil(wordCount / 200));
+          return {
+            id: ch.id,
+            title: ch.title,
+            words: wordCount,
+            readTime: `${mins} phút`,
+            publishedAt: ch.publishAt
+              ? new Date(ch.publishAt).toLocaleDateString("vi-VN")
+              : undefined,
+            locked: (ch.coinPrice ?? 0) > 0 && !ch.isPurchased,
+            price: ch.coinPrice ?? 0,
+          };
+        });
+        setChapters(mapped);
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [story?.id]);
 
   const [userRating, setUserRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -176,7 +211,13 @@ export function StoryDetailPage() {
                 <button
                   className="btn-hero btn-hero-primary"
                   style={{ fontSize: 14 }}
-                  onClick={() => requireAuth(() => router.push("/readerPage"))}
+                  onClick={() => requireAuth(() => {
+                    const firstChapter = chapters[0];
+                    if (firstChapter?.id) {
+                      setSelectedChapterId(firstChapter.id);
+                      router.push("/readerPage");
+                    }
+                  })}
                 >
                   <Ico.Book />
                   Đọc từ đầu
@@ -213,9 +254,12 @@ export function StoryDetailPage() {
                 <div
                   key={ch.id}
                   className={`chapter-item${isLocked ? " chapter-locked" : ""}`}
-                  onClick={() => {
-                    if (!isLocked) requireAuth(() => navTo("read"));
-                  }}
+                  onClick={() => requireAuth(() => {
+                    if (!isLocked && ch.id) {
+                      setSelectedChapterId(ch.id);
+                      router.push("/readerPage");
+                    }
+                  })}
                   style={
                     isLocked
                       ? {

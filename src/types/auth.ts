@@ -51,6 +51,16 @@ export type PayloadLogout = {
   refreshToken: string;
 };
 
+export interface PayloadUpdateProfile {
+  fullName?: string;
+  avatarUrl?: string;
+  bio?: string;
+  phone?: string;
+  dateOfBirth?: string; // yyyy-MM-dd
+  gender?: "MALE" | "FEMALE" | "OTHER";
+  location?: string;
+}
+
 export type RequestSignin = {
   email: string;
   password: string;

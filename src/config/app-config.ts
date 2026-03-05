@@ -2,45 +2,150 @@ export default class APP_CONFIG {
   static ACCESS_TOKEN = "access_token";
   static REFRESH_TOKEN = "refresh_token";
   static API_URL = process.env.NEXT_PUBLIC_BASE_URL;
-  // static FIREBASE = {
-  //   APIKEY: "AIzaSyDxto9TSGB6gyLIrO_TPNUj671ajdi5SHg",
-  //   AUTH_DOMAIN: "affiliate-e80ad.firebaseapp.com",
-  //   PROJECT_ID: "affiliate-e80ad",
-  //   STORAGE_BUCKET: "affiliate-e80ad.firebasestorage.app",
-  //   MESSAGING_SENDER_ID: "450519252584",
-  //   APP_ID: "1:450519252584:web:76292245d3cf8652cdc5dd",
-  //   MEASUREMENT_ID: "G-KN34PM1725",
-  // };
 
+  // ── Auth ─────────────────────────────────────────────────────────────────
   static AUTH = {
-    FORGOT_PASSWORD: "/auth/forgot-password",
-    RESET_PASSWORD: "/auth/reset-password",
+    SIGNIN:              "/auth/login",
+    SIGNUP:              "/auth/sign-up",
+    VERIFY_OTP:          "/auth/sign-up/verify-otp",
+    RESEND_OTP:          "/auth/sign-up/resend-otp",
+    RESEND_VERIFICATION: "/auth/resend-verification",
+    LOGOUT:              "/auth/logout",
+    REFRESH:             "/auth/refresh",
+    FORGOT_PASSWORD:     "/auth/forgot-password",
+    RESET_PASSWORD:      "/auth/reset-password",
+    VERIFY_EMAIL:        "/auth/verify",
+    OAUTH2_VERIFY_OTP:   "/auth/oauth2/verify-otp",
+  };
+
+  // ── User ──────────────────────────────────────────────────────────────────
+  static USER = {
+    GETME:           "/users/me",
+    UPDATE_PROFILE:  "/users/me",
     CHANGE_PASSWORD: "/users/me/change-password",
-    VERIFY_OTP: "/auth/sign-up/verify-otp",
-    SIGNUP: "/auth/sign-up",
-    SIGNIN: "/auth/login",
-    GETME: "/users/me",
-    // SIGNIN_WITH_GOOGLE: "/authorization/system/google/login",
-    LOGOUT: "/auth/logout",
   };
 
-  static CONVERSATION = {
-    END_POINT: "/conversation",
-    GET: (param: string) => `/conversation${param}`,
+  // ── Story ─────────────────────────────────────────────────────────────────
+  static STORY = {
+    LIST:        "/stories",
+    MY:          "/stories/my",
+    SEARCH:      "/stories/search",
+    CREATE:      "/stories",
+    GET:         (id: string | number) => `/stories/${id}`,
+    UPDATE:      (id: string | number) => `/stories/${id}`,
+    DELETE:      (id: string | number) => `/stories/${id}`,
+    DETAIL:      (id: string | number) => `/stories/${id}/detail`,
+    SUBMIT:      (id: string | number) => `/stories/${id}/submit`,
   };
 
-  static TOPIC = {
-    END_POINT: "/topic",
-    GET: (param: string) => `/topic${param}`,
-  };
-  static TOOLS = {
-    SEARCH_RENT_HOUSE: "/agent-tool/search-rent-house",
-    SEARCH_BUY_HOUSE: "/agent-tool/search-buy-house",
+  // ── Chapter ───────────────────────────────────────────────────────────────
+  static CHAPTER = {
+    BY_STORY:  (storyId: string | number) => `/chapters/story/${storyId}`,
+    CREATE:    (storyId: string | number) => `/chapters/story/${storyId}`,
+    GET:       (id: string | number) => `/chapters/${id}`,
+    UPDATE:    (id: string | number) => `/chapters/${id}`,
+    DELETE:    (id: string | number) => `/chapters/${id}`,
+    PURCHASE:  (id: string | number) => `/chapters/${id}/purchase`,
+    PUBLISH:   (id: string | number) => `/chapters/${id}/publish`,
   };
 
-  static BLOG = {
-    END_POINT: "/blog",
-    GET: (param: string) => `/blog${param}`,
-    GET_DETAIL: (id: string) => `/blog/${id}`,
+  // ── Category ──────────────────────────────────────────────────────────────
+  static CATEGORY = {
+    LIST:   "/categories",
+    CREATE: "/categories",
+    UPDATE: (id: string | number) => `/categories/${id}`,
+    DELETE: (id: string | number) => `/categories/${id}`,
+  };
+
+  // ── Follow ────────────────────────────────────────────────────────────────
+  static FOLLOW = {
+    LIST:   "/follows",
+    TOGGLE: (storyId: string | number) => `/follows/${storyId}`,
+    STATUS: (storyId: string | number) => `/follows/${storyId}/status`,
+  };
+
+  // ── Comment ───────────────────────────────────────────────────────────────
+  static COMMENT = {
+    CREATE:      "/comments",
+    BY_CHAPTER:  (chapterId: string | number) => `/comments/chapter/${chapterId}`,
+    DELETE:      (id: string | number) => `/comments/${id}`,
+  };
+
+  // ── Report ────────────────────────────────────────────────────────────────
+  static REPORT = {
+    CREATE: "/reports",
+    MY:     "/reports/my",
+  };
+
+  // ── Mission ───────────────────────────────────────────────────────────────
+  static MISSION = {
+    LIST:     "/missions",
+    COMPLETE: (missionId: string | number) => `/missions/${missionId}/complete`,
+  };
+
+  // ── Role Change Request ───────────────────────────────────────────────────
+  static ROLE_CHANGE = {
+    CREATE: "/role-change-requests",
+    MY:     "/role-change-requests/my",
+  };
+
+  // ── Withdraw Request ──────────────────────────────────────────────────────
+  static WITHDRAW = {
+    CREATE: "/withdraw-requests",
+    MY:     "/withdraw-requests/my",
+  };
+
+  // ── Wallet ────────────────────────────────────────────────────────────────
+  static WALLET = {
+    GET:          "/wallet",
+    TOPUP:        "/wallet/topup",
+    TRANSACTIONS: "/wallet/transactions",
+  };
+
+  // ── Gift ──────────────────────────────────────────────────────────────────
+  static GIFT = {
+    SEND:     "/gifts",
+    BY_STORY: (storyId: string | number) => `/gifts/story/${storyId}`,
+    SENT:     "/gifts/sent",
+    RECEIVED: "/gifts/received",
+  };
+
+  // ── Reviewer ──────────────────────────────────────────────────────────────
+  static REVIEWER = {
+    PENDING_STORIES:  "/reviewer/stories/pending",
+    PENDING_CHAPTERS: "/reviewer/chapters/pending",
+    REVIEW_STORY:     (id: string | number) => `/reviewer/stories/${id}/review`,
+    REVIEW_CHAPTER:   (id: string | number) => `/reviewer/chapters/${id}/review`,
+  };
+
+  // ── Editor ────────────────────────────────────────────────────────────────
+  static EDITOR = {
+    PENDING_CHAPTERS: "/editor/chapters/pending",
+    ASSIGN:           (chapterId: string | number) => `/editor/chapters/${chapterId}/assign`,
+    EDIT:             (chapterId: string | number) => `/editor/chapters/${chapterId}/edit`,
+    VERSIONS:         (chapterId: string | number) => `/editor/chapters/${chapterId}/versions`,
+  };
+
+  // ── Admin ─────────────────────────────────────────────────────────────────
+  static ADMIN = {
+    DASHBOARD:               "/admin/dashboard",
+    USERS:                   "/admin/users",
+    UPDATE_USER_ROLES:       "/admin/users/roles",
+    PENDING_STORIES:         "/admin/stories/pending",
+    REVIEW_STORY:            (id: string | number) => `/admin/stories/${id}/review`,
+    ALL_REPORTS:             "/admin/reports",
+    PENDING_REPORTS:         "/admin/reports/pending",
+    RESOLVE_REPORT:          (id: string | number) => `/admin/reports/${id}/resolve`,
+    ALL_ROLE_REQUESTS:       "/admin/role-change-requests",
+    PENDING_ROLE_REQUESTS:   "/admin/role-change-requests/pending",
+    REVIEW_ROLE_REQUEST:     "/admin/role-change-requests/review",
+    ALL_WITHDRAW_REQUESTS:   "/admin/withdraw-requests",
+    PENDING_WITHDRAW:        "/admin/withdraw-requests/pending",
+    APPROVE_WITHDRAW:        (id: string | number) => `/admin/withdraw-requests/${id}/approve`,
+    REJECT_WITHDRAW:         (id: string | number) => `/admin/withdraw-requests/${id}/reject`,
+    CREATE_MISSION:          "/admin/missions",
+    UPDATE_MISSION:          (id: string | number) => `/admin/missions/${id}`,
+    DELETE_MISSION:          (id: string | number) => `/admin/missions/${id}`,
   };
 }
+

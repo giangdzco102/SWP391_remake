@@ -1,11 +1,61 @@
 "use client";
-import { GENRES } from "@/utils/mockData";
+import { useEffect, useState } from "react";
 import { Ico } from "@/components/Icons";
 import { useStoryStore } from "@/stores/storyStore";
 import { useNavStore } from "@/stores/navStore";
 import { useToast } from "@/hooks/use-toast";
 import { useGotoStory } from "@/hooks/useGotoStory";
 import { StoryCard } from "../../src/components/storyCard/page";
+import useStoryService from "@/api/useStory.service";
+import useCategoryService, { CategoryItem } from "@/api/useCategory.service";
+
+// Gradient fallbacks khi cover chưa có
+const COVER_GRADIENTS = [
+  "linear-gradient(135deg,#f093fb,#f5576c)",
+  "linear-gradient(135deg,#4facfe,#00f2fe)",
+  "linear-gradient(135deg,#43e97b,#38f9d7)",
+  "linear-gradient(135deg,#fa709a,#fee140)",
+  "linear-gradient(135deg,#a18cd1,#fbc2eb)",
+  "linear-gradient(135deg,#ffecd2,#fcb69f)",
+  "linear-gradient(135deg,#667eea,#764ba2)",
+  "linear-gradient(135deg,#f7971e,#ffd200)",
+];
+
+// Map API response item → shape mà StoryCard cần
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const isRealCover = (url?: string) =>
+  !!url &&
+  !url.includes("placeholder.com") &&
+  !url.includes("via.placeholder") &&
+  !url.includes("placeholder");
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const toStoryShape = (s: any, idx: number) => ({
+  id: s.id,
+  title: s.title,
+  author: s.authorName ?? "",
+  penName: s.authorName ?? "",
+  cover: isRealCover(s.coverUrl)
+    ? `url("${s.coverUrl}")`
+    : COVER_GRADIENTS[idx % COVER_GRADIENTS.length],
+  genre: s.categories?.[0]?.name ?? s.genre ?? "",
+  tags: [],
+  rating: s.averageRating ?? 0,
+  reviewCount: 0,
+  reads:
+    s.viewCount != null
+      ? s.viewCount >= 1000
+        ? `${(s.viewCount / 1000).toFixed(1)}K`
+        : String(s.viewCount)
+      : "0",
+  views: s.viewCount ?? 0,
+  favorites: s.favoriteCount ?? 0,
+  chapters: s.totalChapters ?? 0,
+  description: s.summary ?? "",
+  status: s.status === "APPROVED" ? "ongoing" : "pending",
+  featured: false,
+  excerpt: s.summary ?? "",
+});
 
 export function HomePage() {
   const {
@@ -13,12 +63,38 @@ export function HomePage() {
     allStories,
     activeGenre,
     setActiveGenre,
+    setStories,
+    setAllStories,
     likedStories,
     toggleLike,
   } = useStoryStore();
   const { navTo } = useNavStore();
   const gotoStory = useGotoStory();
   const toast = useToast();
+  const { getStories } = useStoryService();
+  const { getCategories } = useCategoryService();
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+
+  useEffect(() => {
+    getStories({ size: 20 })
+      .then((res: any) => {
+        const list: any[] = res?.data ?? res ?? [];
+        const mapped = list.map(toStoryShape);
+        setStories(mapped);
+        setAllStories(mapped);
+      })
+      .catch(() => {
+        // giữ mock data nếu API lỗi
+      });
+
+    getCategories()
+      .then((res: any) => {
+        const list: CategoryItem[] = res?.data ?? res ?? [];
+        setCategories(list);
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filteredStories =
     activeGenre === "all"
@@ -30,13 +106,13 @@ export function HomePage() {
       {/* Genre filter */}
       <div className="section" style={{ paddingBottom: 0 }}>
         <div className="genre-filters">
-          {["all", ...GENRES].map((g) => (
+          {[{ id: 0, name: "all" }, ...categories].map((cat) => (
             <button
-              key={g}
-              className={`tab-btn${activeGenre === g ? " active" : ""}`}
-              onClick={() => setActiveGenre(g)}
+              key={cat.id}
+              className={`tab-btn${activeGenre === cat.name ? " active" : ""}`}
+              onClick={() => setActiveGenre(cat.name)}
             >
-              {g === "all" ? "Tất cả" : g}
+              {cat.name === "all" ? "Tất cả" : cat.name}
             </button>
           ))}
         </div>
