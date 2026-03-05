@@ -11,9 +11,10 @@ export function StoryCard({ story, onStory, liked, onLike }) {
         <div
           className="h-full w-full transition-transform duration-300 group-hover:scale-105"
           style={{
-            background: story.cover,
-            backgroundSize: "cover",
+            backgroundImage: `url(${story.cover})`,
             backgroundPosition: "center",
+            backgroundSize: "cover",
+            backgroundRepeat: "no-repeat",
           }}
         />
 
