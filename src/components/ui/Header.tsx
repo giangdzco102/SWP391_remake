@@ -8,6 +8,7 @@ import { GENRES, GENRE_META } from "../../utils/mockData";
 import { useAuthStore } from "@/stores";
 import { useToast } from "@/hooks/use-toast";
 import useAuthService from "@/api/useAuth.service";
+import useStoryService from "@/api/useStory.service";
 import APP_CONFIG from "@/config/app-config";
 import { useNavStore } from "@/stores/navStore";
 import { useStoryStore } from "@/stores/storyStore";
@@ -47,16 +48,42 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
   const { logout } = useAuthService();
   const toast = useToast();
 
-  // Search results computed locally
-  const searchResults =
-    (searchQ ?? "").trim().length > 1
-      ? stories.filter(
-          (s) =>
-            s.title.toLowerCase().includes(searchQ.toLowerCase()) ||
-            s.penName.toLowerCase().includes(searchQ.toLowerCase()) ||
-            s.genre.toLowerCase().includes(searchQ.toLowerCase()),
-        )
-      : [];
+  const { searchStories } = useStoryService();
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const runSearch = (q: string) => {
+    if (q.trim().length < 2) { setSearchResults([]); return; }
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      searchStories({ keyword: q, size: 8 })
+        .then((res: any) => {
+          const list: any[] = res?.data ?? res ?? [];
+          setSearchResults(list.map((s: any, idx: number) => ({
+            id: s.id,
+            title: s.title,
+            penName: s.authorName ?? "",
+            genre: s.categories?.[0]?.name ?? "",
+            cover: s.coverUrl
+              ? `url("${s.coverUrl}")`
+              : ["linear-gradient(135deg,#f093fb,#f5576c)","linear-gradient(135deg,#4facfe,#00f2fe)","linear-gradient(135deg,#43e97b,#38f9d7)"][idx % 3],
+            views: s.viewCount ?? 0,
+            chapters: s.totalChapters ?? 0,
+            status: s.status === "COMPLETED" ? "done" : "ongoing",
+            rating: s.averageRating ?? 0,
+            reads: s.viewCount >= 1000 ? `${(s.viewCount/1000).toFixed(1)}K` : String(s.viewCount ?? 0),
+            author: s.authorName ?? "",
+            tags: [],
+            reviewCount: 0,
+            favorites: s.favoriteCount ?? 0,
+            description: s.summary ?? "",
+            featured: false,
+            excerpt: s.summary ?? "",
+          })));
+        })
+        .catch(() => setSearchResults([]));
+    }, 300);
+  };
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -449,6 +476,7 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
               onChange={(e) => {
                 setSearchQ(e.target.value);
                 setShowSearchDrop(true);
+                runSearch(e.target.value);
               }}
               onFocus={() => setShowSearchDrop(true)}
               onKeyDown={(e) => {

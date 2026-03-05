@@ -20,6 +20,8 @@ interface Story {
   status: string;
   featured: boolean;
   excerpt: string;
+  categoryId?: number | null;
+  updatedAt?: string;
 }
 
 interface Review {
