@@ -83,6 +83,7 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
         refreshToken: localStorage.getItem(APP_CONFIG.REFRESH_TOKEN) || "",
       });
       toast.success("Đăng xuất thành công!");
+      router.push("/");
     } catch (error) {
       toast.error("Đăng xuất không thành công");
       console.error("Lỗi đăng xuất:", error);

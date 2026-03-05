@@ -63,6 +63,8 @@ interface StoryStore {
   setSearchQ: (q: string) => void;
   setReadProgress: (chapterId: string, progress: number) => void;
   setStories: (stories: Story[]) => void;
+  setAllStories: (stories: Story[]) => void;
+  setChapters: (chapters: Chapter[]) => void;
   setActiveGenre: (genre: string) => void;
   toggleLike: (
     id: number,
@@ -91,6 +93,8 @@ export const useStoryStore = create<StoryStore>((set) => ({
       readProgress: { ...state.readProgress, [chapterId]: progress },
     })),
   setStories: (stories) => set({ stories }),
+  setAllStories: (stories) => set({ allStories: stories }),
+  setChapters: (chapters) => set({ chapters }),
   setActiveGenre: (genre) => set({ activeGenre: genre }),
   toggleLike: (id, showFn) =>
     set((state) => {

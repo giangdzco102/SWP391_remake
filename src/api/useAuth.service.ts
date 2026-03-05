@@ -13,6 +13,7 @@ import {
   PayloadChangePassword,
   PayloadForgotPassword,
   PayloadResetPassword,
+  PayloadUpdateProfile,
 } from "@/types/auth";
 import { Response } from "@/types/global";
 import useHttpClient from "./useHttpClient";
@@ -29,6 +30,7 @@ export type ResultAuthService = {
   changePassword?: (payload: PayloadChangePassword) => Promise<any>;
   forgotPassword?: (payload: PayloadForgotPassword) => Promise<any>;
   resetPassword?: (payload: PayloadResetPassword) => Promise<any>;
+  updateProfile?: (payload: PayloadUpdateProfile) => Promise<DataGetMe | undefined>;
 };
 
 const useAuthService = (): ResultAuthService => {
@@ -48,7 +50,7 @@ const useAuthService = (): ResultAuthService => {
   };
 
   const changePassword = (payload: PayloadChangePassword): Promise<any> => {
-    return httpClient.post(APP_CONFIG.AUTH.CHANGE_PASSWORD, payload);
+    return httpClient.put(APP_CONFIG.USER.CHANGE_PASSWORD, payload);
   };
 
   const signin = (payload: PayloadSignin): Promise<Response<DataSignin>> => {
@@ -99,17 +101,20 @@ const useAuthService = (): ResultAuthService => {
           ? localStorage.getItem(APP_CONFIG.ACCESS_TOKEN)
           : null;
       const responseGetMe = await httpClient.get<Response<DataGetMe>>(
-        APP_CONFIG.AUTH.GETME,
+        APP_CONFIG.USER.GETME,
         {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
       );
 
-      if (responseGetMe && responseGetMe.data && responseGetMe.status) {
-        // Lưu thông tin người dùng vào localStorage hoặc cookie
-        setUser(responseGetMe.data);
-        return responseGetMe.data;
+      // Handle both wrapped { data: {...} } and direct user object responses
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const raw: any = responseGetMe;
+      const userData: DataGetMe | null = raw?.data?.id ? raw.data : (raw?.id ? raw : null);
+      if (userData) {
+        setUser(userData);
+        return userData;
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -133,8 +138,7 @@ const useAuthService = (): ResultAuthService => {
           );
         }
         const responseGetMe = await getMe();
-        setUser(responseGetMe); // Cập nhật thông tin người dùng vào store
-        return responseGetMe; // Trả về thông tin người dùng
+        return responseGetMe; // Trả về thông tin người dùng (setUser đã được gọi bên trong getMe)
       }
     } catch (error) {
       console.error("Login failed:", error);
@@ -156,6 +160,15 @@ const useAuthService = (): ResultAuthService => {
     }
   };
 
+  const updateProfile = async (payload: PayloadUpdateProfile): Promise<DataGetMe | undefined> => {
+    const raw: any = await httpClient.put(APP_CONFIG.USER.UPDATE_PROFILE, payload);
+    const userData: DataGetMe | null = raw?.data?.id ? raw.data : (raw?.id ? raw : null);
+    if (userData) {
+      setUser(userData);
+      return userData;
+    }
+  };
+
   return {
     signout,
     signin,
@@ -167,6 +180,7 @@ const useAuthService = (): ResultAuthService => {
     changePassword,
     forgotPassword,
     resetPassword,
+    updateProfile,
   };
 };
 

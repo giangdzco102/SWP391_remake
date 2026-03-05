@@ -7,7 +7,7 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { getAccessToken } from "@/utils/index";
 
 const createBaseInstance = (baseURL?: string): AxiosInstance => {
@@ -86,8 +86,9 @@ export type ResultHttpClient = {
 };
 
 const handleSuccess = (response: any) => {
+  const status = response?.status;
   if (
-    response?.status === 200 ||
+    (status >= 200 && status < 300) ||
     response?.data?.code === "200" ||
     response?.code === "200"
   ) {
@@ -101,9 +102,10 @@ export default function useHttpClient(
   isConvert?: boolean,
 ): ResultHttpClient {
   const router = useRouter();
-  // const dispatch = useDispatch();
-  const axiosBase = createBaseInstance(baseURL);
-  const axiosAuth = createBaseInstance(baseURL);
+  const axiosBaseRef = useRef<AxiosInstance>(createBaseInstance(baseURL));
+  const axiosAuthRef = useRef<AxiosInstance>(createBaseInstance(baseURL));
+  const axiosBase = axiosBaseRef.current;
+  const axiosAuth = axiosAuthRef.current;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -159,7 +161,7 @@ export default function useHttpClient(
       axiosAuth.interceptors.request.eject(requestInterceptor);
       axiosAuth.interceptors.response.eject(responseInterceptor);
     };
-  }, [axiosAuth, router]);
+  }, []);
 
   const getAuth = <T>(
     url: string,
