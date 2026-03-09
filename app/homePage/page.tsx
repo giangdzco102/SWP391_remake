@@ -1,6 +1,6 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useState, useRef,useCallback } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useStoryStore } from "@/stores/storyStore";
 import { useToast } from "@/hooks/use-toast";
 import { useGotoStory } from "@/hooks/useGotoStory";
@@ -90,19 +90,30 @@ function SkeletonRow() {
 }
 
 // ── Banner Slider ─────────────────────────────────────────────────────────────
-function BannerSlider({ stories, onStory }: { stories: StoryShape[]; onStory: (s: StoryShape) => void }) {
+function BannerSlider({
+  stories,
+  onStory,
+}: {
+  stories: StoryShape[];
+  onStory: (s: StoryShape) => void;
+}) {
   const [idx, setIdx] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const resetTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => setIdx((i) => (i + 1) % stories.length), 4500);
+    timerRef.current = setInterval(
+      () => setIdx((i) => (i + 1) % stories.length),
+      4500,
+    );
   }, [stories.length]);
 
   useEffect(() => {
     if (stories.length === 0) return;
     resetTimer();
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, [stories.length, resetTimer]);
 
   if (stories.length === 0) return null;
@@ -123,12 +134,12 @@ function BannerSlider({ stories, onStory }: { stories: StoryShape[]; onStory: (s
     >
       {/* Background blurred cover */}
       <div
+        className="absolute inset-0"
         style={{
-          position: "absolute",
-          inset: 0,
-          background: s.cover,
+          backgroundImage: s.cover,
           backgroundSize: "cover",
           backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
           filter: "blur(6px) brightness(0.45)",
           transform: "scale(1.08)",
           transition: "background 0.5s",
@@ -142,7 +153,7 @@ function BannerSlider({ stories, onStory }: { stories: StoryShape[]; onStory: (s
           inset: 0,
           display: "flex",
           alignItems: "center",
-          gap: 28,
+          gap: "28px",
           padding: "28px 32px",
         }}
       >
@@ -152,7 +163,7 @@ function BannerSlider({ stories, onStory }: { stories: StoryShape[]; onStory: (s
             width: 160,
             height: 220,
             borderRadius: 12,
-            background: s.cover,
+            backgroundImage: s.cover,
             backgroundSize: "cover",
             backgroundPosition: "center",
             flexShrink: 0,
@@ -162,7 +173,14 @@ function BannerSlider({ stories, onStory }: { stories: StoryShape[]; onStory: (s
 
         {/* Info */}
         <div style={{ color: "#fff", flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              marginBottom: 10,
+              flexWrap: "wrap",
+            }}
+          >
             <span
               style={{
                 background: "rgba(194,61,63,0.9)",
@@ -177,7 +195,10 @@ function BannerSlider({ stories, onStory }: { stories: StoryShape[]; onStory: (s
             </span>
             <span
               style={{
-                background: s.status === "done" ? "rgba(34,197,94,0.85)" : "rgba(251,191,36,0.85)",
+                background:
+                  s.status === "done"
+                    ? "rgba(34,197,94,0.85)"
+                    : "rgba(251,191,36,0.85)",
                 color: "#fff",
                 borderRadius: 20,
                 padding: "3px 12px",
@@ -204,8 +225,17 @@ function BannerSlider({ stories, onStory }: { stories: StoryShape[]; onStory: (s
           >
             {s.title}
           </h2>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", marginBottom: 10 }}>
-            bởi <span style={{ color: "#fcd34d", fontWeight: 600 }}>{s.penName}</span>
+          <div
+            style={{
+              fontSize: 13,
+              color: "rgba(255,255,255,0.75)",
+              marginBottom: 10,
+            }}
+          >
+            bởi{" "}
+            <span style={{ color: "#fcd34d", fontWeight: 600 }}>
+              {s.penName}
+            </span>
           </div>
           <p
             style={{
@@ -221,10 +251,20 @@ function BannerSlider({ stories, onStory }: { stories: StoryShape[]; onStory: (s
           >
             {s.description || s.excerpt}
           </p>
-          <div style={{ display: "flex", gap: 16, fontSize: 13, color: "rgba(255,255,255,0.7)", marginBottom: 18 }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 16,
+              fontSize: 13,
+              color: "rgba(255,255,255,0.7)",
+              marginBottom: 18,
+            }}
+          >
             <span>📖 {s.chapters} chương</span>
             <span>👁 {s.reads} lượt đọc</span>
-            <span>⭐ {Number(s.rating) > 0 ? Number(s.rating).toFixed(1) : "Mới"}</span>
+            <span>
+              ⭐ {Number(s.rating) > 0 ? Number(s.rating).toFixed(1) : "Mới"}
+            </span>
           </div>
           <button
             style={{
@@ -300,7 +340,7 @@ function NewUpdateItem({ s, onClick }: { s: StoryShape; onClick: () => void }) {
           width: 48,
           height: 64,
           borderRadius: 8,
-          background: s.cover,
+          backgroundImage: s.cover,
           backgroundSize: "cover",
           backgroundPosition: "center",
           flexShrink: 0,
@@ -326,7 +366,14 @@ function NewUpdateItem({ s, onClick }: { s: StoryShape; onClick: () => void }) {
         <div style={{ fontSize: 11, color: "#9e8e82" }}>
           Ch.{s.chapters} · {s.penName}
         </div>
-        <div style={{ fontSize: 11, color: "#b8921e", marginTop: 2, fontWeight: 600 }}>
+        <div
+          style={{
+            fontSize: 11,
+            color: "#b8921e",
+            marginTop: 2,
+            fontWeight: 600,
+          }}
+        >
           {s.updatedAt ? timeStartToNow(s.updatedAt) : "Vừa cập nhật"}
         </div>
       </div>
@@ -377,7 +424,7 @@ export function HomePage() {
         setCategories(list);
       })
       .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Load banner (top 6 view nhất, tất cả thể loại) ──────────────────────
@@ -388,7 +435,7 @@ export function HomePage() {
         setBannerStories(list.map(toStoryShape));
       })
       .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Load "mới cập nhật" (không filter genre) ────────────────────────────
@@ -403,7 +450,7 @@ export function HomePage() {
       })
       .catch(() => {})
       .finally(() => setLoadingNew(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Load "hot" theo period — load nhiều, filter client-side theo genre ────
@@ -421,13 +468,11 @@ export function HomePage() {
       })
       .catch(() => {})
       .finally(() => setLoadingHot(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hotPeriod]);
 
   // Top 5 sidebar rank — dùng hotStories (đã sort view từ API)
-  const top5 = [...hotStories]
-    .sort((a, b) => b.views - a.views)
-    .slice(0, 5);
+  const top5 = [...hotStories].sort((a, b) => b.views - a.views).slice(0, 5);
 
   const PERIOD_LABEL: Record<HotPeriod, string> = {
     day: "Hôm nay",
@@ -437,7 +482,6 @@ export function HomePage() {
 
   return (
     <div className="fade-in">
-
       {/* ── Banner Slider ─────────────────────────────────────────────────── */}
       <div className="section" style={{ paddingBottom: 0 }}>
         <BannerSlider stories={bannerStories} onStory={gotoStory} />
@@ -477,16 +521,25 @@ export function HomePage() {
       >
         {/* ── LEFT: Hot tabs + Mới cập nhật + Nổi bật ─────────────────────── */}
         <div>
-
           {/* Hot tabs: Ngày / Tuần / Tháng */}
           <div style={{ marginBottom: 24 }}>
             <div className="sec-head" style={{ marginBottom: 12 }}>
               <div>
                 <div className="sec-title">
-                  🔥 {activeGenre === "all" ? "Truyện hot" : `Hot · ${activeGenre}`}
+                  🔥{" "}
+                  {activeGenre === "all"
+                    ? "Truyện hot"
+                    : `Hot · ${activeGenre}`}
                 </div>
                 {activeGenre !== "all" && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      marginTop: 4,
+                    }}
+                  >
                     <span
                       style={{
                         fontSize: 12,
@@ -542,7 +595,9 @@ export function HomePage() {
             </div>
             {loadingHot ? (
               <div className="story-grid">
-                {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <SkeletonCard key={i} />
+                ))}
               </div>
             ) : hotStories.length === 0 ? (
               <div className="empty-state">Chưa có dữ liệu</div>
@@ -557,7 +612,11 @@ export function HomePage() {
                     onLike={() => {
                       const wasLiked = likedStories.includes(s.id);
                       toggleLike(s.id);
-                      toast.success(wasLiked ? "Đã bỏ yêu thích" : "Đã thêm vào yêu thích ❤");
+                      toast.success(
+                        wasLiked
+                          ? "Đã bỏ yêu thích"
+                          : "Đã thêm vào yêu thích ❤",
+                      );
                     }}
                   />
                 ))}
@@ -572,28 +631,55 @@ export function HomePage() {
                 <div className="sec-title">🆕 Mới cập nhật</div>
                 <div className="sec-sub">Cập nhật theo thời gian thực</div>
               </div>
-              <button className="see-all" onClick={() => router.push("/categoriesPage")}>
+              <button
+                className="see-all"
+                onClick={() => router.push("/categoriesPage")}
+              >
                 Xem tất cả →
               </button>
             </div>
             {loadingNew ? (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 24px" }}>
-                {Array.from({ length: 10 }).map((_, i) => <SkeletonRow key={i} />)}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "0 24px",
+                }}
+              >
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <SkeletonRow key={i} />
+                ))}
               </div>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 24px" }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "0 24px",
+                }}
+              >
                 {newStories.slice(0, 16).map((s) => (
-                  <NewUpdateItem key={s.id} s={s} onClick={() => gotoStory(s)} />
+                  <NewUpdateItem
+                    key={s.id}
+                    s={s}
+                    onClick={() => gotoStory(s)}
+                  />
                 ))}
               </div>
             )}
           </div>
-
         </div>
 
         {/* ── RIGHT SIDEBAR ─────────────────────────────────────────────────── */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 20, position: "sticky", top: 80 }}>
-
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 20,
+            position: "sticky",
+            top: 80,
+          }}
+        >
           {/* BXH top 5 */}
           <div className="sidebar-card">
             <div
@@ -604,7 +690,9 @@ export function HomePage() {
                 marginBottom: 12,
               }}
             >
-              <div className="sidebar-title" style={{ margin: 0 }}>🏆 Bảng xếp hạng</div>
+              <div className="sidebar-title" style={{ margin: 0 }}>
+                🏆 Bảng xếp hạng
+              </div>
               <button
                 className="see-all"
                 style={{ fontSize: 12 }}
@@ -614,7 +702,9 @@ export function HomePage() {
               </button>
             </div>
             {top5.length === 0 ? (
-              <div style={{ fontSize: 13, color: "#9e8e82" }}>Chưa có dữ liệu</div>
+              <div style={{ fontSize: 13, color: "#9e8e82" }}>
+                Chưa có dữ liệu
+              </div>
             ) : (
               top5.map((s, i) => (
                 <div
@@ -641,10 +731,13 @@ export function HomePage() {
                       fontWeight: 900,
                       flexShrink: 0,
                       background:
-                        i === 0 ? "linear-gradient(135deg,#f7d000,#e59400)"
-                        : i === 1 ? "linear-gradient(135deg,#c0c0c0,#909090)"
-                        : i === 2 ? "linear-gradient(135deg,#cd7f32,#a0522d)"
-                        : "#f5ede4",
+                        i === 0
+                          ? "linear-gradient(135deg,#f7d000,#e59400)"
+                          : i === 1
+                            ? "linear-gradient(135deg,#c0c0c0,#909090)"
+                            : i === 2
+                              ? "linear-gradient(135deg,#cd7f32,#a0522d)"
+                              : "#f5ede4",
                       color: i < 3 ? "#fff" : "#9e8e82",
                     }}
                   >
@@ -655,7 +748,7 @@ export function HomePage() {
                       width: 40,
                       height: 52,
                       borderRadius: 6,
-                      background: s.cover,
+                      backgroundImage: s.cover,
                       backgroundSize: "cover",
                       backgroundPosition: "center",
                       flexShrink: 0,
@@ -678,7 +771,10 @@ export function HomePage() {
                       {s.title}
                     </div>
                     <div style={{ fontSize: 11, color: "#9e8e82" }}>
-                      👁 {s.reads} · ⭐ {Number(s.rating) > 0 ? Number(s.rating).toFixed(1) : "Mới"}
+                      👁 {s.reads} · ⭐{" "}
+                      {Number(s.rating) > 0
+                        ? Number(s.rating).toFixed(1)
+                        : "Mới"}
                     </div>
                   </div>
                 </div>
@@ -705,9 +801,11 @@ export function HomePage() {
                     border: "1.5px solid",
                     cursor: "pointer",
                     transition: "all 0.15s",
-                    background: activeGenre === cat.name ? "#c23d3f" : "#fdf7f0",
+                    background:
+                      activeGenre === cat.name ? "#c23d3f" : "#fdf7f0",
                     color: activeGenre === cat.name ? "#fff" : "#6b5a4e",
-                    borderColor: activeGenre === cat.name ? "#c23d3f" : "#e8d8c8",
+                    borderColor:
+                      activeGenre === cat.name ? "#c23d3f" : "#e8d8c8",
                   }}
                 >
                   {cat.name}
@@ -715,10 +813,8 @@ export function HomePage() {
               ))}
             </div>
           </div>
-
         </div>
       </div>
-
     </div>
   );
 }
