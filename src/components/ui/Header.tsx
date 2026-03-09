@@ -53,7 +53,7 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const runSearch = (q: string) => {
-    if (q.trim().length < 2) { setSearchResults([]); return; }
+    if (q.trim().length < 1) { setSearchResults([]); return; }
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
       searchStories({ keyword: q, size: 8 })

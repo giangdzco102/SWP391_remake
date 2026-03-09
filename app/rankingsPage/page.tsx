@@ -8,16 +8,86 @@ import {
 import { useStoryStore } from "@/stores/storyStore";
 import { useGotoStory } from "@/hooks/useGotoStory";
 
+const PAGE_SIZE = 10;
+
+function Pagination({
+  current,
+  total,
+  onChange,
+}: {
+  current: number;
+  total: number;
+  onChange: (p: number) => void;
+}) {
+  const pages: (number | "…")[] = [];
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (current > 3) pages.push("…");
+    const start = Math.max(2, current - 1);
+    const end = Math.min(total - 1, current + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (current < total - 2) pages.push("…");
+    pages.push(total);
+  }
+
+  return (
+    <div className="flex items-center justify-center gap-1.5 pt-6 border-t border-slate-100">
+      <span className="text-xs text-slate-400 mr-2">Trang {current}/{total}</span>
+      <button
+        onClick={() => onChange(current - 1)}
+        disabled={current === 1}
+        className="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 text-base flex items-center justify-center hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+      >
+        ‹
+      </button>
+      {pages.map((p, i) =>
+        p === "…" ? (
+          <span key={`e${i}`} className="text-slate-400 text-sm px-0.5">…</span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => onChange(p as number)}
+            className={`w-9 h-9 rounded-lg border text-sm flex items-center justify-center transition-all ${
+              p === current
+                ? "bg-[#1e293b] border-[#1e293b] text-white font-bold shadow-sm"
+                : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            {p}
+          </button>
+        )
+      )}
+      <button
+        onClick={() => onChange(current + 1)}
+        disabled={current === total}
+        className="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 text-base flex items-center justify-center hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+      >
+        ›
+      </button>
+    </div>
+  );
+}
+
 export function RankingsPage() {
   const { allStories } = useStoryStore();
   const gotoStory = useGotoStory();
   const [tab, setTab] = useState("reads");
+  const [page, setPage] = useState(1);
 
   const sorted = [...allStories].sort((a, b) => {
     if (tab === "reads") return parseFloat(b.reads) - parseFloat(a.reads);
     if (tab === "rating") return (b.rating || 0) - (a.rating || 0);
     return (b.favorites || 0) - (a.favorites || 0);
   });
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const paged = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const rankOffset = (page - 1) * PAGE_SIZE;
+
+  const handleTabChange = (t: string) => { setTab(t); setPage(1); };
+  const handlePageChange = (p: number) => { setPage(p); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
   const getRankStyle = (rank) => {
     if (rank === 1) return "text-yellow-500 font-black text-4xl drop-shadow-sm";
@@ -58,7 +128,7 @@ export function RankingsPage() {
                   ? "bg-[#1e293b] text-white shadow-sm"
                   : "bg-white text-slate-500 hover:bg-slate-100 border border-slate-200"
               }`}
-              onClick={() => setTab(k)}
+              onClick={() => handleTabChange(k)}
             >
               {l}
             </button>
@@ -67,78 +137,86 @@ export function RankingsPage() {
 
         {/* Danh sách */}
         <div className="bg-white w-full rounded-3xl shadow-sm border border-slate-100 flex flex-col gap-10! md:gap-3 py-9! px-5!">
-          {sorted.map((s, i) => (
-            <div
-              key={s.id}
-              className="flex items-center gap-5 p-4 md:p-6 hover:bg-slate-50 transition-colors group cursor-pointer"
-              onClick={() => gotoStory(s)}
-            >
-              {/* Hạng */}
-              <span
-                className={`w-12 md:w-16 shrink-0 flex justify-center items-center font-serif transition-transform group-hover:scale-110 ${getRankStyle(i + 1)}`}
-              >
-                {i + 1}
-              </span>
-
-              {/* Cover */}
+          {paged.map((s, i) => {
+            const rank = rankOffset + i + 1;
+            return (
               <div
-                className="w-14 h-20 md:w-16 md:h-24 rounded-lg shadow-md shrink-0 overflow-hidden"
-                style={{
-                  background: s.cover,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }}
-              />
-
-              {/* Thông tin */}
-              <div className="flex-1 min-w-0 pr-4 flex flex-col gap-1 md:gap-2">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="text-lg md:text-xl font-bold text-slate-800 truncate group-hover:text-rose-600 transition-colors">
-                    {s.title}
-                  </div>
-                  {i === 0 && (
-                    <CrownOutlined className="w-4 h-4 text-yellow-500" />
-                  )}
-                </div>
-                <div className="flex items-center gap-2 text-sm text-slate-500 mb-2 truncate">
-                  <span className="font-medium text-slate-700">
-                    {s.penName}
-                  </span>{" "}
-                  · {s.genre}
-                </div>
-                <div className="flex flex-wrap items-center gap-3 md:gap-6 text-xs font-medium text-slate-500">
-                  <span>{s.rating} ⭐</span>
-                  <span>{s.reads || s.views} lượt đọc</span>
-                  <span className="hidden sm:flex">{s.chapters} chương</span>
-                  {tab === "favorites" && (
-                    <span className="flex items-center gap-1.5 text-rose-500">
-                      <HeartOutlined /> {(s.favorites || 0).toLocaleString()}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Điểm số */}
-              <div className="text-left shrink-0 pl-2 md:pl-4 border-l border-slate-100 min-w-[80px]">
-                <div
-                  className={`font-serif text-lg md:text-2xl font-bold ${i < 3 ? "text-rose-600" : "text-slate-700"}`}
+                key={s.id}
+                className="flex items-center gap-5 p-4 md:p-6 hover:bg-slate-50 transition-colors group cursor-pointer"
+                onClick={() => gotoStory(s)}
+              >
+                {/* Hạng */}
+                <span
+                  className={`w-12 md:w-16 shrink-0 flex justify-center items-center font-serif transition-transform group-hover:scale-110 ${getRankStyle(rank)}`}
                 >
-                  {tab === "reads"
-                    ? s.reads || s.views
-                    : tab === "rating"
-                      ? (s.rating || 0).toFixed(1)
-                      : (s.favorites || 0).toLocaleString()}
+                  {rank}
+                </span>
+
+                {/* Cover */}
+                <div
+                  className="w-14 h-20 md:w-16 md:h-24 rounded-lg shadow-md shrink-0 overflow-hidden"
+                  style={{
+                    background: s.cover,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }}
+                />
+
+                {/* Thông tin */}
+                <div className="flex-1 min-w-0 pr-4 flex flex-col gap-1 md:gap-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="text-lg md:text-xl font-bold text-slate-800 truncate group-hover:text-rose-600 transition-colors">
+                      {s.title}
+                    </div>
+                    {rank === 1 && (
+                      <CrownOutlined className="w-4 h-4 text-yellow-500" />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-slate-500 mb-2 truncate">
+                    <span className="font-medium text-slate-700">
+                      {s.penName}
+                    </span>{" "}
+                    · {s.genre}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 md:gap-6 text-xs font-medium text-slate-500">
+                    <span>{s.rating} ⭐</span>
+                    <span>{s.reads || s.views} lượt đọc</span>
+                    <span className="hidden sm:flex">{s.chapters} chương</span>
+                    {tab === "favorites" && (
+                      <span className="flex items-center gap-1.5 text-rose-500">
+                        <HeartOutlined /> {(s.favorites || 0).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="text-[10px] md:text-xs text-slate-400 font-medium uppercase tracking-wider mt-0.5">
-                  {tab === "reads"
-                    ? "lượt đọc"
-                    : tab === "rating"
-                      ? "/ 5 sao"
-                      : "yêu thích"}
+
+                {/* Điểm số */}
+                <div className="text-left shrink-0 pl-2 md:pl-4 border-l border-slate-100 min-w-[80px]">
+                  <div
+                    className={`font-serif text-lg md:text-2xl font-bold ${rank < 4 ? "text-rose-600" : "text-slate-700"}`}
+                  >
+                    {tab === "reads"
+                      ? s.reads || s.views
+                      : tab === "rating"
+                        ? (s.rating || 0).toFixed(1)
+                        : (s.favorites || 0).toLocaleString()}
+                  </div>
+                  <div className="text-[10px] md:text-xs text-slate-400 font-medium uppercase tracking-wider mt-0.5">
+                    {tab === "reads"
+                      ? "lượt đọc"
+                      : tab === "rating"
+                        ? "/ 5 sao"
+                        : "yêu thích"}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
+
+          {/* Pagination */}
+          <div className="px-4 md:px-6 pb-2">
+            <Pagination current={page} total={totalPages} onChange={handlePageChange} />
+          </div>
         </div>
       </div>
     </div>

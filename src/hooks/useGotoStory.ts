@@ -9,6 +9,6 @@ export function useGotoStory() {
 
   return (story: any) => {
     setSelectedStory(story);
-    router.push("/storyDetailPage");  
+    router.push(`/storyDetailPage?id=${story.id}`);
   };
 }
