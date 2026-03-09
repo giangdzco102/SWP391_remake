@@ -8,6 +8,8 @@ import { useAuthStore } from "@/stores";
 import { useRouter } from "next/navigation";
 import { useGotoStory } from "@/hooks/useGotoStory";
 import useChapterService from "@/api/useChapter.service";
+import useReportService from "@/api/useReport.service";
+import { useToast } from "@/hooks/use-toast";
 
 export function StoryDetailPage() {
   const {
@@ -70,6 +72,28 @@ export function StoryDetailPage() {
   });
   const [helpfulSet, setHelpfulSet] = useState(new Set());
   const [showWriteReview, setShowWriteReview] = useState(false);
+
+  // Report
+  const { createReport } = useReportService();
+  const toast = useToast();
+  const [storyReportOpen, setStoryReportOpen] = useState(false);
+  const [storyReportReason, setStoryReportReason] = useState("");
+  const [storyReporting, setStoryReporting] = useState(false);
+
+  const handleReportStory = async () => {
+    if (!storyReportReason.trim() || !story) return;
+    setStoryReporting(true);
+    try {
+      await createReport({ targetType: "STORY", targetId: story.id, reason: storyReportReason.trim() });
+      toast.success("Báo cáo đã được gửi. Cảm ơn bạn!");
+      setStoryReportOpen(false);
+      setStoryReportReason("");
+    } catch {
+      toast.error("Không thể gửi báo cáo. Thử lại sau.");
+    } finally {
+      setStoryReporting(false);
+    }
+  };
 
   if (!story) return null;
 
@@ -235,9 +259,42 @@ export function StoryDetailPage() {
                   <Ico.Heart f={liked} />
                   {liked ? "Đã lưu" : "Yêu thích"}
                 </button>
+                <button
+                  className="btn-hero btn-hero-outline"
+                  style={{ fontSize: 13, color: "#9ca3af", borderColor: "#e8e0d6" }}
+                  onClick={() => requireAuth(() => setStoryReportOpen(true))}
+                >
+                  🚩 Báo cáo
+                </button>
               </div>
             </div>
           </div>
+
+          {/* Inline Story Report */}
+          {storyReportOpen && (
+            <div style={{ background: "#fdfaf7", border: "1.5px solid #e8e0d6", borderRadius: 14, padding: "16px 18px", marginBottom: 16 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, color: "#1c1512", marginBottom: 8 }}>🚩 Báo cáo truyện: <em>{story.title}</em></div>
+              <textarea
+                value={storyReportReason}
+                onChange={(e) => setStoryReportReason(e.target.value)}
+                placeholder="Mô tả lý do báo cáo..."
+                rows={3}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 10, border: "1.5px solid #e8e0d6", fontSize: 13, color: "#3d2f28", resize: "none", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+              />
+              <div style={{ display: "flex", gap: 8, marginTop: 10, justifyContent: "flex-end" }}>
+                <button onClick={() => { setStoryReportOpen(false); setStoryReportReason(""); }} style={{ padding: "8px 18px", borderRadius: 9, border: "1.5px solid #e8e0d6", background: "#fff", color: "#6b5a4e", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                  Hủy
+                </button>
+                <button
+                  onClick={handleReportStory}
+                  disabled={!storyReportReason.trim() || storyReporting}
+                  style={{ padding: "8px 18px", borderRadius: 9, border: "none", background: !storyReportReason.trim() || storyReporting ? "#f3f4f6" : "#c23d3f", color: !storyReportReason.trim() || storyReporting ? "#9ca3af" : "#fff", fontSize: 13, fontWeight: 700, cursor: !storyReportReason.trim() || storyReporting ? "not-allowed" : "pointer" }}
+                >
+                  {storyReporting ? "Đang gửi..." : "Gửi báo cáo"}
+                </button>
+              </div>
+            </div>
+          )}
 
           <blockquote className="detail-desc">{story.description}</blockquote>
 

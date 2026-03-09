@@ -143,6 +143,7 @@ export default class APP_CONFIG {
     PENDING_WITHDRAW:        "/admin/withdraw-requests/pending",
     APPROVE_WITHDRAW:        (id: string | number) => `/admin/withdraw-requests/${id}/approve`,
     REJECT_WITHDRAW:         (id: string | number) => `/admin/withdraw-requests/${id}/reject`,
+    TOGGLE_USER_STATUS:      (id: string | number) => `/admin/users/${id}/toggle-status`,
     CREATE_MISSION:          "/admin/missions",
     UPDATE_MISSION:          (id: string | number) => `/admin/missions/${id}`,
     DELETE_MISSION:          (id: string | number) => `/admin/missions/${id}`,

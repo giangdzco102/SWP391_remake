@@ -80,6 +80,7 @@ export type ResultAdminService = {
   // Users
   getAllUsers: () => Promise<any>;
   updateUserRoles: (userId: number, roles: string[]) => Promise<any>;
+  toggleUserStatus: (userId: number) => Promise<any>;
 
   // Stories
   getPendingStories: () => Promise<any>;
@@ -131,6 +132,9 @@ const useAdminService = (): ResultAdminService => {
 
   const updateUserRoles = (userId: number, roles: string[]): Promise<any> =>
     httpClient.put(APP_CONFIG.ADMIN.UPDATE_USER_ROLES, { userId, roles });
+
+  const toggleUserStatus = (userId: number): Promise<any> =>
+    httpClient.put(APP_CONFIG.ADMIN.TOGGLE_USER_STATUS(userId), {});
 
   const getPendingStories = (): Promise<any> =>
     httpClient.get(APP_CONFIG.ADMIN.PENDING_STORIES);
@@ -197,6 +201,7 @@ const useAdminService = (): ResultAdminService => {
     getDashboard,
     getAllUsers,
     updateUserRoles,
+    toggleUserStatus,
     getPendingStories,
     reviewStory,
     getAllReports,
