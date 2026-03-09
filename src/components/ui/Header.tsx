@@ -140,6 +140,9 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
       ...(user?.roles.includes("AUTHOR")
         ? [{ label: "Tác phẩm của tôi", page: "my-stories" }]
         : []),
+      ...(user?.roles.includes("ADMIN")
+        ? [{ label: "⚙ Admin", page: "/adminDashboard" }]
+        : []),
     ],
     [user?.roles, pending?.length],
   );
@@ -318,6 +321,18 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
                       ✏ Trở thành Editor
                     </button>
                   </>
+                )}
+                {user.roles.includes("ADMIN") && (
+                  <button
+                    className="mobile-nav-link"
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      router.push("/adminDashboard");
+                    }}
+                    style={{ color: "#7c3aed", fontWeight: 700 }}
+                  >
+                    ⚙ Quản trị Admin
+                  </button>
                 )}
                 <button
                   className="mobile-nav-link"
@@ -739,6 +754,18 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
                         }}
                       >
                         <Ico.Edit /> Bảng nhiệm vụ
+                      </button>
+                    )}
+                    {user.roles.includes("ADMIN") && (
+                      <button
+                        className="dropdown-item"
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          router.push("/adminDashboard");
+                        }}
+                        style={{ color: "#7c3aed", fontWeight: 700 }}
+                      >
+                        <Ico.Shield /> Quản trị Admin
                       </button>
                     )}
                     <div className="dropdown-divider" />

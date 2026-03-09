@@ -4,6 +4,7 @@ import { Modal } from "antd";
 import { Ico } from "../Icons";
 import { GENRES } from "@/utils/mockData";
 import { useToast } from "@/hooks/use-toast";
+import useRoleChangeService from "@/api/useRoleChange.service";
 
 // ── BECOME AUTHOR ──
 export function SettingsModal({ onClose }: any) {
@@ -558,6 +559,27 @@ export function BecomeAuthorModal({ onClose, onSuccess }) {
   const [penName, setPenName] = useState("");
   const [genre, setGenre] = useState("");
   const [bio, setBio] = useState("");
+  const [loading, setLoading] = useState(false);
+  const toast = useToast();
+  const { createRequest } = useRoleChangeService();
+
+  const handleSubmit = async () => {
+    if (!penName.trim() || !genre) return;
+    setLoading(true);
+    try {
+      const reason = [penName.trim(), genre, bio].filter(Boolean).join(" | ");
+      await createRequest({ requestedRole: "AUTHOR", reason });
+      toast.success("✅ Yêu cầu trở thành Tác giả đã được gửi! Admin sẽ xét duyệt sớm.");
+      onSuccess?.(penName.trim());
+      onClose?.();
+    } catch (e: any) {
+      const msg = e?.response?.data?.message ?? e?.message ?? "Gửi yêu cầu thất bại";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
@@ -616,13 +638,11 @@ export function BecomeAuthorModal({ onClose, onSuccess }) {
             </div>
             <button
               className="btn-full btn-red-full"
-              onClick={() => {
-                if (penName.trim() && genre) onSuccess(penName.trim());
-              }}
-              disabled={!penName.trim() || !genre}
-              style={{ opacity: !penName.trim() || !genre ? 0.6 : 1 }}
+              onClick={handleSubmit}
+              disabled={!penName.trim() || !genre || loading}
+              style={{ opacity: !penName.trim() || !genre || loading ? 0.6 : 1 }}
             >
-              ✒ Xác nhận đăng ký Tác giả
+              {loading ? "Đang gửi..." : "✒ Xác nhận đăng ký Tác giả"}
             </button>
           </div>
         </div>
@@ -634,6 +654,27 @@ export function BecomeReviewerModal({ onClose, onSuccess }) {
   const [reason, setReason] = useState("");
   const [experience, setExperience] = useState("");
   const [agreed, setAgreed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const toast = useToast();
+  const { createRequest } = useRoleChangeService();
+
+  const handleSubmit = async () => {
+    if (!agreed || !experience) return;
+    setLoading(true);
+    try {
+      const fullReason = [experience, reason].filter(Boolean).join(" | ");
+      await createRequest({ requestedRole: "REVIEWER", reason: fullReason || undefined });
+      toast.success("✅ Yêu cầu trở thành Reviewer đã được gửi! Admin sẽ xét duyệt sớm.");
+      onSuccess?.();
+      onClose?.();
+    } catch (e: any) {
+      const msg = e?.response?.data?.message ?? e?.message ?? "Gửi yêu cầu thất bại";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
@@ -709,11 +750,11 @@ export function BecomeReviewerModal({ onClose, onSuccess }) {
             </label>
             <button
               className="btn-full btn-gold-full"
-              onClick={onSuccess}
-              disabled={!agreed || !experience}
-              style={{ opacity: !agreed || !experience ? 0.5 : 1 }}
+              onClick={handleSubmit}
+              disabled={!agreed || !experience || loading}
+              style={{ opacity: !agreed || !experience || loading ? 0.5 : 1 }}
             >
-              🛡 Đăng ký Reviewer
+              {loading ? "Đang gửi..." : "🛡 Đăng ký Reviewer"}
             </button>
           </div>
         </div>
@@ -725,6 +766,10 @@ export function BecomeEditorModal({ onClose, onSuccess }) {
   const [skills, setSkills] = useState([]);
   const [portfolio, setPortfolio] = useState("");
   const [agreed, setAgreed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const toast = useToast();
+  const { createRequest } = useRoleChangeService();
+
   const skillOpts = [
     "Sửa lỗi chính tả / ngữ pháp",
     "Chỉnh văn phong, cách hành văn",
@@ -733,7 +778,25 @@ export function BecomeEditorModal({ onClose, onSuccess }) {
     "Kiểm tra tính nhất quán cốt truyện",
   ];
   const toggle = (s) =>
-    setSkills((p) => (p.includes(s) ? p.filter((x) => x !== s) : [...p, s]));
+    setSkills((p: any) => (p.includes(s) ? p.filter((x: any) => x !== s) : [...p, s]));
+
+  const handleSubmit = async () => {
+    if (!agreed || skills.length === 0) return;
+    setLoading(true);
+    try {
+      const reason = [(skills as string[]).join(", "), portfolio].filter(Boolean).join(" | ");
+      await createRequest({ requestedRole: "EDITOR", reason: reason || undefined });
+      toast.success("✅ Yêu cầu trở thành Editor đã được gửi! Admin sẽ xét duyệt sớm.");
+      onSuccess?.();
+      onClose?.();
+    } catch (e: any) {
+      const msg = e?.response?.data?.message ?? e?.message ?? "Gửi yêu cầu thất bại";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
@@ -826,11 +889,11 @@ export function BecomeEditorModal({ onClose, onSuccess }) {
             </label>
             <button
               className="btn-full btn-green-full"
-              onClick={onSuccess}
-              disabled={!agreed || skills.length === 0}
-              style={{ opacity: !agreed || skills.length === 0 ? 0.5 : 1 }}
+              onClick={handleSubmit}
+              disabled={!agreed || skills.length === 0 || loading}
+              style={{ opacity: !agreed || skills.length === 0 || loading ? 0.5 : 1 }}
             >
-              ✏ Đăng ký trở thành Editor
+              {loading ? "Đang gửi..." : "✏ Đăng ký trở thành Editor"}
             </button>
           </div>
         </div>
