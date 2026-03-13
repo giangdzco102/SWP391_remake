@@ -129,16 +129,16 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
         ? [
             {
               label: "Kiểm duyệt",
-              page: "reviewer-dash",
+              page: "/reviewerDashboard",
               badge: pending?.length,
             },
           ]
         : []),
       ...(user?.roles.includes("EDITOR")
-        ? [{ label: "Nhiệm vụ", page: "editor-dash" }]
+        ? [{ label: "Nhiệm vụ", page: "/editorDashboard" }]
         : []),
       ...(user?.roles.includes("AUTHOR")
-        ? [{ label: "Tác phẩm của tôi", page: "my-stories" }]
+        ? [{ label: "Tác phẩm của tôi", page: "/myStoriesPage" }]
         : []),
       ...(user?.roles.includes("ADMIN")
         ? [{ label: "⚙ Admin", page: "/adminDashboard" }]
