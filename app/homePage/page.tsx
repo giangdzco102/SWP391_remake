@@ -1,5 +1,9 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// IMPORTS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStoryStore } from "@/stores/storyStore";
@@ -10,7 +14,9 @@ import useCategoryService, { CategoryItem } from "@/api/useCategory.service";
 import { timeStartToNow } from "@/utils/time";
 import { BannerHomepage } from "@/components/ui/Bannerhomepage";
 
-
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CONSTANTS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const PAGE_SIZE = 20;
 const HOT_FETCH_SIZE = 50;
 const HOT_DISPLAY_LIMIT = 12;
@@ -106,7 +112,6 @@ const countActiveFilters = (f: FilterState) =>
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // SHARED UI PRIMITIVES
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function SectionHeader({ title, sub, right }: { title: string; sub?: string; right?: React.ReactNode }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, paddingBottom: 10, borderBottom: "2px solid #c23d3f" }}>
@@ -145,7 +150,7 @@ function SkeletonNewCard() {
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // STORY CARDS
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 function HotStoryCard({ s, rank, onClick, liked, onLike }: {
   s: StoryShape; rank: number; onClick: () => void; liked: boolean; onLike: () => void;
 }) {
@@ -508,7 +513,7 @@ function Sidebar({ top5, categories, filters, onStory, onGenreToggle }: {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// MAIN PAGE  (state + handlers only)
+// MAIN PAGE  (state + handlers only — no JSX logic here)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export function HomePage() {
   const { likedStories, toggleLike } = useStoryStore();

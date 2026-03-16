@@ -2,23 +2,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SearchResultsPage
-//
-// Luồng dữ liệu:
-//   searchQ = ""   → dùng allStories/stories từ store (0ms), fallback API
-//   searchQ ≥ 1ký  → debounce 300ms → searchStories API
-//
-// Render pipeline:
-//   apiResults → (filter genre/status) → (sort) → results → paged → StoryGrid
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useStoryStore } from "@/stores/storyStore";
 import { useGotoStory } from "@/hooks/useGotoStory";
 import { StoryCard } from "../../src/components/storyCard/page";
 import { useRouter } from "next/navigation";
 import useStoryService from "@/api/useStory.service";
+import { useSearchParams } from "next/navigation";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -37,8 +27,8 @@ const COVER_GRADIENTS = [
 
 const SORT_LABELS = {
   relevant: "Liên quan",
-  views:    "Lượt đọc",
-  rating:   "Đánh giá",
+  views: "Lượt đọc",
+  rating: "Đánh giá",
   chapters: "Số chương",
 } as const;
 
@@ -51,7 +41,7 @@ const RANK_BG = [
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type SortKey = keyof typeof SORT_LABELS;
-type Story   = ReturnType<typeof toShape>;
+type Story = ReturnType<typeof toShape>;
 
 // ── Pure helpers ──────────────────────────────────────────────────────────────
 
@@ -59,43 +49,43 @@ type Story   = ReturnType<typeof toShape>;
 function toShape(s: any, idx: number): Story {
   const hasRealCover = !!s.coverUrl && !s.coverUrl.includes("placeholder");
   return {
-    id:          s.id,
-    title:       s.title,
-    author:      s.authorName   ?? "",
-    penName:     s.authorName   ?? "",
-    cover:       hasRealCover
-                   ? `url("${s.coverUrl}")`
-                   : COVER_GRADIENTS[idx % COVER_GRADIENTS.length],
-    genre:       s.categories?.[0]?.name ?? s.genre ?? "",
-    tags:        s.tags         ?? [],
-    rating:      s.averageRating ?? 0,
-    reviewCount: s.reviewCount  ?? 0,
-    reads:       s.viewCount >= 1000
-                   ? `${(s.viewCount / 1000).toFixed(1)}K`
-                   : String(s.viewCount ?? 0),
-    views:       s.viewCount    ?? 0,
-    favorites:   s.favoriteCount ?? 0,
-    chapters:    s.totalChapters ?? 0,
-    description: s.summary      ?? "",
-    status:      s.status === "COMPLETED" ? "done" : "ongoing",
-    featured:    false,
-    excerpt:     s.summary      ?? "",
-    updatedAt:   s.updatedAt    ?? "",
+    id: s.id,
+    title: s.title,
+    author: s.authorName ?? "",
+    penName: s.authorName ?? "",
+    cover: hasRealCover
+      ? `url("${s.coverUrl}")`
+      : COVER_GRADIENTS[idx % COVER_GRADIENTS.length],
+    genre: s.categories?.[0]?.name ?? s.genre ?? "",
+    tags: s.tags ?? [],
+    rating: s.averageRating ?? 0,
+    reviewCount: s.reviewCount ?? 0,
+    reads: s.viewCount >= 1000
+      ? `${(s.viewCount / 1000).toFixed(1)}K`
+      : String(s.viewCount ?? 0),
+    views: s.viewCount ?? 0,
+    favorites: s.favoriteCount ?? 0,
+    chapters: s.totalChapters ?? 0,
+    description: s.summary ?? "",
+    status: s.status === "COMPLETED" ? "done" : "ongoing",
+    featured: false,
+    excerpt: s.summary ?? "",
+    updatedAt: s.updatedAt ?? "",
   };
 }
 
-/** Điểm liên quan khi sort "relevant" */
+/**sort "relevant" */
 function relevanceScore(s: Story, q: string) {
   const lq = q.toLowerCase();
-  return (s.title.toLowerCase().includes(lq)   ? 3 : 0)
-       + (s.penName.toLowerCase().includes(lq) ? 1 : 0);
+  return (s.title.toLowerCase().includes(lq) ? 3 : 0)
+    + (s.penName.toLowerCase().includes(lq) ? 1 : 0);
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function Highlight({ text, keyword }: { text: string; keyword: string }) {
   if (!keyword.trim()) return <>{text}</>;
-  const safe  = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const safe = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const regex = new RegExp(`(${safe})`, "gi");
   return (
     <>
@@ -158,13 +148,15 @@ function Pagination({ page, total, onPage }: { page: number; total: number; onPa
 export function SearchResultsPage() {
   const { searchQ, likedStories, toggleLike, allStories, stories } = useStoryStore();
   const gotoStory = useGotoStory();
-  const router    = useRouter();
+  const router = useRouter();
   const { searchStories, getAllStories } = useStoryService();
+  const searchParams = useSearchParams();
+  const genreParam = searchParams.get("genre") ?? "all";
 
   // ── Fetch state ───────────────────────────────────────────────────────────
   const [apiResults, setApiResults] = useState<Story[]>([]);
-  const [loading, setLoading]       = useState(false);
-  const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [loading, setLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cachedAllRef = useRef<Story[] | null>(null); // tránh refetch khi quay lại trang
 
   useEffect(() => {
@@ -174,7 +166,7 @@ export function SearchResultsPage() {
       // ── Không có query → hiện toàn bộ ─────────────────────────────
       // 1. Cache đầy đủ từ lần fetch trước → dùng ngay, không fetch lại
       if (cachedAllRef.current) { setApiResults(cachedAllRef.current); return; }
-      // 2. Show store data ngay lập tức (tránh màn trống) trong khi chờ API
+      // 2. Show store data
       const pool = allStories?.length ? allStories : stories;
       if (pool?.length) setApiResults(pool as Story[]);
       else setLoading(true);
@@ -185,7 +177,7 @@ export function SearchResultsPage() {
           cachedAllRef.current = shaped;
           setApiResults(shaped);
         })
-        .catch(() => {}) // giữ nguyên store data nếu API lỗi
+        .catch(() => { }) // giữ nguyên store data nếu API lỗi
         .finally(() => setLoading(false));
       return;
     }
@@ -200,22 +192,30 @@ export function SearchResultsPage() {
     }, 300);
 
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQ]);
 
-  // ── Filter / sort / pagination state ─────────────────────────────────────
-  const [sortBy,       setSortBy]       = useState<SortKey>("relevant");
-  const [filterGenre,  setFilterGenre]  = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [page,         setPage]         = useState(1);
+  useEffect(() => {
+    if (genreParam !== "all") {
+      setFilterGenre(genreParam);
+      if (!searchQ.trim()) setSortBy("views");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [genreParam]);
 
-  const resetPage    = (fn: () => void) => { fn(); setPage(1); };
+  // ── Filter / sort / pagination state ─────────────────────────────────────
+  const [sortBy, setSortBy] = useState<SortKey>("relevant");
+  const [filterGenre, setFilterGenre] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [page, setPage] = useState(1);
+
+  const resetPage = (fn: () => void) => { fn(); setPage(1); };
   const clearFilters = () => { setFilterGenre("all"); setFilterStatus("all"); setPage(1); };
 
   // ── Derived values ────────────────────────────────────────────────────────
   const isSearching = searchQ.trim().length > 0;
-  const hasResults  = apiResults.length > 0;
-  const isFiltered  = filterGenre !== "all" || filterStatus !== "all";
+  const hasResults = apiResults.length > 0;
+  const isFiltered = filterGenre !== "all" || filterStatus !== "all";
 
   const allGenres = useMemo(
     () => Array.from(new Set(apiResults.map((s) => s.genre).filter(Boolean))) as string[],
@@ -224,11 +224,11 @@ export function SearchResultsPage() {
 
   const results = useMemo(() => {
     let list = [...apiResults];
-    if (filterGenre  !== "all") list = list.filter((s) => s.genre  === filterGenre);
+    if (filterGenre !== "all") list = list.filter((s) => s.genre === filterGenre);
     if (filterStatus !== "all") list = list.filter((s) => s.status === filterStatus);
     switch (sortBy) {
-      case "views":    list.sort((a, b) => b.views - a.views); break;
-      case "rating":   list.sort((a, b) => Number(b.rating) - Number(a.rating)); break;
+      case "views": list.sort((a, b) => b.views - a.views); break;
+      case "rating": list.sort((a, b) => Number(b.rating) - Number(a.rating)); break;
       case "chapters": list.sort((a, b) => b.chapters - a.chapters); break;
       default:
         if (isSearching)
@@ -238,8 +238,8 @@ export function SearchResultsPage() {
   }, [apiResults, filterGenre, filterStatus, sortBy, isSearching, searchQ]);
 
   const totalPages = Math.ceil(results.length / PAGE_SIZE);
-  const paged      = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const top5       = [...apiResults].sort((a, b) => b.views - a.views).slice(0, 5);
+  const paged = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const top5 = [...apiResults].sort((a, b) => b.views - a.views).slice(0, 5);
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -250,13 +250,20 @@ export function SearchResultsPage() {
 
         <div style={{ marginBottom: 20 }}>
           <div className="page-title" style={{ marginBottom: 4 }}>
-            {isSearching ? "🔍 Kết quả tìm kiếm" : "📚 Tất cả truyện"}
+            {isSearching
+              ? "🔍 Kết quả tìm kiếm"
+              : filterGenre !== "all"
+                ? `📂 ${filterGenre}`
+                : "📚 Tất cả truyện"
+            }
           </div>
           <div className="page-sub">
-            {loading    ? "Đang tải..."
-            : isSearching
-              ? <> "{searchQ}" — <strong style={{ color: "#c23d3f" }}>{apiResults.length}</strong> kết quả </>
-              : <> <strong style={{ color: "#c23d3f" }}>{apiResults.length}</strong> tác phẩm </>
+            {loading ? "Đang tải..."
+              : isSearching
+                ? <> "{searchQ}" — <strong style={{ color: "#c23d3f" }}>{results.length}</strong> kết quả </>
+                : filterGenre !== "all"
+                  ? <> <strong style={{ color: "#c23d3f" }}>{results.length}</strong> tác phẩm trong thể loại này </>
+                  : <> <strong style={{ color: "#c23d3f" }}>{apiResults.length}</strong> tác phẩm </>
             }
           </div>
         </div>
@@ -287,8 +294,8 @@ export function SearchResultsPage() {
                 <button key={k} onClick={() => resetPage(() => setSortBy(k))} style={{
                   padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600,
                   border: "1.5px solid", cursor: "pointer", transition: "all 0.15s",
-                  background:  sortBy === k ? "#c23d3f" : "transparent",
-                  color:       sortBy === k ? "#fff"    : "#9e8e82",
+                  background: sortBy === k ? "#c23d3f" : "transparent",
+                  color: sortBy === k ? "#fff" : "#9e8e82",
                   borderColor: sortBy === k ? "#c23d3f" : "#e8d8c8",
                 }}>
                   {SORT_LABELS[k]}
@@ -380,10 +387,10 @@ export function SearchResultsPage() {
             <div className="sidebar-card">
               <div className="sidebar-title">📊 Thống kê</div>
               {([
-                ["Tổng truyện",   apiResults.length],
+                ["Tổng truyện", apiResults.length],
                 ["Đang cập nhật", apiResults.filter((s) => s.status !== "done").length],
-                ["Hoàn thành",    apiResults.filter((s) => s.status === "done").length],
-                ["Thể loại",      allGenres.length],
+                ["Hoàn thành", apiResults.filter((s) => s.status === "done").length],
+                ["Thể loại", allGenres.length],
               ] as [string, number][]).map(([label, val]) => (
                 <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "6px 0", borderBottom: "1px solid #f5ede4" }}>
                   <span style={{ color: "#9e8e82" }}>{label}</span>
