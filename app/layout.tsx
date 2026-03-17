@@ -12,6 +12,7 @@ import AuthProvider from "@/components/AuthProvider";
 import { Layout } from "antd";
 import Header from "@/components/ui/Header";
 import { ModalProvider } from "@/components/popup/ModalProvider";
+import { Footer } from "@/components/ui/Footer";
 
 // Extract metadata configuration for better maintainability
 const SITE_METADATA = {
@@ -87,6 +88,7 @@ export default function RootLayout({
                         {/* header */}
                         <Header />
                         {children}
+                        <Footer/>
                       </div>
                       <ModalProvider />
                     </AuthProvider>
