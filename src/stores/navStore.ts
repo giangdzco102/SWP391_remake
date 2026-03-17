@@ -8,7 +8,7 @@ interface NavStore {
   selectedChapterId: number | null;
   navTo: (page: string) => void;
   setSelectedStory: (story: any) => void;
-  setSelectedChapterId: (id: number) => void;
+  setSelectedChapterId: (id: number | null) => void;
 }
 
 export const useNavStore = create<NavStore>((set) => ({
@@ -19,6 +19,7 @@ export const useNavStore = create<NavStore>((set) => ({
     set({ page });
     window.scrollTo(0, 0);
   },
-  setSelectedStory: (story) => set({ selectedStory: story }),
+  // Reset selectedChapterId whenever a new story is selected
+  setSelectedStory: (story) => set({ selectedStory: story, selectedChapterId: null }),
   setSelectedChapterId: (id) => set({ selectedChapterId: id }),
 }));

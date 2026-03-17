@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useAuthStore } from "@/stores";
 import useAuthService from "@/api/useAuth.service";
@@ -211,11 +211,15 @@ type TabKey = "info" | "stories" | "reviews" | "coins";
 // ── Edit Profile Modal ──────────────────────────────────────────
 function EditProfileModal({ onClose }: { onClose: () => void }) {
   const { user } = useAuthStore();
-  const { updateProfile } = useAuthService();
+  const { updateProfile, uploadAvatar } = useAuthService();
   const toast = useToast();
   const [saving, setSaving] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string>(user?.avatarUrl ?? "");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { control, handleSubmit, formState: { errors } } = useForm<PayloadUpdateProfile>({
+  const { control, handleSubmit, setValue, formState: { errors } } = useForm<PayloadUpdateProfile>({
     defaultValues: {
       fullName:    user?.fullName    ?? "",
       bio:         user?.bio         ?? "",
@@ -227,14 +231,60 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
     },
   });
 
+  const processFile = useCallback((file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vui lòng chọn file ảnh (JPG, PNG, GIF, WebP...)");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Ảnh quá lớn! Tối đa 5MB.");
+      return;
+    }
+    // Chỉ hiển thị preview, lưu file để upload sau
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setAvatarPreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+    setSelectedFile(file);
+  }, [toast]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+    e.target.value = "";
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) processFile(file);
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatarPreview("");
+    setSelectedFile(null);
+    setValue("avatarUrl", "");
+  };
+
   const onSubmit = async (data: PayloadUpdateProfile) => {
     setSaving(true);
     try {
-      await updateProfile!(data);
-      toast.success("Cập nhật hồ sơ thành công!");
+      let finalAvatarUrl = data.avatarUrl;
+
+      // Bước 1: Nếu có file ảnh mới → upload lên trước
+      if (selectedFile) {
+        finalAvatarUrl = await uploadAvatar!(selectedFile);
+      }
+
+      // Bước 2: Update profile với URL ảnh (hoặc URL cũ nếu không đổi ảnh)
+      await updateProfile!({ ...data, avatarUrl: finalAvatarUrl });
+      toast.success("✅ Cập nhật hồ sơ thành công!");
       onClose();
-    } catch {
-      toast.error("Cập nhật thất bại, vui lòng thử lại.");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || "Cập nhật thất bại, vui lòng thử lại.";
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -253,6 +303,10 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
   };
   const fieldStyle: React.CSSProperties = { marginBottom: 16 };
   const errorStyle: React.CSSProperties = { fontSize: 11, color: "#c23d3f", marginTop: 4 };
+
+  const avatarInitials = user?.fullName
+    ? user.fullName.split(" ").slice(-2).map((w) => w[0]).join("").toUpperCase()
+    : "AV";
 
   return (
     <div style={{
@@ -308,13 +362,92 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
               )} />
           </div>
 
-          {/* Avatar URL */}
+          {/* Avatar Upload */}
           <div style={fieldStyle}>
-            <label style={labelStyle}>URL ảnh đại diện</label>
-            <Controller name="avatarUrl" control={control}
-              render={({ field }) => (
-                <input {...field} style={inputStyle} placeholder="https://..." />
-              )} />
+            <label style={labelStyle}>Ảnh đại diện</label>
+            <Controller name="avatarUrl" control={control} render={() => <></>} />
+
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
+              {/* Preview */}
+              <div style={{ flexShrink: 0 }}>
+                {avatarPreview ? (
+                  <div style={{ position: "relative", width: 80, height: 80 }}>
+                    <img
+                      src={avatarPreview}
+                      alt="Avatar preview"
+                      style={{
+                        width: 80, height: 80, borderRadius: "50%",
+                        objectFit: "cover", border: "3px solid #c23d3f",
+                        boxShadow: "0 4px 12px rgba(194,61,63,0.25)",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveAvatar}
+                      title="Xóa ảnh"
+                      style={{
+                        position: "absolute", top: -4, right: -4,
+                        width: 22, height: 22, borderRadius: "50%",
+                        background: "#c23d3f", border: "2px solid #fff",
+                        cursor: "pointer", fontSize: 11, color: "#fff",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontWeight: 700, lineHeight: 1,
+                      }}
+                    >✕</button>
+                  </div>
+                ) : (
+                  <div style={{
+                    width: 80, height: 80, borderRadius: "50%",
+                    background: "linear-gradient(135deg,#c23d3f,#9e2d2f)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 24, fontWeight: 900, color: "#fff",
+                    border: "3px solid #f5ede4",
+                  }}>
+                    {avatarInitials}
+                  </div>
+                )}
+              </div>
+
+              {/* Drop zone */}
+              <div
+                onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                onDragLeave={() => setIsDragOver(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  flex: 1,
+                  border: `2px dashed ${isDragOver ? "#c23d3f" : "#ddd5c8"}`,
+                  borderRadius: 12,
+                  padding: "16px 14px",
+                  background: isDragOver ? "#fdf3f3" : "#fdfaf7",
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 4,
+                  textAlign: "center",
+                }}
+              >
+                <span style={{ fontSize: 24 }}>📷</span>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#1c1512" }}>
+                  {avatarPreview ? "Thay ảnh khác" : "Chọn ảnh từ máy tính"}
+                </div>
+                <div style={{ fontSize: 11, color: "#9e8e82" }}>
+                  Kéo thả hoặc click · JPG, PNG, GIF, WebP · Tối đa 5MB
+                </div>
+              </div>
+
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={handleFileChange}
+              />
+            </div>
           </div>
 
           {/* 2 cols: phone + gender */}
@@ -383,9 +516,13 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
 
 export function ProfilePage() {
   const { user } = useAuthStore();
+  const { uploadAvatar, updateProfile } = useAuthService();
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<TabKey>("info");
   const [showEdit, setShowEdit] = useState(false);
   const [showChangePw, setShowChangePw] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const quickAvatarRef = useRef<HTMLInputElement>(null);
 
   const primaryRole   = user?.roles?.[0] ?? "READER";
   const roleLabel     = ROLE_LABEL[primaryRole]     ?? "Độc giả";
@@ -403,6 +540,24 @@ export function ProfilePage() {
     { key: "coins",   label: "Lịch sử coin" },
   ];
 
+  const handleQuickAvatar = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Vui lòng chọn file ảnh!"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Ảnh quá lớn! Tối đa 5MB."); return; }
+    setAvatarUploading(true);
+    try {
+      const avatarUrl = await uploadAvatar!(file);
+      await updateProfile!({ avatarUrl });
+      toast.success("✅ Cập nhật ảnh đại diện thành công!");
+    } catch (err: any) {
+      toast.error(err?.message || "Cập nhật ảnh thất bại");
+    } finally {
+      setAvatarUploading(false);
+    }
+  }, [uploadAvatar, updateProfile, toast]);
+
   return (
     <div className="profile-wrap fade-in">
       {showEdit && <EditProfileModal onClose={() => setShowEdit(false)} />}
@@ -410,23 +565,36 @@ export function ProfilePage() {
 
       {/* ── Header card ── */}
       <div className="profile-header">
-        <div className="avatar-upload-wrap" title="Đổi ảnh đại diện">
+        <div
+          className="avatar-upload-wrap"
+          title="Đổi ảnh đại diện"
+          onClick={() => !avatarUploading && quickAvatarRef.current?.click()}
+          style={{ cursor: avatarUploading ? "wait" : "pointer" }}
+        >
           {user?.avatarUrl ? (
             <img
               src={user.avatarUrl}
               alt="avatar"
               className="profile-avatar-big"
-              style={{ width: 80, height: 80, objectFit: "cover", borderRadius: "50%" }}
+              style={{ width: 80, height: 80, objectFit: "cover", borderRadius: "50%", opacity: avatarUploading ? 0.5 : 1 }}
             />
           ) : (
-            <div className="profile-avatar-big" style={{ width: 80, height: 80 }}>
+            <div className="profile-avatar-big" style={{ width: 80, height: 80, opacity: avatarUploading ? 0.5 : 1 }}>
               <span style={{ fontSize: 28, fontWeight: 900 }}>{avatarInitials}</span>
             </div>
           )}
           <div className="avatar-upload-overlay">
-            <span style={{ fontSize: 20 }}>📷</span>
-            <span>Đổi ảnh</span>
+            <span style={{ fontSize: 20 }}>{avatarUploading ? "⏳" : "📷"}</span>
+            <span>{avatarUploading ? "Đang tải..." : "Đổi ảnh"}</span>
           </div>
+          {/* Hidden file input */}
+          <input
+            ref={quickAvatarRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={handleQuickAvatar}
+          />
         </div>
 
         <div style={{ flex: 1 }}>

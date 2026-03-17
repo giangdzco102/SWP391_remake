@@ -87,7 +87,7 @@ function ConfirmDialog({ message, onYes, onNo }: { message: string; onYes: () =>
         <p style={{ margin: "0 0 20px", fontSize: 15, lineHeight: 1.6, color: "#1c1512" }}>{message}</p>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
           <button onClick={onNo} style={{ padding: "8px 18px", borderRadius: 8, border: "1.5px solid #e5e7eb", background: "#fff", cursor: "pointer", fontSize: 14 }}>Hủy</button>
-          <button onClick={onYes} style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#c23d3f", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>Xác nhận</button>
+          <button onClick={onYes} style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#ff500a", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>Xác nhận</button>
         </div>
       </div>
     </div>
@@ -110,7 +110,7 @@ function ReviewModal({ title, onSubmit, onClose }: { title: string; onSubmit: (n
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
           <button onClick={onClose} style={{ padding: "8px 18px", borderRadius: 8, border: "1.5px solid #e5e7eb", background: "#fff", cursor: "pointer", fontSize: 14 }}>Hủy</button>
           <button onClick={() => onSubmit(note, false)} style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#dc2626", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>Từ chối</button>
-          <button onClick={() => onSubmit(note, true)} style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#059669", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>Duyệt</button>
+          <button onClick={() => onSubmit(note, true)} style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#ff500a", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>Duyệt</button>
         </div>
       </div>
     </div>
@@ -148,7 +148,7 @@ function ReportResolveModal({ report, onSubmit, onClose }: { report: any; onSubm
         <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 2 }}>Chọn hành động xử lý:</span>
           {ACTIONS.map(a => (
-            <label key={a.value} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "9px 12px", borderRadius: 8, border: `1.5px solid ${action === a.value ? "#7c3aed" : "#e5e7eb"}`, cursor: "pointer", background: action === a.value ? "#f5f3ff" : "#fff" }}>
+            <label key={a.value} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "9px 12px", borderRadius: 8, border: `1.5px solid ${action === a.value ? "#ff500a" : "#e5e7eb"}`, cursor: "pointer", background: action === a.value ? "#f5f3ff" : "#fff" }}>
               <input type="radio" name="resolve_action" value={a.value} checked={action === a.value} onChange={() => setAction(a.value)} style={{ marginTop: 3, cursor: "pointer" }} />
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>{a.label}</div>
@@ -175,7 +175,7 @@ function ReportResolveModal({ report, onSubmit, onClose }: { report: any; onSubm
         </div>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
           <button onClick={onClose} style={{ padding: "8px 18px", borderRadius: 8, border: "1.5px solid #e5e7eb", background: "#fff", cursor: "pointer", fontSize: 14 }}>Hủy</button>
-          <button onClick={() => onSubmit({ action, ...(requiresBan ? { banDays } : {}), adminNote: adminNote || undefined })} style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#312e81", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>Xác nhận xử lý</button>
+          <button onClick={() => onSubmit({ action, ...(requiresBan ? { banDays } : {}), adminNote: adminNote || undefined })} style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#e64a19", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>Xác nhận xử lý</button>
         </div>
       </div>
     </div>
@@ -245,7 +245,7 @@ function ReportDetailModal({ report, onResolve, onClose }: { report: any; onReso
     return null;
   }
 
-  const TYPE_COLOR: Record<string, string> = { STORY: "#7c3aed", CHAPTER: "#2563eb", COMMENT: "#d97706" };
+  const TYPE_COLOR: Record<string, string> = { STORY: "#ff500a", CHAPTER: "#2563eb", COMMENT: "#d97706" };
   const TYPE_LABEL: Record<string, string> = { STORY: "Truyện", CHAPTER: "Chương", COMMENT: "Bình luận" };
 
   const renderTarget = () => {
@@ -292,7 +292,7 @@ function ReportDetailModal({ report, onResolve, onClose }: { report: any; onReso
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: "#1c1512", marginBottom: 4 }}>{target.title ?? `Truyện #${report.targetId}`}</div>
           {target.authorName && <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>✍️ {target.authorName}</div>}
-          {target.status && <span style={{ fontSize: 11, fontWeight: 700, background: "#ede9fe", color: "#7c3aed", borderRadius: 4, padding: "2px 7px" }}>{target.status}</span>}
+          {target.status && <span style={{ fontSize: 11, fontWeight: 700, background: "#fff0ea", color: "#ff500a", borderRadius: 4, padding: "2px 7px" }}>{target.status}</span>}
           {target.description && <p style={{ margin: "8px 0 0", fontSize: 13, color: "#374151", lineHeight: 1.55, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{target.description}</p>}
         </div>
       </div>
@@ -321,7 +321,7 @@ function ReportDetailModal({ report, onResolve, onClose }: { report: any; onReso
         {/* Header */}
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #f0ebe3", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#1c1512" }}>
-            Chi tiết báo cáo <span style={{ color: "#7c3aed" }}>#{report.id}</span>
+            Chi tiết báo cáo <span style={{ color: "#ff500a" }}>#{report.id}</span>
           </h3>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#9ca3af", lineHeight: 1, padding: 4 }}>✕</button>
         </div>
@@ -375,7 +375,7 @@ function ReportDetailModal({ report, onResolve, onClose }: { report: any; onReso
             {report.status === "PENDING" && (
               <button
                 onClick={() => { onClose(); onResolve(report); }}
-                style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: "#312e81", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 }}
+                style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: "#e64a19", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 }}
               >
                 ⚡ Xử lý báo cáo
               </button>
@@ -426,7 +426,7 @@ function MissionModal({ initial, onSubmit, onClose }: { initial?: any; onSubmit:
         </div>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 18 }}>
           <button onClick={onClose} style={{ padding: "8px 18px", borderRadius: 8, border: "1.5px solid #e5e7eb", background: "#fff", cursor: "pointer", fontSize: 14 }}>Hủy</button>
-          <button onClick={() => onSubmit(form)} style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#7c3aed", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>Lưu</button>
+          <button onClick={() => onSubmit(form)} style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#ff500a", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>Lưu</button>
         </div>
       </div>
     </div>
@@ -666,7 +666,7 @@ export default function AdminDashboard() {
       )}
 
       {/* ── Page header ── */}
-      <div style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4c1d95 100%)", padding: "28px 32px 0", color: "#fff" }}>
+      <div style={{ background: "linear-gradient(135deg, #ff7043 0%, #ff500a 60%, #e64a19 100%)", padding: "28px 32px 0", color: "#fff" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 6 }}>
             <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
@@ -690,7 +690,7 @@ export default function AdminDashboard() {
                   fontSize: 13, fontWeight: 600, borderRadius: "8px 8px 0 0",
                   whiteSpace: "nowrap", transition: "all 0.15s",
                   background: tab === t.id ? "#fff" : "transparent",
-                  color: tab === t.id ? "#312e81" : "rgba(255,255,255,0.75)",
+                  color: tab === t.id ? "#e64a19" : "rgba(255,255,255,0.75)",
                 }}
               >
                 <t.icon /> {t.label}
@@ -747,14 +747,14 @@ function OverviewTab({ stats }: { stats: any }) {
   );
 
   const cards = [
-    { label: "Tổng người dùng",    value: stats.totalUsers ?? "—",               icon: "👥", bg: "#ede9fe", color: "#7c3aed" },
+    { label: "Tổng người dùng",    value: stats.totalUsers ?? "—",               icon: "👥", bg: "#fff0ea", color: "#ff500a" },
     { label: "Tổng truyện",        value: stats.totalStories ?? "—",              icon: "📚", bg: "#dbeafe", color: "#2563eb" },
     { label: "Truyện chờ duyệt",   value: stats.pendingStories ?? "—",            icon: "⏳", bg: "#fef3c7", color: "#d97706" },
     { label: "Báo cáo chờ",        value: stats.pendingReports ?? "—",            icon: "🚩", bg: "#fee2e2", color: "#dc2626" },
-    { label: "Yêu cầu role",       value: stats.pendingRoleRequests ?? "—",       icon: "🛡", bg: "#d1fae5", color: "#059669" },
+    { label: "Yêu cầu role",       value: stats.pendingRoleRequests ?? "—",       icon: "🛡", bg: "#d1fae5", color: "#ff500a" },
     { label: "Yêu cầu rút tiền",   value: stats.pendingWithdrawRequests ?? "—",   icon: "💸", bg: "#fce7f3", color: "#db2777" },
-    { label: "Tổng chapter",       value: stats.totalChapters ?? "—",             icon: "📖", bg: "#f0fdf4", color: "#16a34a" },
-    { label: "Tổng báo cáo",       value: stats.totalReports ?? "—",              icon: "📋", bg: "#f5f3ff", color: "#7c3aed" },
+    { label: "Tổng chapter",       value: stats.totalChapters ?? "—",             icon: "📖", bg: "#fff0ea", color: "#16a34a" },
+    { label: "Tổng báo cáo",       value: stats.totalReports ?? "—",              icon: "📋", bg: "#f5f3ff", color: "#ff500a" },
   ];
 
   return (
@@ -826,7 +826,7 @@ function UsersTab({ users, editRoleRow, editRoles, ALL_ROLES, onStartEdit, onTog
                   <td style={td}>{u.id}</td>
                   <td style={td}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: u.enabled === false ? "#f3f4f6" : "#ede9fe", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: u.enabled === false ? "#9ca3af" : "#7c3aed", flexShrink: 0 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: u.enabled === false ? "#f3f4f6" : "#fff0ea", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: u.enabled === false ? "#9ca3af" : "#ff500a", flexShrink: 0 }}>
                         {u.fullName?.[0] ?? "?"}
                       </div>
                       <div>
@@ -840,13 +840,13 @@ function UsersTab({ users, editRoleRow, editRoles, ALL_ROLES, onStartEdit, onTog
                     {editRoleRow === u.id ? (
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                         {ALL_ROLES.map((r: string) => (
-                          <button key={r} onClick={() => onToggleRole(r)} style={{ padding: "2px 8px", borderRadius: 20, border: "1.5px solid", fontSize: 11, fontWeight: 600, cursor: "pointer", background: editRoles.includes(r) ? "#7c3aed" : "#fff", color: editRoles.includes(r) ? "#fff" : "#6b7280", borderColor: editRoles.includes(r) ? "#7c3aed" : "#e5e7eb" }}>{r}</button>
+                          <button key={r} onClick={() => onToggleRole(r)} style={{ padding: "2px 8px", borderRadius: 20, border: "1.5px solid", fontSize: 11, fontWeight: 600, cursor: "pointer", background: editRoles.includes(r) ? "#ff500a" : "#fff", color: editRoles.includes(r) ? "#fff" : "#6b7280", borderColor: editRoles.includes(r) ? "#ff500a" : "#e5e7eb" }}>{r}</button>
                         ))}
                       </div>
                     ) : (
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                         {(u.roles ?? []).map((r: string) => (
-                          <span key={r} style={{ padding: "2px 8px", borderRadius: 20, background: "#ede9fe", color: "#7c3aed", fontSize: 11, fontWeight: 600 }}>{r}</span>
+                          <span key={r} style={{ padding: "2px 8px", borderRadius: 20, background: "#fff0ea", color: "#ff500a", fontSize: 11, fontWeight: 600 }}>{r}</span>
                         ))}
                       </div>
                     )}
@@ -856,14 +856,14 @@ function UsersTab({ users, editRoleRow, editRoles, ALL_ROLES, onStartEdit, onTog
                   <td style={td}>
                     {editRoleRow === u.id ? (
                       <div style={{ display: "flex", gap: 6 }}>
-                        <ActionBtn color="#059669" onClick={() => onSave(u.id)}><Icon.Check /> Lưu</ActionBtn>
+                        <ActionBtn color="#ff500a" onClick={() => onSave(u.id)}><Icon.Check /> Lưu</ActionBtn>
                         <ActionBtn color="#6b7280" onClick={onCancel}><Icon.X /> Hủy</ActionBtn>
                       </div>
                     ) : (
                       <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                        <ActionBtn color="#7c3aed" onClick={() => onStartEdit(u)}><Icon.Edit /> Roles</ActionBtn>
+                        <ActionBtn color="#ff500a" onClick={() => onStartEdit(u)}><Icon.Edit /> Roles</ActionBtn>
                         {!(u.roles ?? []).includes("ADMIN") && (
-                          <ActionBtn color={u.enabled !== false ? "#dc2626" : "#059669"} onClick={() => onToggleStatus(u)}>
+                          <ActionBtn color={u.enabled !== false ? "#dc2626" : "#ff500a"} onClick={() => onToggleStatus(u)}>
                             {u.enabled !== false ? <><Icon.Lock />&nbsp;Khóa</> : <><Icon.Unlock />&nbsp;Mở khóa</>}
                           </ActionBtn>
                         )}
@@ -898,7 +898,7 @@ function StoriesTab({ stories, onReview }: any) {
                 {s.coverUrl ? (
                   <img src={s.coverUrl} alt="" style={{ width: 64, height: 88, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
                 ) : (
-                  <div style={{ width: 64, height: 88, borderRadius: 8, background: "linear-gradient(135deg,#c23d3f,#9e2d2f)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0 }}>📚</div>
+                  <div style={{ width: 64, height: 88, borderRadius: 8, background: "linear-gradient(135deg, #ff7043 0%, #ff500a 60%, #e64a19 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0 }}>📚</div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 15, color: "#1c1512", marginBottom: 3 }}>{s.title}</div>
@@ -920,7 +920,7 @@ function StoriesTab({ stories, onReview }: any) {
                     ))}
                   </div>
                 </div>
-                <ActionBtn color="#059669" onClick={() => onReview(s)}><Icon.Check /> Xem & Duyệt</ActionBtn>
+                <ActionBtn color="#ff500a" onClick={() => onReview(s)}><Icon.Check /> Xem & Duyệt</ActionBtn>
               </div>
             </div>
           ))}
@@ -935,7 +935,7 @@ function ReportsTab({ reports, onResolve, onViewDetail }: any) {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const filtered = statusFilter === "ALL" ? reports : reports.filter((r: any) => r.status === statusFilter);
   const pendingCount = reports.filter((r: any) => r.status === "PENDING").length;
-  const TYPE_COLOR: Record<string, string> = { STORY: "#7c3aed", CHAPTER: "#2563eb", COMMENT: "#d97706" };
+  const TYPE_COLOR: Record<string, string> = { STORY: "#ff500a", CHAPTER: "#2563eb", COMMENT: "#d97706" };
 
   return (
     <div>
@@ -946,7 +946,7 @@ function ReportsTab({ reports, onResolve, onViewDetail }: any) {
         </h2>
         <div style={{ display: "flex", gap: 6 }}>
           {[{v: "ALL", l: "Tất cả"}, {v: "PENDING", l: "Chờ xử lý"}, {v: "RESOLVED", l: "Đã xử lý"}].map(s => (
-            <button key={s.v} onClick={() => setStatusFilter(s.v)} style={{ padding: "6px 14px", borderRadius: 20, border: "1.5px solid", cursor: "pointer", fontSize: 12, fontWeight: 600, background: statusFilter === s.v ? "#312e81" : "#fff", color: statusFilter === s.v ? "#fff" : "#6b7280", borderColor: statusFilter === s.v ? "#312e81" : "#e5e7eb" }}>
+            <button key={s.v} onClick={() => setStatusFilter(s.v)} style={{ padding: "6px 14px", borderRadius: 20, border: "1.5px solid", cursor: "pointer", fontSize: 12, fontWeight: 600, background: statusFilter === s.v ? "#e64a19" : "#fff", color: statusFilter === s.v ? "#fff" : "#6b7280", borderColor: statusFilter === s.v ? "#e64a19" : "#e5e7eb" }}>
               {s.l}
             </button>
           ))}
@@ -985,7 +985,7 @@ function ReportsTab({ reports, onResolve, onViewDetail }: any) {
                         Chi tiết
                       </ActionBtn>
                       {r.status === "PENDING" ? (
-                        <ActionBtn color="#312e81" onClick={() => onResolve(r)}><Icon.Check /> Xử lý</ActionBtn>
+                        <ActionBtn color="#e64a19" onClick={() => onResolve(r)}><Icon.Check /> Xử lý</ActionBtn>
                       ) : (
                         r.resolvedAction && <span style={{ fontSize: 11, color: "#6b7280", fontStyle: "italic", alignSelf: "center" }}>{r.resolvedAction.replace(/_/g, " ")}</span>
                       )}
@@ -1020,14 +1020,14 @@ function RoleRequestsTab({ roleReqs, onApprove, onReject }: any) {
                   <div style={{ flex: 1, minWidth: 200 }}>
                     {/* Tên người yêu cầu */}
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#ede9fe", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#7c3aed", flexShrink: 0 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#fff0ea", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#ff500a", flexShrink: 0 }}>
                         {name[0]?.toUpperCase() ?? "?"}
                       </div>
                       <span style={{ fontWeight: 700, fontSize: 14, color: "#1c1512" }}>{name}</span>
                     </div>
                     {/* Role yêu cầu */}
                     <div style={{ fontSize: 13, color: "#6b7280", marginBottom: reason ? 4 : 0 }}>
-                      Yêu cầu role: <span style={{ fontWeight: 700, color: "#7c3aed" }}>{r.requestedRole}</span>
+                      Yêu cầu role: <span style={{ fontWeight: 700, color: "#ff500a" }}>{r.requestedRole}</span>
                     </div>
                     {/* Lý do */}
                     {reason && (
@@ -1042,7 +1042,7 @@ function RoleRequestsTab({ roleReqs, onApprove, onReject }: any) {
                     <div style={{ fontSize: 12, color: "#9ca3af" }}>{new Date(r.createdAt).toLocaleDateString("vi-VN")}</div>
                     {r.status === "PENDING" && (
                       <div style={{ display: "flex", gap: 8 }}>
-                        <ActionBtn color="#059669" onClick={() => onApprove(r)}><Icon.Check /> Duyệt</ActionBtn>
+                        <ActionBtn color="#ff500a" onClick={() => onApprove(r)}><Icon.Check /> Duyệt</ActionBtn>
                         <ActionBtn color="#dc2626" onClick={() => onReject(r)}><Icon.X /> Từ chối</ActionBtn>
                       </div>
                     )}
@@ -1082,7 +1082,7 @@ function WithdrawsTab({ withdraws, onApprove, onReject }: any) {
                 <tr key={w.id} style={trStyle}>
                   <td style={td}>{w.id}</td>
                   <td style={td}>{w.requesterName}</td>
-                  <td style={{ ...td, fontWeight: 700, color: "#059669" }}>{w.amount?.toLocaleString()} VND</td>
+                  <td style={{ ...td, fontWeight: 700, color: "#ff500a" }}>{w.amount?.toLocaleString()} VND</td>
                   <td style={td}>{w.bankName}</td>
                   <td style={{ ...td, fontFamily: "monospace", fontSize: 13 }}>{w.bankAccount}</td>
                   <td style={td}><StatusBadge status={w.status} /></td>
@@ -1090,7 +1090,7 @@ function WithdrawsTab({ withdraws, onApprove, onReject }: any) {
                   <td style={td}>
                     {w.status === "PENDING" && (
                       <div style={{ display: "flex", gap: 6 }}>
-                        <ActionBtn color="#059669" onClick={() => onApprove(w)}><Icon.Check /></ActionBtn>
+                        <ActionBtn color="#ff500a" onClick={() => onApprove(w)}><Icon.Check /></ActionBtn>
                         <ActionBtn color="#dc2626" onClick={() => onReject(w)}><Icon.X /></ActionBtn>
                       </div>
                     )}
@@ -1120,7 +1120,7 @@ function MissionsTab({ missions, onAdd, onEdit, onDelete }: any) {
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
         <h2 style={{ ...sectionTitle, marginBottom: 0 }}>🎯 Quản lý nhiệm vụ ({missions.length})</h2>
-        <button onClick={onAdd} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 8, border: "none", background: "#7c3aed", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: 14 }}>
+        <button onClick={onAdd} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 8, border: "none", background: "#ff500a", color: "#fff", cursor: "pointer", fontWeight: 600, fontSize: 14 }}>
           <Icon.Plus /> Tạo nhiệm vụ
         </button>
       </div>
@@ -1136,7 +1136,7 @@ function MissionsTab({ missions, onAdd, onEdit, onDelete }: any) {
             return (
               <div key={m.id} style={{ ...cardStyle, display: "flex", flexDirection: "column", gap: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "#7c3aed", background: "#ede9fe", padding: "2px 8px", borderRadius: 20 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#ff500a", background: "#fff0ea", padding: "2px 8px", borderRadius: 20 }}>
                     {TYPE_LABEL[typeKey] ?? typeKey}
                   </span>
                   <div style={{ display: "flex", gap: 4 }}>

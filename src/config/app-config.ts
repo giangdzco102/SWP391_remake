@@ -22,6 +22,7 @@ export default class APP_CONFIG {
   static USER = {
     GETME:           "/users/me",
     UPDATE_PROFILE:  "/users/me",
+    UPLOAD_AVATAR:   "/users/me/avatar",
     CHANGE_PASSWORD: "/users/me/change-password",
   };
 
@@ -46,7 +47,8 @@ export default class APP_CONFIG {
     UPDATE:    (id: string | number) => `/chapters/${id}`,
     DELETE:    (id: string | number) => `/chapters/${id}`,
     PURCHASE:  (id: string | number) => `/chapters/${id}/purchase`,
-    PUBLISH:   (id: string | number) => `/chapters/${id}/publish`,
+    SUBMIT:    (id: string | number) => `/chapters/${id}/submit`,   // DRAFT/EDITED → PENDING_REVIEW
+    PUBLISH:   (id: string | number) => `/chapters/${id}/publish`,  // APPROVED → PUBLISHED
   };
 
   // ── Category ──────────────────────────────────────────────────────────────
@@ -114,16 +116,32 @@ export default class APP_CONFIG {
   static REVIEWER = {
     PENDING_STORIES:  "/reviewer/stories/pending",
     PENDING_CHAPTERS: "/reviewer/chapters/pending",
+    STORY_DETAIL:     (id: string | number) => `/reviewer/stories/${id}/detail`,
+    CHAPTER_DETAIL:   (id: string | number) => `/reviewer/chapters/${id}`,
     REVIEW_STORY:     (id: string | number) => `/reviewer/stories/${id}/review`,
     REVIEW_CHAPTER:   (id: string | number) => `/reviewer/chapters/${id}/review`,
+    REVIEW_HISTORY:   "/reviewer/history",
   };
 
-  // ── Editor ────────────────────────────────────────────────────────────────
+  // ── Editor ─────────────────────────────────────────────────────────────────
   static EDITOR = {
-    PENDING_CHAPTERS: "/editor/chapters/pending",
-    ASSIGN:           (chapterId: string | number) => `/editor/chapters/${chapterId}/assign`,
-    EDIT:             (chapterId: string | number) => `/editor/chapters/${chapterId}/edit`,
-    VERSIONS:         (chapterId: string | number) => `/editor/chapters/${chapterId}/versions`,
+    CHAPTER_VERSIONS: (chapterId: string | number) => `/editor/chapters/${chapterId}/versions`,
+  };
+
+  // ── Edit Request Marketplace ───────────────────────────────────────────────
+  static EDIT_REQUEST = {
+    // Author side
+    CREATE:   "/edit-requests",
+    MY:       "/edit-requests/my",
+    APPROVE:  (id: string | number) => `/edit-requests/${id}/approve`,
+    REJECT:   (id: string | number) => `/edit-requests/${id}/reject`,
+    CANCEL:   (id: string | number) => `/edit-requests/${id}/cancel`,
+    // Editor side
+    OPEN:     "/edit-requests/open",
+    ASSIGNED: "/edit-requests/assigned",
+    ASSIGN:   (id: string | number) => `/edit-requests/${id}/assign`,
+    SUBMIT:   (id: string | number) => `/edit-requests/${id}/submit`,
+    WITHDRAW: (id: string | number) => `/edit-requests/${id}/withdraw`,
   };
 
   // ── Admin ─────────────────────────────────────────────────────────────────

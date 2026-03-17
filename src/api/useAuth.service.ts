@@ -31,6 +31,7 @@ export type ResultAuthService = {
   forgotPassword?: (payload: PayloadForgotPassword) => Promise<any>;
   resetPassword?: (payload: PayloadResetPassword) => Promise<any>;
   updateProfile?: (payload: PayloadUpdateProfile) => Promise<DataGetMe | undefined>;
+  uploadAvatar?: (file: File) => Promise<string>;
 };
 
 const useAuthService = (): ResultAuthService => {
@@ -167,7 +168,28 @@ const useAuthService = (): ResultAuthService => {
       setUser(userData);
       return userData;
     }
+    // Backend không trả về user object → reload từ server để cập nhật store
+    return await getMe();
   };
+
+  const uploadAvatar = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const raw: any = await httpClient.post(APP_CONFIG.USER.UPLOAD_AVATAR, formData);
+
+    // Response: { success, status, data: { data: { avatarUrl: "..." } } }
+    const url: string =
+      raw?.data?.data?.avatarUrl ??  // lồng 2 tầng data (backend hiện tại)
+      raw?.data?.avatarUrl       ??  // lồng 1 tầng
+      raw?.avatarUrl;                // trực tiếp
+
+    if (!url || typeof url !== "string") {
+      throw new Error(`Không nhận được URL ảnh từ server. Response: ${JSON.stringify(raw)}`);
+    }
+    return url;
+  };
+
+
 
   return {
     signout,
@@ -181,6 +203,7 @@ const useAuthService = (): ResultAuthService => {
     forgotPassword,
     resetPassword,
     updateProfile,
+    uploadAvatar,
   };
 };
 
