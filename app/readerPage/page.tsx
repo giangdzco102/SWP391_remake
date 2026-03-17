@@ -1,22 +1,28 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useNavStore } from "@/stores/navStore";
 import { useAuthStore } from "@/stores";
 import useChapterService from "@/api/useChapter.service";
+import useCommentService from "@/api/useComment.service";
+import useReportService from "@/api/useReport.service";
 import { useStoryStore } from "@/stores/storyStore";
 import { Ico } from "@/components/Icons";
+import { useToast } from "@/hooks/use-toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────
+// Matches actual API response shape
 interface CommentItem {
   id: number;
   userId: number;
   userName: string;
   content: string;
   createdAt: string;
-  parentId: number | null;
+  parentId?: number | null;
   replies: CommentItem[];
+  // nested user object fallback (some API versions)
+  user?: { id?: number; fullName?: string; name?: string };
 }
 
 interface ChapterData {
@@ -32,9 +38,8 @@ interface ChapterData {
   createdAt: string;
   updatedAt: string;
   isPurchased: boolean;
-  comments: CommentItem[];
-  totalComments: number;
 }
+
 
 // ── Font & Line-height options ────────────────────────────────────────────
 const FONT_OPTIONS = [
@@ -78,41 +83,86 @@ const getAvatarColor = (name: string) =>
 function CommentNode({
   comment,
   depth = 0,
+  currentUserId,
+  isLoggedIn,
+  onSubmitReply,
+  onDelete,
+  onReport,
+  onRequireAuth,
 }: {
   comment: CommentItem;
   depth?: number;
+  currentUserId?: number;
+  isLoggedIn: boolean;
+  onSubmitReply: (parentId: number, content: string) => Promise<void>;
+  onDelete: (id: number) => void;
+  onReport: (id: number) => void;
+  onRequireAuth: () => void;
 }) {
-  const [showReplies, setShowReplies] = useState(true);
-  const initials = comment.userName
+  const [showReplies, setShowReplies] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [replySubmitting, setReplySubmitting] = useState(false);
+  const replyInputRef = useRef<HTMLTextAreaElement>(null);
+  const nodeToast = useToast();
+
+  const name = comment.userName || comment.user?.fullName || comment.user?.name || "Người dùng";
+  const initials = name
     .split(" ")
     .slice(-2)
-    .map((w) => w[0])
+    .map((w: string) => w[0])
     .join("")
     .toUpperCase();
-  const color = getAvatarColor(comment.userName);
+  const color = getAvatarColor(name);
+  const isOwn = currentUserId != null && (comment.userId === currentUserId || comment.user?.id === currentUserId);
+
+  const openReply = () => {
+    if (!isLoggedIn) { onRequireAuth(); return; }
+    setReplyOpen(true);
+    setReplyText(`@${name} `);
+    setTimeout(() => { replyInputRef.current?.focus(); replyInputRef.current?.setSelectionRange(999, 999); }, 50);
+  };
+
+  const handleSubmitReply = async () => {
+    if (!replyText.trim()) return;
+    setReplySubmitting(true);
+    try {
+      await onSubmitReply(comment.id, replyText.trim());
+      setReplyText("");
+      setReplyOpen(false);
+      setShowReplies(true);
+    } catch {
+      nodeToast.error("Không thể gửi trả lời. Thử lại sau.");
+    } finally {
+      setReplySubmitting(false);
+    }
+  };
 
   return (
-    <div style={{ marginLeft: depth > 0 ? 36 : 0, marginBottom: 12 }}>
+    <div style={{ marginBottom: depth > 0 ? 8 : 12 }}>
       <div
         style={{
           display: "flex",
           gap: 10,
-          padding: "14px 16px",
-          background: depth === 0 ? "#fdfaf7" : "#f8f4f0",
+          padding: "12px 16px",
+          background: "#fdfaf7",
           borderRadius: 12,
           border: "1px solid #ede6dd",
+          ...(depth > 0 ? { borderLeft: "3px solid #e8a0a1", borderRadius: "0 12px 12px 0" } : {}),
         }}
       >
+        {/* Avatar */}
         <div
           style={{
-            width: 36,
-            height: 36,
+            width: 34,
+            height: 34,
             borderRadius: "50%",
             background: color,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: 13,
+            fontSize: 12,
             fontWeight: 700,
             color: "#fff",
             flexShrink: 0,
@@ -120,57 +170,112 @@ function CommentNode({
         >
           {initials}
         </div>
-        <div style={{ flex: 1 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: 4,
-            }}
-          >
-            <span style={{ fontWeight: 600, fontSize: 13, color: "#1c1512" }}>
-              {comment.userName}
-            </span>
-            <span style={{ fontSize: 11, color: "#b0a096" }}>
-              {timeAgo(comment.createdAt)}
-            </span>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Header */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+            <span style={{ fontWeight: 600, fontSize: 13, color: "#1c1512" }}>{name}</span>
+            <span style={{ fontSize: 11, color: "#b0a096" }}>{timeAgo(comment.createdAt)}</span>
           </div>
-          <p
-            style={{
-              margin: 0,
-              fontSize: 14,
-              color: "#3d2f28",
-              lineHeight: 1.65,
-            }}
-          >
+
+          {/* Content */}
+          <p style={{ margin: 0, fontSize: 14, color: "#3d2f28", lineHeight: 1.65, wordBreak: "break-word" }}>
             {comment.content}
           </p>
-          {comment.replies?.length > 0 && (
+
+          {/* Actions */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
             <button
-              onClick={() => setShowReplies((v) => !v)}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontSize: 12,
-                color: "#c23d3f",
-                fontWeight: 600,
-                marginTop: 6,
-                padding: 0,
-              }}
+              onClick={openReply}
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#c23d3f", fontWeight: 600, padding: 0 }}
             >
-              {showReplies
-                ? `▲ Ẩn ${comment.replies.length} phản hồi`
-                : `▼ Xem ${comment.replies.length} phản hồi`}
+              ↩ Trả lời
             </button>
-          )}
+            {comment.replies && comment.replies.length > 0 && (
+              <button
+                onClick={() => setShowReplies((v) => !v)}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#c23d3f", fontWeight: 600, padding: 0, display: "flex", alignItems: "center", gap: 4 }}
+              >
+                {showReplies
+                  ? `▲ Ẩn ${comment.replies.length} phản hồi`
+                  : <><span style={{ background: "#fde8e8", color: "#c23d3f", borderRadius: 20, padding: "1px 8px", fontWeight: 700, fontSize: 11 }}>{comment.replies.length}</span>&nbsp;phản hồi ▼</>}
+              </button>
+            )}
+
+            {/* Three-dot menu */}
+            <div style={{ position: "relative", marginLeft: "auto" }}>
+              <button
+                onClick={() => setMenuOpen((v) => !v)}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#b0a096", padding: "0 4px", lineHeight: 1 }}
+              >
+                ···
+              </button>
+              {menuOpen && (
+                <div
+                  style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", background: "#fff", border: "1px solid #e8e0d6", borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.10)", zIndex: 50, minWidth: 120, overflow: "hidden" }}
+                  onMouseLeave={() => setMenuOpen(false)}
+                >
+                  <button
+                    onClick={() => { setMenuOpen(false); onReport(comment.id); }}
+                    style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "#6b5a4e", textAlign: "left", fontFamily: "inherit" }}
+                  >
+                    🚩 Báo cáo
+                  </button>
+                  {isOwn && (
+                    <button
+                      onClick={() => { setMenuOpen(false); onDelete(comment.id); }}
+                      style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "#dc2626", textAlign: "left", fontFamily: "inherit" }}
+                    >
+                      🗑 Xóa
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-      {showReplies &&
-        comment.replies?.map((r) => (
-          <CommentNode key={r.id} comment={r} depth={depth + 1} />
-        ))}
+
+      {/* Inline reply input — appears directly below this comment */}
+      {replyOpen && (
+        <div style={{ marginLeft: 44, marginTop: 6, marginBottom: 6 }}>
+          <div style={{ fontSize: 11, color: "#b0a096", marginBottom: 4 }}>Trả lời <strong style={{ color: "#6b5a4e" }}>{name}</strong></div>
+          <div style={{ display: "flex", gap: 8, alignItems: "flex-end", background: "#fdfaf7", border: "1.5px solid #e8e0d6", borderRadius: 12, padding: "8px 12px" }}>
+            <textarea
+              ref={replyInputRef}
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleSubmitReply(); }}
+              rows={2}
+              style={{ flex: 1, border: "none", background: "transparent", resize: "none", fontSize: 13, color: "#3d2f28", fontFamily: "inherit", outline: "none" }}
+            />
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <button
+                onClick={handleSubmitReply}
+                disabled={!replyText.trim() || replySubmitting}
+                style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: !replyText.trim() || replySubmitting ? "#f3f4f6" : "#c23d3f", color: !replyText.trim() || replySubmitting ? "#9ca3af" : "#fff", fontSize: 14, cursor: !replyText.trim() || replySubmitting ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                ➤
+              </button>
+              <button
+                onClick={() => setReplyOpen(false)}
+                style={{ width: 32, height: 32, borderRadius: "50%", border: "1px solid #e8e0d6", background: "#fff", color: "#9ca3af", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Replies */}
+      {showReplies && comment.replies && comment.replies.length > 0 && (
+        <div style={{ marginLeft: 24, marginTop: 6, borderLeft: "2px solid #f5d0d0", paddingLeft: 8 }}>
+          {comment.replies.map((r) => (
+            <CommentNode key={r.id} comment={r} depth={depth + 1} currentUserId={currentUserId} isLoggedIn={isLoggedIn} onSubmitReply={onSubmitReply} onDelete={onDelete} onReport={onReport} onRequireAuth={onRequireAuth} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -396,6 +501,44 @@ const btnStyle: React.CSSProperties = {
   flexShrink: 0,
 };
 
+// ── Report Modal ──────────────────────────────────────────────────────────
+interface ReportModalProps {
+  targetLabel: string;
+  onSubmit: (reason: string) => void;
+  onClose: () => void;
+  loading?: boolean;
+}
+function ReportModal({ targetLabel, onSubmit, onClose, loading }: ReportModalProps) {
+  const [reason, setReason] = useState("");
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div style={{ background: "#fff", borderRadius: 16, padding: "28px 28px 24px", maxWidth: 420, width: "100%", boxShadow: "0 12px 40px rgba(0,0,0,0.18)" }}>
+        <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 18, fontWeight: 700, color: "#1c1512", marginBottom: 6 }}>🚩 Báo cáo</div>
+        <div style={{ fontSize: 13, color: "#6b5a4e", marginBottom: 16 }}>Báo cáo: <strong>{targetLabel}</strong></div>
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Mô tả lý do báo cáo..."
+          rows={4}
+          style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #e8e0d6", fontSize: 14, color: "#3d2f28", resize: "vertical", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+        />
+        <div style={{ display: "flex", gap: 10, marginTop: 16, justifyContent: "flex-end" }}>
+          <button onClick={onClose} style={{ padding: "9px 20px", borderRadius: 9, border: "1.5px solid #e8e0d6", background: "#fff", color: "#6b5a4e", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+            Hủy
+          </button>
+          <button
+            onClick={() => reason.trim() && onSubmit(reason.trim())}
+            disabled={!reason.trim() || loading}
+            style={{ padding: "9px 20px", borderRadius: 9, border: "none", background: !reason.trim() || loading ? "#f3f4f6" : "#c23d3f", color: !reason.trim() || loading ? "#9ca3af" : "#fff", fontSize: 13, fontWeight: 700, cursor: !reason.trim() || loading ? "not-allowed" : "pointer" }}
+          >
+            {loading ? "Đang gửi..." : "Gửi báo cáo"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────
 export default function ReaderPage() {
   const router = useRouter();
@@ -404,6 +547,11 @@ export default function ReaderPage() {
   const { chapters } = useStoryStore();
   const { user } = useAuthStore();
   const { getChapter } = useChapterService();
+  const commentService = useCommentService();
+  const commentServiceRef = useRef(commentService);
+  commentServiceRef.current = commentService;
+  const { createReport } = useReportService();
+  const toast = useToast();
 
   const [chapterData, setChapterData] = useState<ChapterData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -412,6 +560,25 @@ export default function ReaderPage() {
   const [lineHeight, setLineHeight] = useState(1.8);
   const [scrollPct, setScrollPct] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
+
+  // Comment state
+  const [comments, setComments] = useState<CommentItem[]>([]);
+  const [commentText, setCommentText] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [reportModal, setReportModal] = useState<{ targetType: string; targetId: number; label: string } | null>(null);
+  const [reporting, setReporting] = useState(false);
+
+  // Load comments — use ref so it's never stale
+  const loadComments = useCallback(async (chapterId: number) => {
+    try {
+      const res: any = await commentServiceRef.current.getCommentsByChapter(chapterId, { page: 0, size: 100 });
+      const data: CommentItem[] = (res?.data?.content ?? res?.data ?? res?.content ?? res) as CommentItem[];
+      if (Array.isArray(data)) setComments(data);
+    } catch {
+      // keep existing comments on error
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Scroll progress
   useEffect(() => {
@@ -426,11 +593,13 @@ export default function ReaderPage() {
     return () => window.removeEventListener("scroll", handler);
   }, []);
 
-  // Fetch chapter when id changes
+  // Fetch chapter + comments when id changes
   useEffect(() => {
     if (!selectedChapterId) return;
     setLoading(true);
     window.scrollTo(0, 0);
+    setComments([]);
+    setCommentText("");
     getChapter(selectedChapterId)
       .then((res: any) => {
         const data: ChapterData = res?.data ?? res;
@@ -438,8 +607,66 @@ export default function ReaderPage() {
       })
       .catch(() => setChapterData(null))
       .finally(() => setLoading(false));
+    loadComments(selectedChapterId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChapterId]);
+
+  // Post new root comment
+  const handlePostComment = async () => {
+    if (!user) { router.push("?login"); return; }
+    if (!commentText.trim() || !chapterData) return;
+    setSubmitting(true);
+    try {
+      await commentServiceRef.current.createComment({ chapterId: chapterData.id, content: commentText.trim() });
+      setCommentText("");
+      await loadComments(chapterData.id);
+      toast.success("Đã đăng bình luận!");
+    } catch {
+      toast.error("Không thể đăng bình luận. Thử lại sau.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Post reply (passed down to CommentNode) — throws on error so CommentNode can handle
+  const handleSubmitReply = async (parentId: number, content: string) => {
+    if (!chapterData) throw new Error("no chapter");
+    await commentServiceRef.current.createComment({ chapterId: chapterData.id, content, parentId });
+    await loadComments(chapterData.id);
+  };
+
+  // Delete own comment
+  const handleDeleteComment = async (commentId: number) => {
+    if (!window.confirm("Xóa bình luận này?")) return;
+    try {
+      await commentServiceRef.current.deleteComment(commentId);
+      if (chapterData) await loadComments(chapterData.id);
+      toast.success("Đã xóa bình luận.");
+    } catch {
+      toast.error("Không thể xóa bình luận.");
+    }
+  };
+
+  // Open report modal
+  const handleOpenReport = (targetType: string, targetId: number, label: string) => {
+    if (!user) { router.push("?login"); return; }
+    setReportModal({ targetType, targetId, label });
+  };
+
+  // Submit report
+  const handleSubmitReport = async (reason: string) => {
+    if (!reportModal) return;
+    setReporting(true);
+    try {
+      await createReport({ targetType: reportModal.targetType, targetId: reportModal.targetId, reason });
+      toast.success("Báo cáo đã được gửi. Cảm ơn bạn!");
+      setReportModal(null);
+    } catch {
+      toast.error("Không thể gửi báo cáo. Thử lại sau.");
+    } finally {
+      setReporting(false);
+    }
+  };
 
   // Navigate prev/next by chapterOrder
   const currentIdx = chapters.findIndex((c) => c.id === selectedChapterId);
@@ -726,38 +953,80 @@ export default function ReaderPage() {
       </div>
 
       {/* Comments */}
-      <div
-        style={{ maxWidth: 680, margin: "48px auto 80px", padding: "0 16px" }}
-      >
-        <div
-          style={{
-            fontFamily: "'Playfair Display',serif",
-            fontSize: 20,
-            fontWeight: 700,
-            color: "#1c1512",
-            marginBottom: 20,
-          }}
-        >
-          💬 Bình luận (
-          {chapterData.totalComments ?? chapterData.comments?.length ?? 0})
-        </div>
-        {!chapterData.comments?.length ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "32px 0",
-              fontSize: 14,
-              color: "#b0a096",
-            }}
+      <div style={{ maxWidth: 680, margin: "48px auto 80px", padding: "0 16px" }}>
+
+        {/* Section header + report chapter button */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 8 }}>
+          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 700, color: "#1c1512" }}>
+            💬 Bình luận ({comments.length})
+          </div>
+          <button
+            onClick={() => handleOpenReport("CHAPTER", chapterData.id, chapterData.title)}
+            style={{ fontSize: 12, color: "#9ca3af", background: "none", border: "1px solid #e8e0d6", borderRadius: 8, padding: "5px 12px", cursor: "pointer" }}
           >
+            🚩 Báo cáo chương
+          </button>
+        </div>
+
+        {/* Comment input — root comments only */}
+        <div style={{ background: "#fdfaf7", border: "1.5px solid #e8e0d6", borderRadius: 14, padding: "14px 16px", marginBottom: 24 }}>
+          <textarea
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handlePostComment(); }}
+            placeholder={user ? "Viết bình luận của bạn... (Ctrl+Enter để gửi)" : "Đăng nhập để bình luận"}
+            disabled={!user}
+            rows={3}
+            style={{ width: "100%", border: "none", background: "transparent", resize: "none", fontSize: 14, color: "#3d2f28", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+          />
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8, gap: 8 }}>
+            {!user && (
+              <button onClick={() => router.push("?login")} style={{ fontSize: 13, color: "#c23d3f", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>
+                Đăng nhập để bình luận →
+              </button>
+            )}
+            {user && (
+              <button
+                onClick={handlePostComment}
+                disabled={!commentText.trim() || submitting}
+                style={{ padding: "8px 20px", borderRadius: 9, border: "none", background: !commentText.trim() || submitting ? "#f3f4f6" : "#c23d3f", color: !commentText.trim() || submitting ? "#9ca3af" : "#fff", fontSize: 13, fontWeight: 700, cursor: !commentText.trim() || submitting ? "not-allowed" : "pointer" }}
+              >
+                {submitting ? "Đang gửi..." : "Gửi"}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Comment list */}
+        {comments.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "32px 0", fontSize: 14, color: "#b0a096" }}>
             Chưa có bình luận nào. Hãy là người đầu tiên bình luận! 🌸
           </div>
         ) : (
-          chapterData.comments.map((c) => (
-            <CommentNode key={c.id} comment={c} />
+          comments.map((c) => (
+            <CommentNode
+              key={c.id}
+              comment={c}
+              currentUserId={user?.id}
+              isLoggedIn={!!user}
+              onSubmitReply={handleSubmitReply}
+              onDelete={handleDeleteComment}
+              onReport={(id) => handleOpenReport("COMMENT", id, `Bình luận #${id}`)}
+              onRequireAuth={() => router.push("?login")}
+            />
           ))
         )}
       </div>
+
+      {/* Report Modal */}
+      {reportModal && (
+        <ReportModal
+          targetLabel={reportModal.label}
+          loading={reporting}
+          onSubmit={handleSubmitReport}
+          onClose={() => setReportModal(null)}
+        />
+      )}
     </div>
   );
 }

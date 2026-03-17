@@ -122,9 +122,23 @@ const LoginForm = ({ onForgot }: { onForgot?: () => void }) => {
       await login(data);
       toast.showByCode(TOAST_KEYS.LOGIN, TOAST_CODES.SUCCESS);
       router.push("/homePage");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      toast.showByCode(TOAST_KEYS.LOGIN, TOAST_CODES.UNPROCESSABLE);
+      const status = error?.response?.status ?? error?.status;
+      const message: string = (error?.response?.data?.message ?? error?.message ?? "").toLowerCase();
+      const isLocked =
+        status === 403 ||
+        message.includes("disabled") ||
+        message.includes("locked") ||
+        message.includes("banned") ||
+        message.includes("khóa");
+      if (isLocked) {
+        toast.error("🚫 Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.");
+      } else if (status === 401) {
+        toast.showByCode(TOAST_KEYS.LOGIN, TOAST_CODES.UNAUTHORIZED);
+      } else {
+        toast.showByCode(TOAST_KEYS.LOGIN, TOAST_CODES.UNPROCESSABLE);
+      }
     } finally {
       setLoading(false);
     }

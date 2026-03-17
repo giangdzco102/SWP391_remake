@@ -14,6 +14,7 @@ export interface ToastMessages {
 // Constants for easy usage
 export const TOAST_KEYS = {
   LOGIN: "login",
+  ACCOUNT_LOCKED: "account_locked",
 } as const;
 
 export const TOAST_CODES = {
@@ -51,8 +52,8 @@ export const toastMessages: ToastMessages = {
     },
     [TOAST_CODES.FORBIDDEN]: {
       type: "error",
-      message: "Bạn không có quyền truy cập",
-      title: "Truy cập bị từ chối",
+      message: "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.",
+      title: "Tài khoản bị khóa",
     },
     [TOAST_CODES.NOT_FOUND]: {
       type: "error",
@@ -68,6 +69,13 @@ export const toastMessages: ToastMessages = {
       type: "error",
       message: "Lỗi hệ thống, vui lòng thử lại sau",
       title: "Lỗi server",
+    },
+  },
+  [TOAST_KEYS.ACCOUNT_LOCKED]: {
+    "default": {
+      type: "error",
+      message: "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.",
+      title: "🚫 Tài khoản bị khóa",
     },
   },
 };
