@@ -172,7 +172,60 @@ const Icon = {
     </svg>
   ),
   Refresh: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <polyline points="23 4 23 10 17 10" />
+      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+    </svg>
+  ),
+  Search: () => (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  ),
+
+  // Lock — ổ khóa đóng
+  Lock: () => (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  ),
+
+  // Unlock — ổ khóa mở
+  Unlock: () => (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+    </svg>
   ),
 };
 
@@ -460,6 +513,197 @@ const labelStyle: React.CSSProperties = {
   display: "block",
   marginBottom: 4,
 };
+
+// ─── Report Detail Modal ─────────────────────────────────────────────────────
+function ReportDetailModal({
+  report,
+  onResolve,
+  onClose,
+}: {
+  report: any;
+  onResolve: (r: any) => void;
+  onClose: () => void;
+}) {
+  const TYPE_COLOR: Record<string, string> = {
+    STORY: "#7c3aed",
+    CHAPTER: "#2563eb",
+    COMMENT: "#d97706",
+  };
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.45)",
+        zIndex: 1000,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: 14,
+          padding: 28,
+          maxWidth: 520,
+          width: "90%",
+          boxShadow: "0 20px 60px rgba(0,0,0,.25)",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Chi tiết báo cáo #{report.id}</h3>
+          <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", fontSize: 18, color: "#6b7280" }}>✕</button>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 14 }}>
+          <Row label="Người báo cáo" value={report.reporterName} />
+          <Row
+            label="Loại đối tượng"
+            value={
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: TYPE_COLOR[report.targetType] ?? "#6b7280", borderRadius: 4, padding: "2px 8px" }}>
+                {report.targetType}
+              </span>
+            }
+          />
+          <Row label="ID đối tượng" value={`#${report.targetId}`} />
+          <Row label="Trạng thái" value={<StatusBadge status={report.status} />} />
+          <Row label="Ngày tạo" value={new Date(report.createdAt).toLocaleString("vi-VN")} />
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 4 }}>Nội dung báo cáo</div>
+            <div style={{ background: "#f8f7f4", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", color: "#374151", lineHeight: 1.6 }}>
+              {report.content}
+            </div>
+          </div>
+          {report.resolveNote && (
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 4 }}>Ghi chú xử lý</div>
+              <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "10px 14px", color: "#065f46", lineHeight: 1.6 }}>
+                {report.resolveNote}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
+          <button onClick={onClose} style={{ padding: "8px 18px", borderRadius: 8, border: "1.5px solid #e5e7eb", background: "#fff", cursor: "pointer", fontSize: 14 }}>
+            Đóng
+          </button>
+          {report.status === "PENDING" && (
+            <button
+              onClick={() => onResolve(report)}
+              style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#312e81", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 }}
+            >
+              Xử lý báo cáo
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Report Resolve Modal ────────────────────────────────────────────────────
+function ReportResolveModal({
+  report,
+  onSubmit,
+  onClose,
+}: {
+  report: any;
+  onSubmit: (payload: any) => void;
+  onClose: () => void;
+}) {
+  const [action, setAction] = useState("WARNING");
+  const [note, setNote] = useState("");
+
+  const ACTIONS = [
+    { value: "WARNING", label: "⚠️ Cảnh báo" },
+    { value: "REMOVE_CONTENT", label: "🗑 Xóa nội dung" },
+    { value: "BAN_USER", label: "🔒 Khóa tài khoản" },
+    { value: "NO_ACTION", label: "✅ Bỏ qua" },
+  ];
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.45)",
+        zIndex: 1000,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: 14,
+          padding: 28,
+          maxWidth: 460,
+          width: "90%",
+          boxShadow: "0 20px 60px rgba(0,0,0,.25)",
+        }}
+      >
+        <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700 }}>
+          Xử lý báo cáo #{report.id}
+        </h3>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div>
+            <div style={labelStyle}>Hành động</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {ACTIONS.map((a) => (
+                <label key={a.value} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 14 }}>
+                  <input
+                    type="radio"
+                    name="resolveAction"
+                    value={a.value}
+                    checked={action === a.value}
+                    onChange={() => setAction(a.value)}
+                  />
+                  {a.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div style={labelStyle}>Ghi chú (tuỳ chọn)</div>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Nhập ghi chú..."
+              style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
+            />
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 18 }}>
+          <button onClick={onClose} style={{ padding: "8px 18px", borderRadius: 8, border: "1.5px solid #e5e7eb", background: "#fff", cursor: "pointer", fontSize: 14 }}>
+            Hủy
+          </button>
+          <button
+            onClick={() => onSubmit({ action, note })}
+            style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#312e81", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 }}
+          >
+            Xác nhận xử lý
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Helper component dùng trong ReportDetailModal
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", gap: 8 }}>
+      <span style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", minWidth: 120, paddingTop: 1 }}>{label}</span>
+      <span style={{ color: "#1c1512" }}>{value}</span>
+    </div>
+  );
+}
 
 // ─── Tabs config ─────────────────────────────────────────────────────────────
 const TABS = [
