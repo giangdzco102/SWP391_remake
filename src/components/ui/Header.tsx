@@ -14,6 +14,7 @@ import { useNavStore } from "@/stores/navStore";
 import { useStoryStore } from "@/stores/storyStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useGotoStory } from "@/hooks/useGotoStory";
+import { useTheme } from "@/contexts/ThemeContext";
 import {
   BecomeAuthorModal,
   BecomeReviewerModal,
@@ -31,26 +32,26 @@ const SEARCH_COVER_FALLBACKS = [
 
 const ROLE_LABEL: Record<string, string> = {
   reviewer: "Reviewer",
-  author: "Tác giả",
-  editor: "Editor",
-  reader: "Độc giả",
+  author:   "Tác giả",
+  editor:   "Editor",
+  reader:   "Độc giả",
 };
 
 const ROLE_CHIP_CLASS: Record<string, string> = {
   reviewer: "chip-role-reviewer",
-  author: "chip-role-author",
-  editor: "chip-role-editor",
-  reader: "chip-role-reader",
+  author:   "chip-role-author",
+  editor:   "chip-role-editor",
+  reader:   "chip-role-reader",
 };
 
 // ── CategoryDropdown ──────────────────────────────────────────────────────────
 function CategoryDropdown({
   visible, categories, onSelect, onViewAll,
 }: {
-  visible: boolean;
+  visible:    boolean;
   categories: CategoryItem[];
-  onSelect: (name: string) => void;
-  onViewAll: () => void;
+  onSelect:   (name: string) => void;
+  onViewAll:  () => void;
 }) {
   const itemStyle: React.CSSProperties = {
     display: "flex", alignItems: "center", gap: 8,
@@ -107,34 +108,35 @@ function CategoryDropdown({
 }
 
 // ── Header ────────────────────────────────────────────────────────────────────
-export function Header({ pending, darkMode, setDarkMode }: any) {
+export function Header({ pending }: any) {
+  const { theme, toggleTheme }    = useTheme();           // ← dùng ThemeContext, bỏ props
   const { openModal, closeModal } = useModalStore();
-  const { user, setLoading } = useAuthStore();
-  const { navTo, page } = useNavStore();
-  const gotoStory = useGotoStory();
+  const { user, setLoading }      = useAuthStore();
+  const { navTo, page }           = useNavStore();
+  const gotoStory                 = useGotoStory();
   const { setActiveGenre, searchQ, setSearchQ } = useStoryStore();
   const { notifications, unreadCount, markAllRead, markOneRead } = useNotificationStore();
   const router = useRouter();
-  const toast = useToast();
-  const { logout } = useAuthService();
+  const toast  = useToast();
+  const { logout }        = useAuthService();
   const { searchStories } = useStoryService();
   const { getCategories } = useCategoryService();
 
   // ── Refs ──────────────────────────────────────────────────────────────────
   const userMenuRef = useRef<HTMLDivElement>(null);
-  const notifRef = useRef<HTMLDivElement>(null);
-  const searchRef = useRef<HTMLDivElement>(null);
-  const catMenuRef = useRef<HTMLDivElement>(null);
+  const notifRef    = useRef<HTMLDivElement>(null);
+  const searchRef   = useRef<HTMLDivElement>(null);
+  const catMenuRef  = useRef<HTMLDivElement>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── State ─────────────────────────────────────────────────────────────────
-  const [showCatMenu, setShowCatMenu] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showNotif, setShowNotif] = useState(false);
+  const [showCatMenu,    setShowCatMenu]    = useState(false);
+  const [showUserMenu,   setShowUserMenu]   = useState(false);
+  const [showNotif,      setShowNotif]      = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showSearchDrop, setShowSearchDrop] = useState(false);
-  const [dbCategories, setDbCategories] = useState<CategoryItem[]>([]);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [dbCategories,   setDbCategories]   = useState<CategoryItem[]>([]);
+  const [searchResults,  setSearchResults]  = useState<any[]>([]);
 
   const primaryRole = user?.roles?.[0] ?? "READER";
 
@@ -142,17 +144,17 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
   useEffect(() => {
     getCategories()
       .then((res: any) => setDbCategories(res?.data ?? res ?? []))
-      .catch(() => { });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Click outside ─────────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) setShowUserMenu(false);
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setShowNotif(false);
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setShowSearchDrop(false);
-      if (catMenuRef.current && !catMenuRef.current.contains(e.target as Node)) setShowCatMenu(false);
+      if (notifRef.current    && !notifRef.current.contains(e.target as Node))    setShowNotif(false);
+      if (searchRef.current   && !searchRef.current.contains(e.target as Node))   setShowSearchDrop(false);
+      if (catMenuRef.current  && !catMenuRef.current.contains(e.target as Node))  setShowCatMenu(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -164,17 +166,17 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(async () => {
       try {
-        const res: any = await searchStories({ keyword: q, size: 8 });
+        const res: any    = await searchStories({ keyword: q, size: 8 });
         const list: any[] = res?.data ?? res ?? [];
         setSearchResults(list.map((s: any, i: number) => ({
           id: s.id, title: s.title, penName: s.authorName ?? "",
-          genre: s.categories?.[0]?.name ?? "",
-          cover: s.coverUrl ? `url("${s.coverUrl}")` : SEARCH_COVER_FALLBACKS[i % 3],
-          views: s.viewCount ?? 0, chapters: s.totalChapters ?? 0,
-          status: s.status === "COMPLETED" ? "done" : "ongoing",
-          rating: s.averageRating ?? 0,
-          reads: s.viewCount >= 1000 ? `${(s.viewCount / 1000).toFixed(1)}K` : String(s.viewCount ?? 0),
-          author: s.authorName ?? "", tags: [], reviewCount: 0,
+          genre:   s.categories?.[0]?.name ?? "",
+          cover:   s.coverUrl ? `url("${s.coverUrl}")` : SEARCH_COVER_FALLBACKS[i % 3],
+          views:   s.viewCount ?? 0, chapters: s.totalChapters ?? 0,
+          status:  s.status === "COMPLETED" ? "done" : "ongoing",
+          rating:  s.averageRating ?? 0,
+          reads:   s.viewCount >= 1000 ? `${(s.viewCount / 1000).toFixed(1)}K` : String(s.viewCount ?? 0),
+          author:  s.authorName ?? "", tags: [], reviewCount: 0,
           favorites: s.favoriteCount ?? 0, description: s.summary ?? "",
           featured: false, excerpt: s.summary ?? "",
         })));
@@ -195,47 +197,22 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
     } finally { setLoading(false); }
   };
 
-  const navLinks = useMemo(
-    () => [
-      { label: "Trang chủ", page: "/homePage" },
-      { label: "Bảng xếp hạng", page: "/rankingsPage" },
-      { label: "Thể loại", page: "/categoriesPage", isCat: true },
-      { label: "Yêu thích", page: "/favoritesPage" },
-      ...(user?.roles.includes("REVIEWER")
-        ? [
-            {
-              label: "Kiểm duyệt",
-              page: "/reviewerDashboard",
-              badge: pending?.length,
-            },
-          ]
-        : []),
-      ...(user?.roles.includes("EDITOR")
-        ? [{ label: "Nhiệm vụ", page: "/editorDashboard" }]
-        : []),
-      ...(user?.roles.includes("AUTHOR")
-        ? [{ label: "Tác phẩm của tôi", page: "/myStoriesPage" }]
-        : []),
-      ...(user?.roles.includes("ADMIN")
-        ? [{ label: "⚙ Admin", page: "/adminDashboard" }]
-        : []),
-    ],
-    [user?.roles, pending?.length],
-  );
+  // ── Nav links ─────────────────────────────────────────────────────────────
+  const navLinks = useMemo(() => [
+    { label: "Trang chủ",        page: "/homePage" },
+    { label: "Bảng xếp hạng",   page: "/rankingsPage" },
+    { label: "Thể loại",         page: "/categoriesPage", isCat: true },
+    { label: "Yêu thích",        page: "/favoritesPage" },
+    ...(user?.roles.includes("REVIEWER") ? [{ label: "Kiểm duyệt",       page: "/reviewerDashboard", badge: pending?.length }] : []),
+    ...(user?.roles.includes("EDITOR")   ? [{ label: "Nhiệm vụ",         page: "/editorDashboard" }] : []),
+    ...(user?.roles.includes("AUTHOR")   ? [{ label: "Tác phẩm của tôi", page: "/myStoriesPage" }] : []),
+    ...(user?.roles.includes("ADMIN")    ? [{ label: "⚙ Admin",          page: "/adminDashboard" }] : []),
+  ], [user?.roles, pending?.length]);
 
-  const ROLE_LABEL: any = {
-    reviewer: "Reviewer",
-    author: "Tác giả",
-    editor: "Editor",
-    reader: "Độc giả",
-  };
-  const ROLE_CHIP_CLASS: any = {
-    reviewer: "chip-role-reviewer",
-    author: "chip-role-author",
-    editor: "chip-role-editor",
-    reader: "chip-role-reader",
-  };
+  // ── Helper ────────────────────────────────────────────────────────────────
+  const mobileAnd = (fn: () => void) => () => { setShowMobileMenu(false); fn(); };
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
       {/* ── MOBILE SIDEBAR ──────────────────────────────────────────────── */}
@@ -287,16 +264,16 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
             {/* Auth */}
             {!user ? (
               <div style={{ padding: "12px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
-                <button className="btn-full btn-red-full" onClick={mobileAnd(() => router.push("?login"))}>Đăng nhập</button>
+                <button className="btn-full btn-red-full"  onClick={mobileAnd(() => router.push("?login"))}>Đăng nhập</button>
                 <button className="btn-full btn-blue-full" onClick={mobileAnd(() => router.push("?register"))}>Đăng ký</button>
               </div>
             ) : (
               <>
                 {user.roles.includes("READER") && (
                   <>
-                    <button className="mobile-nav-link" onClick={mobileAnd(() => openModal(BecomeAuthorModal, { onSuccess: () => closeModal() }))}>✒ Trở thành Tác giả</button>
+                    <button className="mobile-nav-link" onClick={mobileAnd(() => openModal(BecomeAuthorModal,   { onSuccess: () => closeModal() }))}>✒ Trở thành Tác giả</button>
                     <button className="mobile-nav-link" onClick={mobileAnd(() => openModal(BecomeReviewerModal, { onSuccess: () => closeModal() }))}>🛡 Trở thành Reviewer</button>
-                    <button className="mobile-nav-link" onClick={mobileAnd(() => openModal(BecomeEditorModal, { onSuccess: () => closeModal() }))}>✏ Trở thành Editor</button>
+                    <button className="mobile-nav-link" onClick={mobileAnd(() => openModal(BecomeEditorModal,   { onSuccess: () => closeModal() }))}>✏ Trở thành Editor</button>
                   </>
                 )}
                 {user.roles.includes("ADMIN") && (
@@ -393,17 +370,17 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
             )}
           </div>
 
-          {/* Dark mode */}
-          <button className={`dark-toggle${darkMode ? " on" : ""}`} onClick={() => setDarkMode((d: boolean) => !d)}>
-            <div className="dark-toggle-thumb">{darkMode ? <Ico.Moon /> : <Ico.Sun />}</div>
+          {/* Dark mode — useTheme() thay vì props */}
+          <button className={`dark-toggle${theme === "dark" ? " on" : ""}`} onClick={toggleTheme}>
+            <div className="dark-toggle-thumb">{theme === "dark" ? <Ico.Moon /> : <Ico.Sun />}</div>
           </button>
 
           {/* Guest */}
           {!user ? (
             <>
-              <button className="btn-nav btn-primary" onClick={() => router.push("?login")}>Đăng nhập</button>
+              <button className="btn-nav btn-primary"       onClick={() => router.push("?login")}>Đăng nhập</button>
               <button className="btn-nav btn-secondary-nav" onClick={() => router.push("?register")}>Đăng ký</button>
-              <button className="menu-icon-btn" onClick={() => setShowMobileMenu(true)}><Ico.Menu /></button>
+              <button className="menu-icon-btn"             onClick={() => setShowMobileMenu(true)}><Ico.Menu /></button>
             </>
           ) : (
             <>
@@ -467,7 +444,7 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
                     </button>
 
                     {/* Role-based */}
-                    {user.roles.includes("AUTHOR") && <button className="dropdown-item" onClick={() => { setShowUserMenu(false); navTo("my-stories"); }}><Ico.Pen /> Tác phẩm của tôi</button>}
+                    {user.roles.includes("AUTHOR")   && <button className="dropdown-item" onClick={() => { setShowUserMenu(false); navTo("my-stories"); }}><Ico.Pen /> Tác phẩm của tôi</button>}
                     {user.roles.includes("REVIEWER") && (
                       <button className="dropdown-item" onClick={() => { setShowUserMenu(false); navTo("reviewer-dash"); }}>
                         <Ico.Shield /> Bảng kiểm duyệt
@@ -475,16 +452,16 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
                       </button>
                     )}
                     {user.roles.includes("EDITOR") && <button className="dropdown-item" onClick={() => { setShowUserMenu(false); navTo("editor-dash"); }}><Ico.Edit /> Bảng nhiệm vụ</button>}
-                    {user.roles.includes("ADMIN") && <button className="dropdown-item" style={{ color: "#7c3aed", fontWeight: 700 }} onClick={() => { setShowUserMenu(false); router.push("/adminDashboard"); }}><Ico.Shield /> Quản trị Admin</button>}
+                    {user.roles.includes("ADMIN")  && <button className="dropdown-item" style={{ color: "#7c3aed", fontWeight: 700 }} onClick={() => { setShowUserMenu(false); router.push("/adminDashboard"); }}><Ico.Shield /> Quản trị Admin</button>}
 
                     <div className="dropdown-divider" />
 
                     {/* Upgrade role */}
                     {user.roles.includes("READER") && (
                       <>
-                        <button className="dropdown-item" onClick={() => { setShowUserMenu(false); openModal(BecomeAuthorModal, { onSuccess: () => closeModal() }); }}>✒ Trở thành Tác giả</button>
+                        <button className="dropdown-item" onClick={() => { setShowUserMenu(false); openModal(BecomeAuthorModal,   { onSuccess: () => closeModal() }); }}>✒ Trở thành Tác giả</button>
                         <button className="dropdown-item" onClick={() => { setShowUserMenu(false); openModal(BecomeReviewerModal, { onSuccess: () => closeModal() }); }}>🛡 Trở thành Reviewer</button>
-                        <button className="dropdown-item" onClick={() => { setShowUserMenu(false); openModal(BecomeEditorModal, { onSuccess: () => closeModal() }); }}>✏ Trở thành Editor</button>
+                        <button className="dropdown-item" onClick={() => { setShowUserMenu(false); openModal(BecomeEditorModal,   { onSuccess: () => closeModal() }); }}>✏ Trở thành Editor</button>
                         <div className="dropdown-divider" />
                       </>
                     )}
