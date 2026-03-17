@@ -29,19 +29,7 @@ const SEARCH_COVER_FALLBACKS = [
   "linear-gradient(135deg,#43e97b,#38f9d7)",
 ];
 
-const ROLE_LABEL: Record<string, string> = {
-  reviewer: "Reviewer",
-  author: "Tác giả",
-  editor: "Editor",
-  reader: "Độc giả",
-};
 
-const ROLE_CHIP_CLASS: Record<string, string> = {
-  reviewer: "chip-role-reviewer",
-  author: "chip-role-author",
-  editor: "chip-role-editor",
-  reader: "chip-role-reader",
-};
 
 // ── CategoryDropdown ──────────────────────────────────────────────────────────
 function CategoryDropdown({
@@ -234,6 +222,10 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
     author: "chip-role-author",
     editor: "chip-role-editor",
     reader: "chip-role-reader",
+  };
+  const mobileAnd = (fn: () => void) => () => {
+    setShowMobileMenu(false);
+    fn();
   };
 
   return (

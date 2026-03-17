@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Ico } from "@/components/Icons";
 import { StarRating } from "@/components/ui";
 import { useStoryStore } from "@/stores/storyStore";
@@ -70,19 +70,6 @@ export function StoryDetailPage() {
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [story?.id]);
-
-  const [userRating, setUserRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
-  const [reviewText, setReviewText] = useState("");
-  const [aspectRatings, setAspectRatings] = useState({
-    plot: 0,
-    characters: 0,
-    writing: 0,
-    pacing: 0,
-  });
-  const [helpfulSet, setHelpfulSet] = useState(new Set());
-  const [showWriteReview, setShowWriteReview] = useState(false);
-
   // Report
   const { createReport } = useReportService();
   const toast = useToast();
@@ -125,26 +112,28 @@ export function StoryDetailPage() {
   return (
     <div className="fade-in">
       <div className="detail-wrap">
-
         {/* ── MAIN ─────────────────────────────────────────────────────────── */}
         <div className="mobile-user-info">
-
           <button className="back-btn" onClick={() => router.push("/homePage")}>
             <Ico.Back /> Quay lại
           </button>
 
           {/* ── Hero: cover + meta ───────────────────────────────────────── */}
-          <div className="detail-cover-row" style={{ alignItems: "flex-start" }}>
-
+          <div
+            className="detail-cover-row"
+            style={{ alignItems: "flex-start" }}
+          >
             <div
-              className="detail-cover flex-shrink-0"
+              className="detail-cover shrink-0"
               style={{ width: 140, height: 200 }}
             >
-              <div className="w-full h-full" style={{ background: story.cover }} />
+              <div
+                className="w-full h-full"
+                style={{ background: story.cover }}
+              />
             </div>
 
             <div className="hero-left flex flex-col" style={{ gap: 10 }}>
-
               {/* Status badge */}
               <div>
                 <span
@@ -156,39 +145,67 @@ export function StoryDetailPage() {
               </div>
 
               {/* Title */}
-              <h1 className="detail-title" style={{ marginBottom: 0 }}>{story.title}</h1>
+              <h1 className="detail-title" style={{ marginBottom: 0 }}>
+                {story.title}
+              </h1>
 
               {/* Tác giả */}
-              <div className="flex items-center flex-wrap" style={{ gap: "4px 6px", fontSize: 13, color: "#9e8e82" }}>
+              <div
+                className="flex items-center flex-wrap"
+                style={{ gap: "4px 6px", fontSize: 13, color: "#9e8e82" }}
+              >
                 <span>Tác giả:</span>
-                <span style={{ color: "#c23d3f", fontWeight: 600, fontSize: 14 }}>{story.author}</span>
+                <span
+                  style={{ color: "#c23d3f", fontWeight: 600, fontSize: 14 }}
+                >
+                  {story.author}
+                </span>
                 <span style={{ color: "#ddd" }}>·</span>
-                <span style={{ color: "#b0a096", fontStyle: "italic" }}>{story.penName}</span>
+                <span style={{ color: "#b0a096", fontStyle: "italic" }}>
+                  {story.penName}
+                </span>
               </div>
 
               {/* Genre + Tags */}
-              <div className="flex flex-wrap items-center" style={{ gap: "6px" }}>
+              <div
+                className="flex flex-wrap items-center"
+                style={{ gap: "6px" }}
+              >
                 <span
                   className="tag"
-                  style={{ background: "#fde8e8", color: "#c23d3f", border: "1.5px solid #f0b4b5", fontWeight: 600 }}
+                  style={{
+                    background: "#fde8e8",
+                    color: "#c23d3f",
+                    border: "1.5px solid #f0b4b5",
+                    fontWeight: 600,
+                  }}
                 >
                   {story.genre}
                 </span>
                 {story.tags.map((t) => (
-                  <span key={t} className="tag">{t}</span>
+                  <span key={t} className="tag">
+                    {t}
+                  </span>
                 ))}
               </div>
 
               {/* Stats */}
               <div
                 className="flex items-stretch rounded-xl overflow-hidden"
-                style={{ border: "1.5px solid #ece6dc", background: "#fff", alignSelf: "flex-start" }}
+                style={{
+                  border: "1.5px solid #ece6dc",
+                  background: "#fff",
+                  alignSelf: "flex-start",
+                }}
               >
                 {[
-                  { num: story.reads,                             label: "Lượt đọc"  },
-                  { num: chapters.length,                          label: "Chương"    },
-                  { num: reviews.length,                          label: "Đánh giá"  },
-                  { num: (story.favorites || 0).toLocaleString(), label: "Yêu thích" },
+                  { num: story.reads, label: "Lượt đọc" },
+                  { num: chapters.length, label: "Chương" },
+                  { num: reviews.length, label: "Đánh giá" },
+                  {
+                    num: (story.favorites || 0).toLocaleString(),
+                    label: "Yêu thích",
+                  },
                 ].map(({ num, label }, i) => (
                   <div
                     key={label}
@@ -208,7 +225,14 @@ export function StoryDetailPage() {
               {/* Rating */}
               <div className="detail-rating" style={{ marginBottom: 0 }}>
                 <StarRating rating={parseFloat(avgRating) || 0} size={18} />
-                <span style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 700, color: "#c23d3f" }}>
+                <span
+                  style={{
+                    fontFamily: "'Playfair Display',serif",
+                    fontSize: 20,
+                    fontWeight: 700,
+                    color: "#c23d3f",
+                  }}
+                >
                   {avgRating}
                 </span>
                 <span style={{ fontSize: 13, color: "#9e8e82" }}>/ 5</span>
@@ -222,7 +246,10 @@ export function StoryDetailPage() {
                   onClick={() =>
                     requireAuth(() => {
                       const first = chapters[0];
-                      if (first?.id) { setSelectedChapterId(first.id); router.push("/readerPage"); }
+                      if (first?.id) {
+                        setSelectedChapterId(first.id);
+                        router.push("/readerPage");
+                      }
                     })
                   }
                 >
@@ -233,8 +260,17 @@ export function StoryDetailPage() {
                   className={`btn-hero ${liked ? "btn-hero-primary" : "btn-hero-outline"}`}
                   style={
                     liked
-                      ? { background: "#fde8e8", color: "#c23d3f", borderColor: "#c23d3f", fontSize: 14 }
-                      : { borderColor: "#c23d3f", color: "#c23d3f", fontSize: 14 }
+                      ? {
+                          background: "#fde8e8",
+                          color: "#c23d3f",
+                          borderColor: "#c23d3f",
+                          fontSize: 14,
+                        }
+                      : {
+                          borderColor: "#c23d3f",
+                          color: "#c23d3f",
+                          fontSize: 14,
+                        }
                   }
                   onClick={() => requireAuth(() => toggleLike(story.id))}
                 >
@@ -243,7 +279,11 @@ export function StoryDetailPage() {
                 </button>
                 <button
                   className="btn-hero btn-hero-outline"
-                  style={{ fontSize: 13, color: "#9ca3af", borderColor: "#e8e0d6" }}
+                  style={{
+                    fontSize: 13,
+                    color: "#9ca3af",
+                    borderColor: "#e8e0d6",
+                  }}
                   onClick={() => requireAuth(() => setStoryReportOpen(true))}
                 >
                   🚩 Báo cáo
@@ -254,23 +294,91 @@ export function StoryDetailPage() {
 
           {/* Inline Story Report */}
           {storyReportOpen && (
-            <div style={{ background: "#fdfaf7", border: "1.5px solid #e8e0d6", borderRadius: 14, padding: "16px 18px", marginBottom: 16 }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: "#1c1512", marginBottom: 8 }}>🚩 Báo cáo truyện: <em>{story.title}</em></div>
+            <div
+              style={{
+                background: "#fdfaf7",
+                border: "1.5px solid #e8e0d6",
+                borderRadius: 14,
+                padding: "16px 18px",
+                marginBottom: 16,
+              }}
+            >
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: 14,
+                  color: "#1c1512",
+                  marginBottom: 8,
+                }}
+              >
+                🚩 Báo cáo truyện: <em>{story.title}</em>
+              </div>
               <textarea
                 value={storyReportReason}
                 onChange={(e) => setStoryReportReason(e.target.value)}
                 placeholder="Mô tả lý do báo cáo..."
                 rows={3}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 10, border: "1.5px solid #e8e0d6", fontSize: 13, color: "#3d2f28", resize: "none", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  borderRadius: 10,
+                  border: "1.5px solid #e8e0d6",
+                  fontSize: 13,
+                  color: "#3d2f28",
+                  resize: "none",
+                  fontFamily: "inherit",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
               />
-              <div style={{ display: "flex", gap: 8, marginTop: 10, justifyContent: "flex-end" }}>
-                <button onClick={() => { setStoryReportOpen(false); setStoryReportReason(""); }} style={{ padding: "8px 18px", borderRadius: 9, border: "1.5px solid #e8e0d6", background: "#fff", color: "#6b5a4e", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  marginTop: 10,
+                  justifyContent: "flex-end",
+                }}
+              >
+                <button
+                  onClick={() => {
+                    setStoryReportOpen(false);
+                    setStoryReportReason("");
+                  }}
+                  style={{
+                    padding: "8px 18px",
+                    borderRadius: 9,
+                    border: "1.5px solid #e8e0d6",
+                    background: "#fff",
+                    color: "#6b5a4e",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
                   Hủy
                 </button>
                 <button
                   onClick={handleReportStory}
                   disabled={!storyReportReason.trim() || storyReporting}
-                  style={{ padding: "8px 18px", borderRadius: 9, border: "none", background: !storyReportReason.trim() || storyReporting ? "#f3f4f6" : "#c23d3f", color: !storyReportReason.trim() || storyReporting ? "#9ca3af" : "#fff", fontSize: 13, fontWeight: 700, cursor: !storyReportReason.trim() || storyReporting ? "not-allowed" : "pointer" }}
+                  style={{
+                    padding: "8px 18px",
+                    borderRadius: 9,
+                    border: "none",
+                    background:
+                      !storyReportReason.trim() || storyReporting
+                        ? "#f3f4f6"
+                        : "#c23d3f",
+                    color:
+                      !storyReportReason.trim() || storyReporting
+                        ? "#9ca3af"
+                        : "#fff",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor:
+                      !storyReportReason.trim() || storyReporting
+                        ? "not-allowed"
+                        : "pointer",
+                  }}
                 >
                   {storyReporting ? "Đang gửi..." : "Gửi báo cáo"}
                 </button>
@@ -278,31 +386,6 @@ export function StoryDetailPage() {
             </div>
           )}
 
-          {/* Inline Story Report */}
-          {storyReportOpen && (
-            <div style={{ background: "#fdfaf7", border: "1.5px solid #e8e0d6", borderRadius: 14, padding: "16px 18px", marginBottom: 16 }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: "#1c1512", marginBottom: 8 }}>🚩 Báo cáo truyện: <em>{story.title}</em></div>
-              <textarea
-                value={storyReportReason}
-                onChange={(e) => setStoryReportReason(e.target.value)}
-                placeholder="Mô tả lý do báo cáo..."
-                rows={3}
-                style={{ width: "100%", padding: "9px 12px", borderRadius: 10, border: "1.5px solid #e8e0d6", fontSize: 13, color: "#3d2f28", resize: "none", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
-              />
-              <div style={{ display: "flex", gap: 8, marginTop: 10, justifyContent: "flex-end" }}>
-                <button onClick={() => { setStoryReportOpen(false); setStoryReportReason(""); }} style={{ padding: "8px 18px", borderRadius: 9, border: "1.5px solid #e8e0d6", background: "#fff", color: "#6b5a4e", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                  Hủy
-                </button>
-                <button
-                  onClick={handleReportStory}
-                  disabled={!storyReportReason.trim() || storyReporting}
-                  style={{ padding: "8px 18px", borderRadius: 9, border: "none", background: !storyReportReason.trim() || storyReporting ? "#f3f4f6" : "#c23d3f", color: !storyReportReason.trim() || storyReporting ? "#9ca3af" : "#fff", fontSize: 13, fontWeight: 700, cursor: !storyReportReason.trim() || storyReporting ? "not-allowed" : "pointer" }}
-                >
-                  {storyReporting ? "Đang gửi..." : "Gửi báo cáo"}
-                </button>
-              </div>
-            </div>
-          )}
 
           <blockquote className="detail-desc">{story.description}</blockquote>
 
@@ -310,7 +393,15 @@ export function StoryDetailPage() {
           <div className="sec-head" style={{ marginBottom: 12 }}>
             <div className="sec-title" style={{ fontSize: 18 }}>
               Danh sách chương
-              <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: 14, fontWeight: 400, color: "#9e8e82", marginLeft: 6 }}>
+              <span
+                style={{
+                  fontFamily: "DM Sans, sans-serif",
+                  fontSize: 14,
+                  fontWeight: 400,
+                  color: "#9e8e82",
+                  marginLeft: 6,
+                }}
+              >
                 ({chapters.length})
               </span>
             </div>
@@ -325,23 +416,42 @@ export function StoryDetailPage() {
                   className={`chapter-item${isLocked ? " chapter-locked" : ""}`}
                   onClick={() =>
                     requireAuth(() => {
-                      if (!isLocked && ch.id) { setSelectedChapterId(ch.id); router.push("/readerPage"); }
+                      if (!isLocked && ch.id) {
+                        setSelectedChapterId(ch.id);
+                        router.push("/readerPage");
+                      }
                     })
                   }
-                  style={isLocked ? { cursor: "default", background: "#fdf7f0", borderColor: "#f0dfc8" } : {}}
+                  style={
+                    isLocked
+                      ? {
+                          cursor: "default",
+                          background: "#fdf7f0",
+                          borderColor: "#f0dfc8",
+                        }
+                      : {}
+                  }
                 >
                   <span
-                    className="flex-shrink-0 text-center font-bold"
-                    style={{ width: 28, fontSize: 12, color: "#c9b89a", fontFamily: "DM Sans, sans-serif" }}
+                    className="shrink-0 text-center font-bold"
+                    style={{
+                      width: 28,
+                      fontSize: 12,
+                      color: "#c9b89a",
+                      fontFamily: "DM Sans, sans-serif",
+                    }}
                   >
                     {i + 1}
                   </span>
 
                   <div className="hero-left" style={{ flex: 1 }}>
-                    <div className="ch-title flex items-center" style={{ gap: 6 }}>
+                    <div
+                      className="ch-title flex items-center"
+                      style={{ gap: 6 }}
+                    >
                       {isLocked && (
                         <span
-                          className="flex-shrink-0 font-bold"
+                          className="shrink-0 font-bold"
                           style={{
                             fontSize: 10,
                             background: "#fef3c7",
@@ -357,7 +467,8 @@ export function StoryDetailPage() {
                       {ch.title}
                     </div>
                     <div className="ch-meta flex items-center gap-1">
-                      <Ico.Book /> {ch.words.toLocaleString()} chữ · ⏱ {ch.readTime}
+                      <Ico.Book /> {ch.words.toLocaleString()} chữ · ⏱{" "}
+                      {ch.readTime}
                       {ch.publishedAt && ` · ${ch.publishedAt}`}
                     </div>
                   </div>
@@ -368,7 +479,7 @@ export function StoryDetailPage() {
                         e.stopPropagation();
                         requireAuth(() => unlockChapter(ch.id, ch.price || 10));
                       }}
-                      className="flex items-center flex-shrink-0 whitespace-nowrap font-bold"
+                      className="flex items-center shrink-0 whitespace-nowrap font-bold"
                       style={{
                         gap: 5,
                         background: "linear-gradient(135deg,#c69526,#9a7020)",
@@ -384,28 +495,34 @@ export function StoryDetailPage() {
                       🪙 {ch.price} xu
                     </button>
                   ) : (
-                    <div className="ch-arrow"><Ico.Next /></div>
+                    <div className="ch-arrow">
+                      <Ico.Next />
+                    </div>
                   )}
                 </div>
               );
             })}
           </div>
-
         </div>
 
         {/* ── SIDEBAR ──────────────────────────────────────────────────────── */}
         <div className="detail-sidebar">
-
           {/* Related stories */}
           <div className="sidebar-card" style={{ padding: "16px 14px" }}>
-
             {/* Header */}
             <div className="flex items-center justify-between mb-3">
-              <div className="sidebar-title" style={{ marginBottom: 0 }}>Cùng thể loại</div>
+              <div className="sidebar-title" style={{ marginBottom: 0 }}>
+                Cùng thể loại
+              </div>
               <span
                 style={{
-                  padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700,
-                  background: "#fde8e8", color: "#c23d3f", border: "1px solid #f0b4b5",
+                  padding: "2px 10px",
+                  borderRadius: 20,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  background: "#fde8e8",
+                  color: "#c23d3f",
+                  border: "1px solid #f0b4b5",
                 }}
               >
                 {story.genre}
@@ -414,43 +531,61 @@ export function StoryDetailPage() {
 
             {relatedStories.length > 0 ? (
               <div className="flex flex-col" style={{ gap: 8 }}>
-                {relatedStories.map((s, idx) => (
+                {relatedStories.map((s) => (
                   <div
                     key={s.id}
                     onClick={() => gotoStory(s)}
                     style={{
-                      display: "flex", gap: 10, padding: 10, borderRadius: 12,
-                      cursor: "pointer", border: "1.5px solid #f0ebe3",
-                      background: "#fdfaf7", transition: "all .15s",
-                      position: "relative", overflow: "hidden",
+                      display: "flex",
+                      gap: 10,
+                      padding: 10,
+                      borderRadius: 12,
+                      cursor: "pointer",
+                      border: "1.5px solid #f0ebe3",
+                      background: "#fdfaf7",
+                      transition: "all .15s",
+                      position: "relative",
+                      overflow: "hidden",
                     }}
                     onMouseEnter={(e) => {
                       const el = e.currentTarget as HTMLDivElement;
                       el.style.borderColor = "#c23d3f";
-                      el.style.background  = "#fff";
-                      el.style.boxShadow   = "0 4px 16px rgba(194,61,63,.1)";
+                      el.style.background = "#fff";
+                      el.style.boxShadow = "0 4px 16px rgba(194,61,63,.1)";
                     }}
                     onMouseLeave={(e) => {
                       const el = e.currentTarget as HTMLDivElement;
                       el.style.borderColor = "#f0ebe3";
-                      el.style.background  = "#fdfaf7";
-                      el.style.boxShadow   = "none";
+                      el.style.background = "#fdfaf7";
+                      el.style.boxShadow = "none";
                     }}
                   >
-
                     {/* Cover */}
                     <div
-                      className="flex-shrink-0 rounded-lg overflow-hidden"
-                      style={{ width: 52, height: 72, background: s.cover, position: "relative" }}
+                      className="shrink-0 rounded-lg overflow-hidden"
+                      style={{
+                        width: 52,
+                        height: 72,
+                        background: s.cover,
+                        position: "relative",
+                      }}
                     >
                       <div
                         style={{
-                          position: "absolute", bottom: 0, left: 0, right: 0,
-                          textAlign: "center", fontSize: 8, fontWeight: 700,
-                          color: "#fff", letterSpacing: "0.3px", padding: "2px 0",
-                          background: s.status === "done"
-                            ? "rgba(28,101,58,.85)"
-                            : "rgba(194,61,63,.85)",
+                          position: "absolute",
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          textAlign: "center",
+                          fontSize: 8,
+                          fontWeight: 700,
+                          color: "#fff",
+                          letterSpacing: "0.3px",
+                          padding: "2px 0",
+                          background:
+                            s.status === "done"
+                              ? "rgba(28,101,58,.85)"
+                              : "rgba(194,61,63,.85)",
                         }}
                       >
                         {s.status === "done" ? "HOÀN THÀNH" : "ĐANG RA"}
@@ -459,28 +594,58 @@ export function StoryDetailPage() {
                     {/* Info */}
                     <div className="flex flex-col justify-between flex-1 min-w-0">
                       <div>
-                        <div style={{
-                          fontWeight: 700, fontSize: 13, color: "#1c1512",
-                          lineHeight: 1.35, marginBottom: 3,
-                          display: "-webkit-box", WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical", overflow: "hidden",
-                        }}>
+                        <div
+                          style={{
+                            fontWeight: 700,
+                            fontSize: 13,
+                            color: "#1c1512",
+                            lineHeight: 1.35,
+                            marginBottom: 3,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
                           {s.title}
                         </div>
-                        <div style={{ fontSize: 11, color: "#9e8e82", fontStyle: "italic" }}>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: "#9e8e82",
+                            fontStyle: "italic",
+                          }}
+                        >
                           {s.penName}
                         </div>
                       </div>
 
                       {/* Stats */}
-                      <div className="flex items-center flex-wrap" style={{ gap: "3px 8px", marginTop: 5 }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: "#c69526" }}>
+                      <div
+                        className="flex items-center flex-wrap"
+                        style={{ gap: "3px 8px", marginTop: 5 }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: "#c69526",
+                          }}
+                        >
                           ★ {s.rating}
                         </span>
-                        <span style={{ fontSize: 10, color: "#e0d8d0" }}>·</span>
-                        <span style={{ fontSize: 11, color: "#9e8e82" }}>{s.reads} đọc</span>
-                        <span style={{ fontSize: 10, color: "#e0d8d0" }}>·</span>
-                        <span style={{ fontSize: 11, color: "#9e8e82" }}>{chapters.length} ch.</span>
+                        <span style={{ fontSize: 10, color: "#e0d8d0" }}>
+                          ·
+                        </span>
+                        <span style={{ fontSize: 11, color: "#9e8e82" }}>
+                          {s.reads} đọc
+                        </span>
+                        <span style={{ fontSize: 10, color: "#e0d8d0" }}>
+                          ·
+                        </span>
+                        <span style={{ fontSize: 11, color: "#9e8e82" }}>
+                          {chapters.length} ch.
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -499,27 +664,44 @@ export function StoryDetailPage() {
 
           <div className="sidebar-card">
             <div className="sidebar-title">Thông tin tác phẩm</div>
-            {([
-              ["Tác giả",    story.author],
-              ["Trạng thái", story.status === "done" ? "Hoàn thành" : "Đang cập nhật"],
-              ["Số chương",  `${chapters.length || story.chapters || 0} chương`],
-              ["Lượt đọc",   story.reads],
-              ["Đánh giá",   `${avgRating}/5 (${reviews.length} đánh giá)`],
-            ] as [string, string][]).map(([k, v], i, arr) => (
+            {(
+              [
+                ["Tác giả", story.author],
+                [
+                  "Trạng thái",
+                  story.status === "done" ? "Hoàn thành" : "Đang cập nhật",
+                ],
+                [
+                  "Số chương",
+                  `${chapters.length || story.chapters || 0} chương`,
+                ],
+                ["Lượt đọc", story.reads],
+                ["Đánh giá", `${avgRating}/5 (${reviews.length} đánh giá)`],
+              ] as [string, string][]
+            ).map(([k, v], i, arr) => (
               <div
                 key={k}
                 className="flex justify-between text-sm"
                 style={{
                   padding: "9px 0",
-                  borderBottom: i < arr.length - 1 ? "1px solid #f5ede4" : "none",
+                  borderBottom:
+                    i < arr.length - 1 ? "1px solid #f5ede4" : "none",
                 }}
               >
                 <span style={{ color: "#9e8e82" }}>{k}</span>
-                <span style={{ fontWeight: 600, color: "#1c1512", marginLeft: 8, textAlign: "right" }}>{v}</span>
+                <span
+                  style={{
+                    fontWeight: 600,
+                    color: "#1c1512",
+                    marginLeft: 8,
+                    textAlign: "right",
+                  }}
+                >
+                  {v}
+                </span>
               </div>
             ))}
           </div>
-
         </div>
       </div>
     </div>
