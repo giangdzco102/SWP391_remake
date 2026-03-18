@@ -1,195 +1,343 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores";
 import useHttpClient from "@/api/useHttpClient";
 import APP_CONFIG from "@/config/app-config";
 import { useToast } from "@/hooks/use-toast";
 
-// ── Types ─────────────────────────────────────────────────────────────────
-interface PendingStory {
+/* ================================================================
+   TYPES
+   ================================================================ */
+interface StoryItem {
   id: number;
   title: string;
+  authorId: number;
+  authorName: string;
   description?: string;
   coverUrl?: string;
+  categoryIds?: number[];
+  categoryNames?: string[];
   status: string;
-  viewCount?: number;
-  totalChapters?: number;
-  author: { id: number; fullName: string; avatarUrl?: string };
-  categories: { id: number; name: string }[];
   createdAt: string;
-  submittedAt?: string;
-  reviewNote?: string;
+  chapterCount?: number;
 }
 
-interface PendingChapter {
+interface ChapterItem {
   id: number;
   title: string;
-  chapterOrder: number;
-  content?: string;
-  wordCount?: number;
-  coinPrice?: number;
-  status: string;
   storyId: number;
-  storyTitle?: string;
+  storyTitle: string;
   authorName?: string;
+  chapterOrder: number;
+  content: string;
+  coinPrice: number;
+  status: string;
   createdAt: string;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────
+interface ReviewHistoryItem {
+  id: number;
+  targetType: "STORY" | "CHAPTER";
+  targetId: number;
+  targetTitle: string;
+  storyTitle?: string;
+  decision: "APPROVED" | "REJECTED";
+  note?: string;
+  reviewedAt: string;
+}
+
+/* ================================================================
+   THEME TOKENS — consistent soft palette
+   ================================================================ */
+const T = {
+  bg: "#f6f4f1",
+  card: "#ffffff",
+  border: "#e8e3dc",
+  borderLight: "#f0ece6",
+  text: "#2d2319",
+  textSec: "#7a6e63",
+  textMuted: "#b5a99e",
+  accent: "#6e4ca0",
+  accentLight: "#f3eefa",
+  accentBorder: "#cbb8e8",
+  success: "#3a8a5c",
+  successBg: "#eaf7f0",
+  successBorder: "#b8e0ca",
+  warn: "#b08430",
+  warnBg: "#fef9ee",
+  warnBorder: "#f0daa8",
+  danger: "#c24040",
+  dangerBg: "#fdf0f0",
+  dangerBorder: "#f0b8b8",
+  info: "#3a72b0",
+  infoBg: "#eef4fc",
+  infoBorder: "#b4cde8",
+  purple: "#7c5cbf",
+  purpleBg: "#f4f0fc",
+  purpleBorder: "#d0c2ec",
+  gray: "#8a8078",
+  grayBg: "#f3f0ed",
+  grayBorder: "#ddd7d0",
+  headerGrad: "linear-gradient(135deg, #2a1a40 0%, #4a2d70 50%, #6e4ca0 100%)",
+  radius: 14,
+  radiusSm: 10,
+  shadow: "0 2px 12px rgba(45,35,25,0.06)",
+  shadowMd: "0 6px 24px rgba(45,35,25,0.1)",
+  font: "'DM Sans', sans-serif",
+  fontSerif: "'Playfair Display', 'Lora', Georgia, serif",
+};
+
+/* ================================================================
+   HELPERS
+   ================================================================ */
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days > 0) return `${days} ngày trước`;
-  const hrs = Math.floor(diff / 3600000);
-  if (hrs > 0) return `${hrs} giờ trước`;
+  const d = Math.floor(diff / 86400000);
+  if (d > 0) return `${d} ngày trước`;
+  const h = Math.floor(diff / 3600000);
+  if (h > 0) return `${h} giờ trước`;
   return `${Math.floor(diff / 60000)} phút trước`;
 }
 
-function StatCard({ icon, label, value, color }: { icon: string; label: string; value: string | number; color?: string }) {
-  return (
-    <div style={{ background: "#fff", border: "1.5px solid #e8e0d6", borderRadius: 14, padding: "16px 20px" }}>
-      <div style={{ fontSize: 22 }}>{icon}</div>
-      <div style={{ fontSize: 24, fontWeight: 800, color: color ?? "#1c1512", marginTop: 4 }}>{value}</div>
-      <div style={{ fontSize: 12, color: "#9e8e82", marginTop: 2 }}>{label}</div>
-    </div>
-  );
-}
+/* ================================================================
+   SHARED STYLES
+   ================================================================ */
+const btnBase: React.CSSProperties = { padding: "8px 16px", borderRadius: T.radiusSm, fontSize: 13, fontWeight: 600, cursor: "pointer", border: "none", fontFamily: T.font, display: "inline-flex", alignItems: "center", gap: 6, transition: "all 0.15s ease" };
+const btnPrimary: React.CSSProperties = { ...btnBase, background: T.accent, color: "#fff" };
+const btnOutline: React.CSSProperties = { ...btnBase, background: T.card, color: T.textSec, border: `1.5px solid ${T.border}` };
+const btnSuccess: React.CSSProperties = { ...btnBase, background: T.success, color: "#fff" };
+const btnDanger: React.CSSProperties = { ...btnBase, background: T.danger, color: "#fff" };
+const btnDisabled: React.CSSProperties = { ...btnBase, background: "#f0edea", color: T.textMuted, cursor: "not-allowed" };
 
-// ── Story preview ─────────────────────────────────────────────────────────
-function StoryPreview({ story, onClose }: { story: PendingStory; onClose: () => void }) {
-  return (
-    <div onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: "#fff", borderRadius: 18, width: "100%", maxWidth: 620, maxHeight: "88vh", display: "flex", flexDirection: "column", boxShadow: "0 16px 48px rgba(0,0,0,0.22)", overflow: "hidden" }}>
-        <div style={{ padding: "18px 20px 14px", borderBottom: "1.5px solid #f0e8e0", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 18, fontWeight: 800, color: "#1c1512" }}>{story.title}</div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: "50%", border: "1.5px solid #e8e0d6", background: "#fdfaf7", cursor: "pointer", fontSize: 16, color: "#6b5a4e", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-        </div>
-        <div style={{ overflowY: "auto", padding: "20px 24px" }}>
-          <div style={{ fontSize: 13, color: "#6b5a4e", marginBottom: 12 }}>
-            ✍ {story.author?.fullName} · {story.categories?.map((c) => c.name).join(", ") || "Chưa phân loại"} · {story.totalChapters ?? 0} chương · Nộp {timeAgo(story.submittedAt ?? story.createdAt)}
-          </div>
-          {story.description ? (
-            <div style={{ fontSize: 15, color: "#2a1e18", lineHeight: 1.8, fontFamily: "'Lora',serif" }}>{story.description}</div>
-          ) : (
-            <div style={{ color: "#b0a096", fontStyle: "italic" }}>Không có mô tả.</div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Chapter preview ───────────────────────────────────────────────────────
-function ChapterPreview({ chapter, onClose }: { chapter: PendingChapter; onClose: () => void }) {
-  const paragraphs = chapter.content?.split(/\n+/).filter(Boolean) ?? [];
-  const words = chapter.wordCount ?? chapter.content?.trim().split(/\s+/).filter(Boolean).length ?? 0;
-  return (
-    <div onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: "#fff", borderRadius: 18, width: "100%", maxWidth: 680, maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 16px 48px rgba(0,0,0,0.22)", overflow: "hidden" }}>
-        <div style={{ padding: "18px 20px 14px", borderBottom: "1.5px solid #f0e8e0", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-          <div>
-            <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, fontWeight: 800, color: "#1c1512" }}>{chapter.title}</div>
-            <div style={{ fontSize: 12, color: "#b0a096", marginTop: 2 }}>{chapter.storyTitle} · Chương {chapter.chapterOrder} · {words.toLocaleString()} chữ · {Math.max(1, Math.ceil(words / 200))} phút đọc</div>
-          </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: "50%", border: "1.5px solid #e8e0d6", background: "#fdfaf7", cursor: "pointer", fontSize: 16, color: "#6b5a4e", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-        </div>
-        <div style={{ overflowY: "auto", padding: "20px 24px" }}>
-          {paragraphs.length === 0 ? (
-            <div style={{ color: "#b0a096", fontStyle: "italic" }}>Không có nội dung.</div>
-          ) : (
-            paragraphs.map((p, i) => (
-              <p key={i} style={{ fontSize: 15, color: "#2a1e18", lineHeight: 1.85, fontFamily: "'Lora',serif", marginBottom: "1em" }}>{p}</p>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Review action buttons ─────────────────────────────────────────────────
-function ReviewActions({
-  onApprove,
-  onReject,
-  loading,
-}: {
-  onApprove: (note: string) => void;
-  onReject: (note: string) => void;
-  loading: boolean;
+/* ================================================================
+   STORY DETAIL MODAL — left: info + chapters, reviewing story
+   ================================================================ */
+function StoryDetailModal({ story, onClose, onReview }: {
+  story: StoryItem;
+  onClose: () => void;
+  onReview: (storyId: number, approved: boolean, note: string) => Promise<void>;
 }) {
+  const httpClient = useHttpClient();
+  const [chapters, setChapters] = useState<ChapterItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [expandChapter, setExpandChapter] = useState<number | null>(null);
+
+  useEffect(() => {
+    httpClient.get(APP_CONFIG.REVIEWER.STORY_DETAIL(story.id))
+      .then((res: any) => {
+        const data = res?.data ?? res ?? {};
+        const chs = data.chapters ?? data.content ?? [];
+        setChapters(Array.isArray(chs) ? chs : []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [story.id]);// eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleDecision = async (approved: boolean) => {
+    if (!approved && !note.trim()) return;
+    setSaving(true);
+    try { await onReview(story.id, approved, note); onClose(); }
+    catch { /* parent handles error */ }
+    finally { setSaving(false); }
+  };
+
   return (
-    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
-      <input
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        placeholder="Ghi chú cho tác giả (tùy chọn)…"
-        style={{ flex: 1, minWidth: 180, padding: "8px 12px", borderRadius: 8, border: "1.5px solid #e8e0d6", fontSize: 13, color: "#3d2f28", fontFamily: "inherit", outline: "none" }}
-      />
-      <button
-        onClick={() => onApprove(note)}
-        disabled={loading}
-        style={{ padding: "8px 18px", borderRadius: 9, border: "none", background: loading ? "#f3f4f6" : "#16a34a", color: loading ? "#9ca3af" : "#fff", fontSize: 13, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6 }}
-      >
-        ✓ Duyệt
-      </button>
-      <button
-        onClick={() => onReject(note)}
-        disabled={loading}
-        style={{ padding: "8px 18px", borderRadius: 9, border: "none", background: loading ? "#f3f4f6" : "#c23d3f", color: loading ? "#9ca3af" : "#fff", fontSize: 13, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6 }}
-      >
-        ✕ Từ chối
-      </button>
+    <div onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(3px)" }}>
+      <div style={{ background: T.card, borderRadius: 20, width: "100%", maxWidth: 950, maxHeight: "92vh", display: "flex", flexDirection: "column", boxShadow: T.shadowMd, overflow: "hidden" }}>
+        {/* Header */}
+        <div style={{ padding: "18px 22px 14px", borderBottom: `1.5px solid ${T.borderLight}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0, background: T.grayBg }}>
+          <div>
+            <div style={{ fontFamily: T.fontSerif, fontSize: 18, fontWeight: 800, color: T.text }}>{story.title}</div>
+            <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>✍️ {story.authorName} · 📅 {timeAgo(story.createdAt)}{story.categoryNames?.length ? ` · 📂 ${story.categoryNames.join(", ")}` : ""}</div>
+          </div>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: "50%", border: `1.5px solid ${T.border}`, background: T.card, cursor: "pointer", fontSize: 16, color: T.textSec, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+        </div>
+
+        {/* Body — two columns */}
+        <div style={{ flex: 1, overflow: "hidden", display: "grid", gridTemplateColumns: "340px 1fr", gap: 0 }}>
+          {/* Left: Story info */}
+          <div style={{ borderRight: `1.5px solid ${T.borderLight}`, overflowY: "auto", padding: "16px 18px" }}>
+            {story.coverUrl && <img src={story.coverUrl} alt="" style={{ width: "100%", borderRadius: 12, marginBottom: 12, objectFit: "cover", maxHeight: 220 }} />}
+            <div style={{ fontSize: 13, color: T.text, lineHeight: 1.7 }}>{story.description || <span style={{ color: T.textMuted, fontStyle: "italic" }}>Chưa có mô tả.</span>}</div>
+            <div style={{ marginTop: 16, fontSize: 12, color: T.textMuted }}>📊 {chapters.length} chương</div>
+          </div>
+          {/* Right: Chapters */}
+          <div style={{ overflowY: "auto", padding: "16px 18px" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: T.textSec, marginBottom: 10, textTransform: "uppercase" }}>📚 Danh sách chương</div>
+            {loading ? <div style={{ color: T.textMuted }}>Đang tải…</div> :
+              chapters.length === 0 ? <div style={{ color: T.textMuted, fontStyle: "italic" }}>Không có chương.</div> :
+                chapters.map((ch) => (
+                  <div key={ch.id} style={{ marginBottom: 8, border: `1px solid ${expandChapter === ch.id ? T.accentBorder : T.borderLight}`, borderRadius: 10, overflow: "hidden" }}>
+                    <button onClick={() => setExpandChapter(expandChapter === ch.id ? null : ch.id)} style={{ width: "100%", padding: "10px 14px", border: "none", background: expandChapter === ch.id ? T.accentLight : T.card, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: T.text, flex: 1 }}>Ch.{ch.chapterOrder} — {ch.title}</span>
+                      <span style={{ fontSize: 11, color: T.textMuted }}>{ch.coinPrice > 0 ? `🪙 ${ch.coinPrice}` : "Free"}</span>
+                      <span style={{ fontSize: 11, transform: expandChapter === ch.id ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▼</span>
+                    </button>
+                    {expandChapter === ch.id && (
+                      <div style={{ padding: "14px 16px", borderTop: `1px solid ${T.borderLight}`, fontSize: 14, color: T.text, lineHeight: 1.8, fontFamily: "'Lora',serif", maxHeight: 300, overflowY: "auto" }}>
+                        {!ch.content
+                          ? <span style={{ color: T.textMuted, fontStyle: "italic" }}>Nội dung chưa được tải.</span>
+                          : /<[a-z]/i.test(ch.content)
+                            ? <div dangerouslySetInnerHTML={{ __html: ch.content }} />
+                            : ch.content.split(/\n+/).filter(Boolean).map((p, i) => <p key={i} style={{ marginBottom: "0.7em" }}>{p}</p>)
+                        }
+                      </div>
+                    )}
+                  </div>
+                ))}
+          </div>
+        </div>
+
+        {/* Footer — decision */}
+        <div style={{ padding: "14px 22px", borderTop: `1.5px solid ${T.borderLight}`, flexShrink: 0, background: T.grayBg }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: T.textSec, marginBottom: 4, textTransform: "uppercase" }}>Ghi chú kiểm duyệt</label>
+              <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Bắt buộc nếu từ chối…" style={{ width: "100%", padding: "8px 12px", borderRadius: T.radiusSm, border: `1.5px solid ${T.border}`, fontSize: 13, color: T.text, fontFamily: T.font, outline: "none", background: T.card, boxSizing: "border-box" }} />
+            </div>
+            <button onClick={onClose} style={btnOutline}>Đóng</button>
+            <button onClick={() => handleDecision(false)} disabled={!note.trim() || saving} style={!note.trim() || saving ? btnDisabled : btnDanger}>
+              {saving ? "…" : "❌ Từ chối"}
+            </button>
+            <button onClick={() => handleDecision(true)} disabled={saving} style={saving ? btnDisabled : btnSuccess}>
+              {saving ? "…" : "✅ Duyệt"}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────
+/* ================================================================
+   CHAPTER REVIEW MODAL — full content reading + decision
+   ================================================================ */
+function ChapterReviewModal({ chapter, onClose, onReview }: {
+  chapter: ChapterItem;
+  onClose: () => void;
+  onReview: (chapterId: number, approved: boolean, note: string) => Promise<void>;
+}) {
+  const httpClient = useHttpClient();
+  const [content, setContent] = useState<string>(chapter.content ?? "");
+  const [loading, setLoading] = useState(!chapter.content);
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (chapter.content) return;
+    httpClient.get(APP_CONFIG.REVIEWER.CHAPTER_DETAIL(chapter.id))
+      .then((res: any) => setContent(res?.data?.content ?? res?.content ?? ""))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [chapter.id]);// eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleDecision = async (approved: boolean) => {
+    if (!approved && !note.trim()) return;
+    setSaving(true);
+    try { await onReview(chapter.id, approved, note); onClose(); }
+    catch { /* parent handles error */ }
+    finally { setSaving(false); }
+  };
+
+  const isHtml = /<[a-z]/i.test(content);
+
+  return (
+    <div onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(3px)" }}>
+      <div style={{ background: T.card, borderRadius: 20, width: "100%", maxWidth: 750, maxHeight: "92vh", display: "flex", flexDirection: "column", boxShadow: T.shadowMd, overflow: "hidden" }}>
+        {/* Header */}
+        <div style={{ padding: "18px 22px 14px", borderBottom: `1.5px solid ${T.borderLight}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+          <div>
+            <div style={{ fontFamily: T.fontSerif, fontSize: 17, fontWeight: 800, color: T.text }}>{chapter.title}</div>
+            <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>📖 {chapter.storyTitle} · Ch.{chapter.chapterOrder} · {chapter.coinPrice > 0 ? `🪙 ${chapter.coinPrice} xu` : "Miễn phí"} · ✍️ {chapter.authorName ?? "?"}</div>
+          </div>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: "50%", border: `1.5px solid ${T.border}`, background: T.bg, cursor: "pointer", fontSize: 16, color: T.textSec, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+          {loading ? <div style={{ textAlign: "center", padding: 20, color: T.textMuted }}>⏳ Đang tải…</div> :
+            !content ? <div style={{ color: T.textMuted, fontStyle: "italic" }}>Không có nội dung.</div> :
+              isHtml ?
+                <div style={{ fontSize: 15, color: T.text, lineHeight: 1.85, fontFamily: "'Lora',serif" }} dangerouslySetInnerHTML={{ __html: content }} /> :
+                content.split(/\n+/).filter(Boolean).map((p, i) => <p key={i} style={{ fontSize: 15, color: T.text, lineHeight: 1.85, fontFamily: "'Lora',serif", marginBottom: "1em" }}>{p}</p>)
+          }
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: "14px 22px", borderTop: `1.5px solid ${T.borderLight}`, flexShrink: 0, background: T.grayBg }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: T.textSec, marginBottom: 4, textTransform: "uppercase" }}>Ghi chú kiểm duyệt</label>
+              <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Bắt buộc nếu từ chối…" style={{ width: "100%", padding: "8px 12px", borderRadius: T.radiusSm, border: `1.5px solid ${T.border}`, fontSize: 13, color: T.text, fontFamily: T.font, outline: "none", background: T.card, boxSizing: "border-box" }} />
+            </div>
+            <button onClick={onClose} style={btnOutline}>Đóng</button>
+            <button onClick={() => handleDecision(false)} disabled={!note.trim() || saving} style={!note.trim() || saving ? btnDisabled : btnDanger}>
+              {saving ? "…" : "❌ Từ chối"}
+            </button>
+            <button onClick={() => handleDecision(true)} disabled={saving} style={saving ? btnDisabled : btnSuccess}>
+              {saving ? "…" : "✅ Duyệt"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   MAIN PAGE
+   ================================================================ */
 export default function ReviewerDashboardPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const httpClient = useHttpClient();
   const toast = useToast();
 
-  const [tab, setTab] = useState<"stories" | "chapters" | "guide">("stories");
-  const [pendingStories, setPendingStories] = useState<PendingStory[]>([]);
-  const [pendingChapters, setPendingChapters] = useState<PendingChapter[]>([]);
+  type Tab = "stories" | "chapters" | "history" | "criteria";
+  const [tab, setTab] = useState<Tab>("stories");
+  const [pendingStories, setPendingStories] = useState<StoryItem[]>([]);
+  const [pendingChapters, setPendingChapters] = useState<ChapterItem[]>([]);
+  const [reviewHistory, setReviewHistory] = useState<ReviewHistoryItem[]>([]);
   const [loadingStories, setLoadingStories] = useState(true);
   const [loadingChapters, setLoadingChapters] = useState(true);
-  const [reviewing, setReviewing] = useState<number | null>(null);
-  const [previewStory, setPreviewStory] = useState<PendingStory | null>(null);
-  const [previewChapter, setPreviewChapter] = useState<PendingChapter | null>(null);
-  const [doneStories, setDoneStories] = useState<{ story: PendingStory; action: "APPROVED" | "REJECTED"; at: string }[]>([]);
-  const [doneChapters, setDoneChapters] = useState<{ chapter: PendingChapter; action: "APPROVED" | "REJECTED"; at: string }[]>([]);
-  const [historyTab, setHistoryTab] = useState<"stories" | "chapters">("stories");
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [storyModal, setStoryModal] = useState<StoryItem | null>(null);
+  const [chapterModal, setChapterModal] = useState<ChapterItem | null>(null);
+  const [historyFilter, setHistoryFilter] = useState<"ALL" | "APPROVED" | "REJECTED">("ALL");
 
-  const loadPendingStories = async () => {
+  const loadPendingStories = useCallback(async () => {
     setLoadingStories(true);
     try {
       const res: any = await httpClient.get(APP_CONFIG.REVIEWER.PENDING_STORIES);
-      const list: PendingStory[] = res?.data?.content ?? res?.data ?? res?.content ?? res ?? [];
+      const list = res?.data?.content ?? res?.data ?? res?.content ?? res ?? [];
       setPendingStories(Array.isArray(list) ? list : []);
-    } catch {
-      setPendingStories([]);
-    } finally {
-      setLoadingStories(false);
-    }
-  };
+    } catch { setPendingStories([]); }
+    finally { setLoadingStories(false); }
+  }, [httpClient]);
 
-  const loadPendingChapters = async () => {
+  const loadPendingChapters = useCallback(async () => {
     setLoadingChapters(true);
     try {
       const res: any = await httpClient.get(APP_CONFIG.REVIEWER.PENDING_CHAPTERS);
-      const list: PendingChapter[] = res?.data?.content ?? res?.data ?? res?.content ?? res ?? [];
+      const list = res?.data?.content ?? res?.data ?? res?.content ?? res ?? [];
       setPendingChapters(Array.isArray(list) ? list : []);
-    } catch {
-      setPendingChapters([]);
-    } finally {
-      setLoadingChapters(false);
-    }
-  };
+    } catch { setPendingChapters([]); }
+    finally { setLoadingChapters(false); }
+  }, [httpClient]);
+
+  const loadHistory = useCallback(async () => {
+    setLoadingHistory(true);
+    try {
+      const res: any = await httpClient.get(APP_CONFIG.REVIEWER.REVIEW_HISTORY);
+      const list = res?.data?.content ?? res?.data ?? res?.content ?? res ?? [];
+      setReviewHistory(Array.isArray(list) ? list : []);
+    } catch { setReviewHistory([]); }
+    finally { setLoadingHistory(false); }
+  }, [httpClient]);
 
   useEffect(() => {
     if (!user) { router.push("/?login"); return; }
@@ -197,277 +345,257 @@ export default function ReviewerDashboardPage() {
     if (!hasReviewer) { router.push("/"); return; }
     loadPendingStories();
     loadPendingChapters();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user]);// eslint-disable-line react-hooks/exhaustive-deps
 
-  const reviewStory = async (story: PendingStory, status: "APPROVED" | "REJECTED", reviewNote: string) => {
-    setReviewing(story.id);
+  useEffect(() => {
+    if (tab === "history" && reviewHistory.length === 0) loadHistory();
+  }, [tab]);// eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleReviewStory = async (storyId: number, approved: boolean, note: string) => {
     try {
-      await httpClient.post(APP_CONFIG.REVIEWER.REVIEW_STORY(story.id), { status, reviewNote: reviewNote || undefined });
-      toast.success(status === "APPROVED" ? `✅ Đã duyệt "${story.title}"` : `❌ Đã từ chối "${story.title}"`);
-      setDoneStories((p) => [{ story, action: status, at: new Date().toLocaleString("vi") }, ...p]);
-      setPendingStories((p) => p.filter((s) => s.id !== story.id));
+      await httpClient.post(APP_CONFIG.REVIEWER.REVIEW_STORY(storyId), {
+        action: approved ? "APPROVE" : "REJECT",
+        note: note || undefined,
+      });
+      toast.success(approved ? "Đã duyệt truyện." : "Đã từ chối truyện.");
+      setPendingStories((p) => p.filter((s) => s.id !== storyId));
     } catch {
-      toast.error("Không thể gửi kết quả duyệt. Thử lại sau.");
-    } finally {
-      setReviewing(null);
+      toast.error("Lỗi khi duyệt truyện.");
+      throw new Error("failed");
     }
   };
 
-  const reviewChapter = async (chapter: PendingChapter, status: "APPROVED" | "REJECTED", reviewNote: string) => {
-    setReviewing(chapter.id * -1);
+  const handleReviewChapter = async (chapterId: number, approved: boolean, note: string) => {
     try {
-      await httpClient.post(APP_CONFIG.REVIEWER.REVIEW_CHAPTER(chapter.id), { status, reviewNote: reviewNote || undefined });
-      toast.success(status === "APPROVED" ? `✅ Đã duyệt chương "${chapter.title}"` : `❌ Đã từ chối chương "${chapter.title}"`);
-      setDoneChapters((p) => [{ chapter, action: status, at: new Date().toLocaleString("vi") }, ...p]);
-      setPendingChapters((p) => p.filter((c) => c.id !== chapter.id));
+      await httpClient.post(APP_CONFIG.REVIEWER.REVIEW_CHAPTER(chapterId), {
+        action: approved ? "APPROVE" : "REJECT",
+        note: note || undefined,
+      });
+      toast.success(approved ? "Đã duyệt chương." : "Đã từ chối chương.");
+      setPendingChapters((p) => p.filter((c) => c.id !== chapterId));
     } catch {
-      toast.error("Không thể gửi kết quả duyệt. Thử lại sau.");
-    } finally {
-      setReviewing(null);
+      toast.error("Lỗi khi duyệt chương.");
+      throw new Error("failed");
     }
   };
 
-  const TABS = [
-    { id: "stories", label: `📖 Truyện (${pendingStories.length})` },
-    { id: "chapters", label: `📄 Chương (${pendingChapters.length})` },
-    { id: "history", label: `📋 Lịch sử (${doneStories.length + doneChapters.length})` },
-    { id: "guide", label: "📏 Tiêu chí" },
-  ] as const;
+  const filteredHistory = historyFilter === "ALL" ? reviewHistory : reviewHistory.filter((h) => h.decision === historyFilter);
 
-  const totalReviewed = doneStories.length + doneChapters.length;
-  const approved = [...doneStories.filter((d) => d.action === "APPROVED"), ...doneChapters.filter((d) => d.action === "APPROVED")].length;
+  const TABS: { id: Tab; label: string; icon: string; count?: number }[] = [
+    { id: "stories", label: "Truyện", icon: "📖", count: pendingStories.length },
+    { id: "chapters", label: "Chương", icon: "📄", count: pendingChapters.length },
+    { id: "history", label: "Lịch sử", icon: "📋" },
+    { id: "criteria", label: "Tiêu chí", icon: "⚖️" },
+  ];
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f4f6fb" }}>
-      {/* ── Gradient header ── */}
-      <div style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #3730a3 60%, #4f46e5 100%)", padding: "28px 40px 0", color: "#fff" }}>
+    <div style={{ minHeight: "100vh", background: T.bg }}>
+      {/* ════════════════ HEADER ════════════════ */}
+      <div style={{ background: T.headerGrad, padding: "32px 40px 0", color: "#fff" }}>
         <div style={{ maxWidth: 1320, margin: "0 auto" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🛡</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 14, background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>🔍</div>
             <div>
-              <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, letterSpacing: -0.5 }}>Bảng Kiểm Duyệt</h1>
-              <p style={{ margin: 0, fontSize: 13, opacity: 0.75 }}>Xin chào, {user?.fullName} — duyệt truyện & chương để nhận coin thưởng</p>
+              <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, letterSpacing: -0.5, fontFamily: T.fontSerif }}>Bảng Kiểm Duyệt</h1>
+              <p style={{ margin: 0, fontSize: 13, opacity: 0.7 }}>Xin chào, {user?.fullName} — kiểm duyệt nội dung truyện và chương</p>
             </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
             {[
-              { icon: "⏳", label: "Truyện chờ duyệt", value: pendingStories.length },
-              { icon: "📄", label: "Chương chờ duyệt", value: pendingChapters.length },
-              { icon: "✅", label: "Đã duyệt hôm nay", value: approved },
-              { icon: "📊", label: "Tổng đã xử lý", value: totalReviewed },
+              { icon: "📖", label: "Truyện chờ duyệt", value: pendingStories.length, color: "#ffab91" },
+              { icon: "📄", label: "Chương chờ duyệt", value: pendingChapters.length, color: "#b39ddb" },
+              { icon: "📋", label: "Đã duyệt", value: reviewHistory.length || "—", color: "#a5d6a7" },
             ].map((s) => (
-              <div key={s.label} style={{ background: "rgba(255,255,255,0.12)", borderRadius: 12, padding: "14px 16px", border: "1px solid rgba(255,255,255,0.2)" }}>
+              <div key={s.label} style={{ background: "rgba(255,255,255,0.08)", borderRadius: 12, padding: "14px 16px", border: "1px solid rgba(255,255,255,0.12)" }}>
                 <div style={{ fontSize: 20 }}>{s.icon}</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginTop: 4 }}>{s.value}</div>
-                <div style={{ fontSize: 11, opacity: 0.8 }}>{s.label}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, marginTop: 4 }}>{s.value}</div>
+                <div style={{ fontSize: 11, opacity: 0.7 }}>{s.label}</div>
               </div>
             ))}
           </div>
-          <div style={{ display: "flex", gap: 4, overflowX: "auto" }}>
+          <div style={{ display: "flex", gap: 2 }}>
             {TABS.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id as any)}
-                style={{ flex: 1, minWidth: 110, padding: "10px 18px", borderRadius: "8px 8px 0 0", border: "none", background: tab === t.id ? "rgba(255,255,255,0.18)" : "transparent", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", borderBottom: `2px solid ${tab === t.id ? "#fff" : "transparent"}`, opacity: tab === t.id ? 1 : 0.72 }}
-              >
-                {t.label}
+              <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, padding: "12px 16px", borderRadius: "10px 10px 0 0", border: "none", background: tab === t.id ? T.bg : "transparent", color: tab === t.id ? T.accent : "rgba(255,255,255,0.75)", fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all 0.15s" }}>
+                {t.icon} {t.label}{t.count !== undefined ? ` (${t.count})` : ""}
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ── Content ── */}
+      {/* ════════════════ CONTENT ════════════════ */}
       <div style={{ maxWidth: 1320, margin: "0 auto", padding: "28px 40px 80px" }}>
-        {/* ── Stories tab ── */}
-      {tab === "stories" && (
-        <div>
-          {loadingStories ? (
-            <div style={{ textAlign: "center", padding: "40px 0", color: "#9e8e82" }}>⏳ Đang tải...</div>
-          ) : pendingStories.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "60px 0", color: "#b0a096" }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
-              <div style={{ fontSize: 16, fontWeight: 700 }}>Không có truyện nào chờ duyệt!</div>
-              <div style={{ fontSize: 13, marginTop: 6 }}>Hãy quay lại sau.</div>
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {pendingStories.map((story) => (
-                <div key={story.id} style={{ background: "#fff", border: "1.5px solid #e8e0d6", borderRadius: 16, padding: "18px 20px" }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
-                    <div style={{ width: 52, height: 72, borderRadius: 8, background: story.coverUrl ? `url(${story.coverUrl}) center/cover` : "linear-gradient(135deg,#c23d3f,#e8a0a1)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 20 }}>
-                      {!story.coverUrl && "📖"}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, fontWeight: 700, color: "#1c1512", marginBottom: 4 }}>{story.title}</div>
-                      <div style={{ fontSize: 12, color: "#9e8e82", marginBottom: 8 }}>
-                        ✍ {story.author?.fullName} · {story.categories?.map((c) => c.name).join(", ") || "Chưa phân loại"} · {story.totalChapters ?? 0} chương · Nộp {timeAgo(story.submittedAt ?? story.createdAt)}
-                      </div>
-                      {story.description && (
-                        <div style={{ fontSize: 13, color: "#6b5a4e", lineHeight: 1.6, marginBottom: 8, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
-                          {story.description}
-                        </div>
-                      )}
-                      <button
-                        onClick={() => setPreviewStory(story)}
-                        style={{ fontSize: 12, padding: "5px 12px", borderRadius: 7, border: "1.5px solid #e8e0d6", background: "#fdfaf7", color: "#6b5a4e", cursor: "pointer", fontWeight: 600 }}
-                      >
-                        👁 Xem mô tả đầy đủ
-                      </button>
-                      <ReviewActions
-                        onApprove={(note) => reviewStory(story, "APPROVED", note)}
-                        onReject={(note) => reviewStory(story, "REJECTED", note)}
-                        loading={reviewing === story.id}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
-      {/* ── Chapters tab ── */}
-      {tab === "chapters" && (
-        <div>
-          {loadingChapters ? (
-            <div style={{ textAlign: "center", padding: "40px 0", color: "#9e8e82" }}>⏳ Đang tải...</div>
-          ) : pendingChapters.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "60px 0", color: "#b0a096" }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
-              <div style={{ fontSize: 16, fontWeight: 700 }}>Không có chương nào chờ duyệt!</div>
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {pendingChapters.map((ch) => {
-                const words = ch.wordCount ?? ch.content?.trim().split(/\s+/).filter(Boolean).length ?? 0;
-                const readMins = Math.max(1, Math.ceil(words / 200));
-                return (
-                  <div key={ch.id} style={{ background: "#fff", border: "1.5px solid #e8e0d6", borderRadius: 16, padding: "16px 20px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8, flexWrap: "wrap" }}>
-                      <div style={{ width: 30, height: 30, borderRadius: 8, background: "#fde8e8", color: "#c23d3f", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {/* ──── TAB: STORIES ──── */}
+        {tab === "stories" && (
+          <div>
+            {loadingStories ? <div style={{ textAlign: "center", padding: "40px 0", color: T.textMuted }}>⏳ Đang tải truyện chờ duyệt…</div> :
+              pendingStories.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "60px 0", background: T.card, borderRadius: 18, border: `1.5px dashed ${T.border}` }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: T.text }}>Không có truyện nào cần duyệt</div>
+                  <div style={{ fontSize: 13, color: T.textMuted, marginTop: 6 }}>Tất cả đã được xử lý!</div>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))", gap: 14 }}>
+                  {pendingStories.map((story) => (
+                    <div key={story.id} style={{ background: T.card, border: `1.5px solid ${T.border}`, borderRadius: 16, overflow: "hidden", boxShadow: T.shadow, display: "flex", flexDirection: "column" }}>
+                      {story.coverUrl && <img src={story.coverUrl} alt="" style={{ width: "100%", height: 150, objectFit: "cover" }} />}
+                      <div style={{ padding: "14px 18px", flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+                        <div style={{ fontFamily: T.fontSerif, fontSize: 16, fontWeight: 700, color: T.text }}>{story.title}</div>
+                        <div style={{ fontSize: 12, color: T.textMuted, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                          <span>✍️ {story.authorName}</span>
+                          <span>🕐 {timeAgo(story.createdAt)}</span>
+                          {story.categoryNames && story.categoryNames.length > 0 && <span>📂 {story.categoryNames.join(", ")}</span>}
+                        </div>
+                        {story.description && <div style={{ fontSize: 13, color: T.textSec, lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{story.description}</div>}
+                        <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
+                          <button onClick={() => setStoryModal(story)} style={{ ...btnPrimary, flex: 1 }}>🔍 Xem chi tiết & Duyệt</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+          </div>
+        )}
+
+        {/* ──── TAB: CHAPTERS ──── */}
+        {tab === "chapters" && (
+          <div>
+            {loadingChapters ? <div style={{ textAlign: "center", padding: "40px 0", color: T.textMuted }}>⏳ Đang tải chương chờ duyệt…</div> :
+              pendingChapters.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "60px 0", background: T.card, borderRadius: 18, border: `1.5px dashed ${T.border}` }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: T.text }}>Không có chương nào cần duyệt</div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {pendingChapters.map((ch) => (
+                    <div key={ch.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", background: T.card, borderRadius: 14, border: `1.5px solid ${T.border}`, boxShadow: T.shadow }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: T.accentLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: T.accent, flexShrink: 0 }}>
                         {ch.chapterOrder}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: "#1c1512" }}>{ch.title}</div>
-                        <div style={{ fontSize: 12, color: "#9e8e82" }}>
-                          {ch.storyTitle && <>{ch.storyTitle} · </>}
-                          {ch.authorName && <>{ch.authorName} · </>}
-                          📝 {words.toLocaleString()} chữ · ⏱ ~{readMins} phút đọc
-                          {(ch.coinPrice ?? 0) > 0 && <> · 🪙 {ch.coinPrice} xu</>}
-                          {" · Nộp "}{timeAgo(ch.createdAt)}
+                        <div style={{ fontWeight: 700, fontSize: 14, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ch.title}</div>
+                        <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2, display: "flex", gap: 10 }}>
+                          <span>📖 {ch.storyTitle}</span>
+                          <span>{ch.coinPrice > 0 ? `🪙 ${ch.coinPrice} xu` : "Miễn phí"}</span>
+                          <span>🕐 {timeAgo(ch.createdAt)}</span>
                         </div>
                       </div>
-                      {ch.content && (
-                        <button
-                          onClick={() => setPreviewChapter(ch)}
-                          style={{ fontSize: 12, padding: "5px 12px", borderRadius: 7, border: "1.5px solid #e8e0d6", background: "#fdfaf7", color: "#6b5a4e", cursor: "pointer", fontWeight: 600, flexShrink: 0 }}
-                        >
-                          👁 Đọc nội dung
-                        </button>
-                      )}
+                      <button onClick={() => setChapterModal(ch)} style={btnPrimary}>🔍 Đọc & Duyệt</button>
                     </div>
-                    <ReviewActions
-                      onApprove={(note) => reviewChapter(ch, "APPROVED", note)}
-                      onReject={(note) => reviewChapter(ch, "REJECTED", note)}
-                      loading={reviewing === ch.id * -1}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+                  ))}
+                </div>
+              )}
+          </div>
+        )}
 
-      {/* ── History tab ── */}
-      {(tab as string) === "history" && (
-        <div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-            {(["stories", "chapters"] as const).map((t) => (
-              <button key={t} onClick={() => setHistoryTab(t)} style={{ padding: "7px 18px", borderRadius: 8, border: "1.5px solid #e8e0d6", background: historyTab === t ? "#c23d3f" : "#fff", color: historyTab === t ? "#fff" : "#6b5a4e", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                {t === "stories" ? `📖 Truyện (${doneStories.length})` : `📄 Chương (${doneChapters.length})`}
-              </button>
+        {/* ──── TAB: HISTORY ──── */}
+        {tab === "history" && (
+          <div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+              {(["ALL", "APPROVED", "REJECTED"] as const).map((f) => (
+                <button key={f} onClick={() => setHistoryFilter(f)} style={{ padding: "6px 14px", borderRadius: 20, border: `1.5px solid ${historyFilter === f ? T.accent : T.border}`, background: historyFilter === f ? T.accentLight : T.card, color: historyFilter === f ? T.accent : T.textSec, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                  {f === "ALL" ? "Tất cả" : f === "APPROVED" ? "✅ Đã duyệt" : "❌ Đã từ chối"}
+                </button>
+              ))}
+            </div>
+            {loadingHistory ? <div style={{ textAlign: "center", padding: "40px 0", color: T.textMuted }}>⏳ Đang tải…</div> :
+              filteredHistory.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "60px 0", background: T.card, borderRadius: 18, border: `1.5px dashed ${T.border}` }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: T.text }}>Chưa có lịch sử duyệt</div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {filteredHistory.map((h) => (
+                    <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: T.card, borderRadius: 12, border: `1.5px solid ${h.decision === "APPROVED" ? T.successBorder : T.dangerBorder}` }}>
+                      <span style={{ fontSize: 20 }}>{h.decision === "APPROVED" ? "✅" : "❌"}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>
+                          {h.targetType === "STORY" ? "📖 " : "📄 "}{h.targetTitle}
+                        </div>
+                        <div style={{ fontSize: 12, color: T.textMuted }}>
+                          {h.storyTitle ? `${h.storyTitle} · ` : ""}{new Date(h.reviewedAt).toLocaleDateString("vi-VN")}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, ...(h.decision === "APPROVED" ? { background: T.successBg, color: T.success } : { background: T.dangerBg, color: T.danger }) }}>
+                        {h.decision === "APPROVED" ? "Duyệt" : "Từ chối"}
+                      </span>
+                      {h.note && <span style={{ fontSize: 12, color: T.textMuted, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={h.note}>📝 {h.note}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+          </div>
+        )}
+
+        {/* ──── TAB: CRITERIA ──── */}
+        {tab === "criteria" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {[
+              {
+                icon: "📖", color: T.accent, bg: T.accentLight, border: T.accentBorder,
+                title: "Tiêu chí duyệt truyện",
+                items: [
+                  "Tiêu đề rõ ràng, không quảng cáo, không clickbait",
+                  "Mô tả đúng nội dung, không spam, không link lạ",
+                  "Ảnh bìa phù hợp, không chứa nội dung vi phạm",
+                  "Thể loại phân loại đúng",
+                  "Không trùng lặp với truyện đã có trên hệ thống",
+                ],
+              },
+              {
+                icon: "📄", color: T.info, bg: T.infoBg, border: T.infoBorder,
+                title: "Tiêu chí duyệt chương",
+                items: [
+                  "Nội dung chương đầy đủ, không bỏ dở giữa chừng",
+                  "Không vi phạm bản quyền (sao chép nguyên văn)",
+                  "Không chứa nội dung bạo lực, thù ghét, khiêu dâm",
+                  "Không quảng cáo, spam link trong nội dung",
+                  "Giá coin (nếu có) hợp lý với độ dài chương",
+                  "Thứ tự chương đúng logic, không trùng lặp",
+                ],
+              },
+              {
+                icon: "⚠️", color: T.warn, bg: T.warnBg, border: T.warnBorder,
+                title: "Lưu ý khi duyệt",
+                items: [
+                  "Luôn ghi chú rõ ràng khi từ chối — giúp tác giả cải thiện",
+                  "Nếu chưa chắc, liên hệ admin để xin ý kiến",
+                  "Không sử dụng quyền reviewer cho mục đích cá nhân",
+                  "Duyệt công bằng, không thiên vị tác giả nào",
+                  "Kiểm tra cả nội dung images (link ảnh bìa) khi duyệt",
+                ],
+              },
+              {
+                icon: "🚫", color: T.danger, bg: T.dangerBg, border: T.dangerBorder,
+                title: "Nội dung phải từ chối ngay",
+                items: [
+                  "Nội dung vi phạm pháp luật",
+                  "Nội dung phân biệt chủng tộc, giới tính, tôn giáo",
+                  "Nội dung có tính chất khủng bố, chính trị cực đoan",
+                  "Truyện/chương chỉ chứa spam hoặc nội dung tự động",
+                  "Vi phạm bản quyền (copy nguyên văn tác phẩm nổi tiếng)",
+                ],
+              },
+            ].map((sec) => (
+              <div key={sec.title} style={{ background: sec.bg, border: `1.5px solid ${sec.border}`, borderRadius: T.radius, padding: "18px 20px" }}>
+                <div style={{ fontWeight: 800, fontSize: 15, color: sec.color, marginBottom: 10 }}>{sec.icon} {sec.title}</div>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {sec.items.map((item, i) => <li key={i} style={{ fontSize: 13, color: T.text, lineHeight: 1.7 }}>{item}</li>)}
+                </ul>
+              </div>
             ))}
           </div>
-
-          {historyTab === "stories" && (
-            doneStories.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px 0", color: "#b0a096", fontSize: 14 }}>Chưa có lịch sử duyệt truyện trong phiên này.</div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {doneStories.map((d, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: d.action === "APPROVED" ? "#f0fdf4" : "#fde8e8", borderRadius: 12, border: `1.5px solid ${d.action === "APPROVED" ? "#86efac" : "#e8a0a1"}` }}>
-                    <span style={{ fontSize: 20 }}>{d.action === "APPROVED" ? "✅" : "❌"}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: "#1c1512" }}>{d.story.title}</div>
-                      <div style={{ fontSize: 12, color: "#9e8e82" }}>{d.action === "APPROVED" ? "Đã duyệt" : "Đã từ chối"} · {d.at}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )
-          )}
-
-          {historyTab === "chapters" && (
-            doneChapters.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px 0", color: "#b0a096", fontSize: 14 }}>Chưa có lịch sử duyệt chương trong phiên này.</div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {doneChapters.map((d, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: d.action === "APPROVED" ? "#f0fdf4" : "#fde8e8", borderRadius: 12, border: `1.5px solid ${d.action === "APPROVED" ? "#86efac" : "#e8a0a1"}` }}>
-                    <span style={{ fontSize: 20 }}>{d.action === "APPROVED" ? "✅" : "❌"}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: "#1c1512" }}>{d.chapter.title}</div>
-                      <div style={{ fontSize: 12, color: "#9e8e82" }}>{d.action === "APPROVED" ? "Đã duyệt" : "Đã từ chối"} · {d.at}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )
-          )}
-        </div>
-      )}
-
-      {/* ── Guide tab ── */}
-      {(tab as string) === "guide" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {[
-            {
-              icon: "✅", color: "#166534", bg: "#f0fdf4", border: "#86efac",
-              title: "Nội dung được duyệt",
-              items: ["Truyện có cốt truyện rõ ràng, mạch lạc", "Chính tả, văn phong đạt chuẩn tối thiểu", "Không vi phạm bản quyền tác giả khác", "Nội dung tích cực, phù hợp với độc giả", "Mô tả truyện trung thực với nội dung"],
-            },
-            {
-              icon: "❌", color: "#9e2d2f", bg: "#fde8e8", border: "#e8a0a1",
-              title: "Nội dung cần từ chối",
-              items: ["Nội dung khiêu dâm, bạo lực quá mức", "Kích động thù hận, phân biệt đối xử", "Vi phạm bản quyền rõ ràng (copy từ tác phẩm khác)", "Spam, nội dung vô nghĩa hoặc quảng cáo", "Chính tả quá kém, không thể đọc được"],
-            },
-            {
-              icon: "📝", color: "#1d4ed8", bg: "#eff6ff", border: "#93c5fd",
-              title: "Tiêu chí độ dài chương",
-              items: ["Tối thiểu: 500 chữ/chương để được duyệt", "Lý tưởng: 1.500 – 3.000 chữ/chương", "Chương VIP (trả phí): nên có ≥ 2.000 chữ", "Chương quá ngắn (< 200 chữ): từ chối và ghi chú", "Chương quá dài (> 10.000 chữ): khuyến nghị chia nhỏ"],
-            },
-          ].map((section) => (
-            <div key={section.title} style={{ background: section.bg, border: `1.5px solid ${section.border}`, borderRadius: 14, padding: "18px 20px" }}>
-              <div style={{ fontWeight: 800, fontSize: 15, color: section.color, marginBottom: 10 }}>{section.icon} {section.title}</div>
-              <ul style={{ margin: 0, paddingLeft: 20 }}>
-                {section.items.map((item, i) => (
-                  <li key={i} style={{ fontSize: 13, color: "#3d2f28", lineHeight: 1.7 }}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      )}
-
+        )}
       </div>
 
-      {/* Modals */}
-      {previewStory && <StoryPreview story={previewStory} onClose={() => setPreviewStory(null)} />}
-      {previewChapter && <ChapterPreview chapter={previewChapter} onClose={() => setPreviewChapter(null)} />}
+      {/* ════════════════ MODALS ════════════════ */}
+      {storyModal && <StoryDetailModal story={storyModal} onClose={() => setStoryModal(null)} onReview={handleReviewStory} />}
+      {chapterModal && <ChapterReviewModal chapter={chapterModal} onClose={() => setChapterModal(null)} onReview={handleReviewChapter} />}
     </div>
   );
 }

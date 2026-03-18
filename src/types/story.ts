@@ -34,34 +34,60 @@ export interface StoryDetail extends Story {
   chapters?: ChapterSummary[];
 }
 
-// Lightweight chapter used inside story detail
+// Lightweight chapter used inside story detail  (matches StoryDetailResponse.chapters)
 export interface ChapterSummary {
   id: number;
   title: string;
-  chapterNumber: number;
-  isPaid: boolean;
-  price?: number;
+  chapterOrder: number;
+  coinPrice: number;
+  isPurchased: boolean;
   status: string;
-  createdAt: string;
+  publishAt?: string;
+  createdAt?: string;
 }
 
 // ── Chapter ───────────────────────────────────────────────────────────────
-export type ChapterStatus = "DRAFT" | "PENDING" | "PUBLISHED" | "REJECTED";
+export type ChapterStatus = "DRAFT" | "EDITED" | "PENDING_REVIEW" | "APPROVED" | "PUBLISHED" | "HIDDEN";
 
 export interface Chapter {
   id: number;
   storyId: number;
+  storyTitle?: string;
   title: string;
   content: string;
-  chapterNumber: number;
-  isPaid: boolean;
-  price?: number;
+  chapterOrder: number;
+  coinPrice: number;
+  isPurchased: boolean;
   status: ChapterStatus;
-  viewCount?: number;
+  publishAt?: string;
+  reviewNote?: string | null;
+  comments?: unknown[];
+  totalComments?: number;
   createdAt: string;
   updatedAt: string;
 }
+// ── EditRequest ───────────────────────────────────────────────────────────
+export type EditRequestStatus = "OPEN" | "IN_PROGRESS" | "SUBMITTED" | "APPROVED" | "CANCELLED";
 
+export interface EditRequest {
+  id: number;
+  chapterId: number;
+  chapterTitle: string;
+  storyTitle: string;
+  authorId: number;
+  authorName: string;
+  editorId?: number;
+  editorName?: string;
+  coinReward: number;
+  description?: string;
+  editedContent?: string;
+  editorNote?: string;
+  authorNote?: string;
+  status: EditRequestStatus;
+  attemptCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
 // ── Comment ───────────────────────────────────────────────────────────────
 export interface CommentUser {
   id: number;

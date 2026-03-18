@@ -8,6 +8,7 @@ import { useAuthStore } from "@/stores";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGotoStory } from "@/hooks/useGotoStory";
 import useChapterService from "@/api/useChapter.service";
+import useStoryService from "@/api/useStory.service";
 import useReportService from "@/api/useReport.service";
 import { useToast } from "@/hooks/use-toast";
 
@@ -27,48 +28,36 @@ export function StoryDetailPage() {
   const gotoStory = useGotoStory();
   const { user } = useAuthStore();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const { getChaptersByStory } = useChapterService();
+  const { getStoryDetail } = useStoryService();
 
-  // Khi reload trang, store bị xoá → đọc ?id từ URL rồi tìm lại trong danh sách
-  useEffect(() => {
-    if (!story) {
-      const idParam = searchParams.get("id");
-      if (idParam) {
-        const found = stories.find((s) => String(s.id) === idParam);
-        if (found) setSelectedStory(found);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
+  // Clear stale chapters & fetch from API via story detail (includes published chapters)
   useEffect(() => {
     if (!story?.id) return;
-    getChaptersByStory(story.id)
+    setChapters([]);  // prevent stale mock-data from being used
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getStoryDetail(story.id).then((res: any) => {
+      // API envelope: { code, data: StoryDetailResponse, message }
+      const detail = res?.data ?? res;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .then((res: any) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const list: any[] = res?.data ?? res ?? [];
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const mapped = list.map((ch: any) => {
-          const wordCount = ch.content ? ch.content.trim().split(/\s+/).length : 0;
-          const mins = Math.max(1, Math.ceil(wordCount / 200));
-          return {
-            id: ch.id,
-            title: ch.title,
-            words: wordCount,
-            readTime: `${mins} phút`,
-            publishedAt: ch.publishAt
-              ? new Date(ch.publishAt).toLocaleDateString("vi-VN")
-              : undefined,
-            locked: (ch.coinPrice ?? 0) > 0 && !ch.isPurchased,
-            price: ch.coinPrice ?? 0,
-          };
-        });
-        setChapters(mapped);
-      })
-      .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      const list: any[] = Array.isArray(detail?.chapters) ? detail.chapters : [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mapped = list.map((ch: any) => ({
+        id: ch.id,
+        title: ch.title,
+        chapterOrder: ch.chapterOrder ?? ch.chapterNumber ?? 0,
+        coinPrice: ch.coinPrice ?? ch.price ?? 0,
+        isPurchased: ch.isPurchased ?? false,
+        words: 0,
+        readTime: "—",
+        publishedAt: ch.publishAt
+          ? new Date(ch.publishAt).toLocaleDateString("vi-VN")
+          : undefined,
+        locked: (ch.coinPrice ?? ch.price ?? 0) > 0 && !(ch.isPurchased ?? false),
+        price: ch.coinPrice ?? ch.price ?? 0,
+      }));
+      setChapters(mapped);
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [story?.id]);
   // Report
   const { createReport } = useReportService();

@@ -51,6 +51,10 @@ interface Chapter {
   publishedAt?: string;
   locked?: boolean;
   price?: number;
+  // new API fields
+  chapterOrder?: number;
+  coinPrice?: number;
+  isPurchased?: boolean;
 }
 
 interface StoryStore {
@@ -91,7 +95,7 @@ export const useStoryStore = create<StoryStore>((set) => ({
   readProgress: {},
   searchQ: "",
   reviews: MOCK_REVIEWS,
-  chapters: MOCK_CHAPTERS,
+  chapters: [],
   unlockedChapters: [],
   fontSize: 18,
   selectedChapter: 0,

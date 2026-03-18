@@ -735,9 +735,9 @@ export default function ReaderPage() {
   const router = useRouter();
   const { selectedStory, selectedChapterId, setSelectedChapterId } =
     useNavStore();
-  const { chapters } = useStoryStore();
+  const { chapters, setChapters } = useStoryStore();
   const { user } = useAuthStore();
-  const { getChapter } = useChapterService();
+  const { getChapter, getChaptersByStory } = useChapterService();
   const commentService = useCommentService();
   const commentServiceRef = useRef(commentService);
   commentServiceRef.current = commentService;
@@ -746,6 +746,7 @@ export default function ReaderPage() {
 
   const [chapterData, setChapterData] = useState<ChapterData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [chapterError, setChapterError] = useState<string | null>(null);
   const [fontSize, setFontSize] = useState(16);
   const [fontFamily, setFontFamily] = useState(FONT_OPTIONS[0].value);
   const [lineHeight, setLineHeight] = useState(1.8);
@@ -772,6 +773,36 @@ export default function ReaderPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Fetch chapter list for prev/next navigation when Zustand store is empty
+  // (happens on page refresh or direct URL access)
+  useEffect(() => {
+    const storyId = chapterData?.storyId;
+    if (!storyId || chapters.length > 0) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getChaptersByStory(storyId).then((res: any) => {
+      // API envelope: { code, data: List<ChapterResponse>, message }
+      const list: any[] = res?.data ?? res ?? [];
+      if (!Array.isArray(list)) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mapped = list.map((ch: any) => ({
+        id: ch.id,
+        title: ch.title,
+        chapterOrder: ch.chapterOrder ?? 0,
+        coinPrice: ch.coinPrice ?? 0,
+        isPurchased: ch.isPurchased ?? false,
+        words: 0,
+        readTime: "—",
+        publishedAt: ch.publishAt
+          ? new Date(ch.publishAt).toLocaleDateString("vi-VN")
+          : undefined,
+        locked: (ch.coinPrice ?? 0) > 0 && !(ch.isPurchased ?? false),
+        price: ch.coinPrice ?? 0,
+      }));
+      setChapters(mapped);
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapterData?.storyId]);
+
   // Scroll progress
   useEffect(() => {
     const handler = () => {
@@ -787,17 +818,39 @@ export default function ReaderPage() {
 
   // Fetch chapter + comments when id changes
   useEffect(() => {
-    if (!selectedChapterId) return;
+    if (!selectedChapterId) {
+      setLoading(false);
+      setChapterError("Không có chương nào được chọn. Hãy quay lại trang truyện và chọn một chương.");
+      return;
+    }
     setLoading(true);
+    setChapterError(null);
     window.scrollTo(0, 0);
     setComments([]);
     setCommentText("");
     getChapter(selectedChapterId)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .then((res: any) => {
         const data: ChapterData = res?.data ?? res;
-        setChapterData(data);
+        if (!data?.id) {
+          setChapterData(null);
+          setChapterError("Dữ liệu chương không hợp lệ (thiếu ID).");
+        } else {
+          setChapterData(data);
+        }
       })
-      .catch(() => setChapterData(null))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .catch((err: any) => {
+        setChapterData(null);
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          setChapterError("Đây là chương VIP hoặc bạn chưa đăng nhập.");
+        } else if (status === 404) {
+          setChapterError("Không tìm thấy chương (chương chưa được đăng tải hoặc đã bị xóa).");
+        } else {
+          setChapterError(`Không thể tải chương (lỗi ${status ?? "kết nối"})`);
+        }
+      })
       .finally(() => setLoading(false));
     loadComments(selectedChapterId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -891,32 +944,32 @@ export default function ReaderPage() {
     return (
       <div style={{ textAlign: "center", padding: "80px 24px" }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>😕</div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: "#1c1512" }}>
+        <div style={{ fontSize: 18, fontWeight: 700, color: "#1c1512", marginBottom: 8 }}>
           Không tìm thấy chương
         </div>
-        <button
-          onClick={() => router.back()}
-          style={{
-            marginTop: 20,
-            padding: "10px 24px",
-            borderRadius: 10,
-            border: "none",
-            background: "#c23d3f",
-            color: "#fff",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          ← Quay lại
-        </button>
+        {chapterError && (
+          <div style={{ fontSize: 14, color: "#c23d3f", background: "#fde8e8", borderRadius: 10, padding: "10px 20px", display: "inline-block", marginBottom: 16 }}>
+            {chapterError}
+          </div>
+        )}
+        <div>
+          <button
+            onClick={() => router.back()}
+            style={{ marginTop: 8, padding: "10px 24px", borderRadius: 10, border: "none", background: "#c23d3f", color: "#fff", fontWeight: 600, cursor: "pointer" }}
+          >
+            ← Quay lại
+          </button>
+        </div>
       </div>
     );
   }
 
-  const paragraphs = chapterData.content
-    ? chapterData.content.split(/\n+/).filter(Boolean)
-    : [];
-  const wordCount = chapterData.content?.trim().split(/\s+/).length ?? 0;
+  const rawContent = chapterData.content ?? "";
+  const isHtmlContent = /<[a-z][\s\S]*>/i.test(rawContent);
+  const paragraphs = isHtmlContent ? [] : rawContent.split(/\n+/).filter(Boolean);
+  const wordCount = isHtmlContent
+    ? rawContent.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().split(/\s+/).filter(Boolean).length
+    : rawContent.trim().split(/\s+/).filter(Boolean).length;
   const readMins = Math.max(1, Math.ceil(wordCount / 200));
   const isLocked = (chapterData.coinPrice ?? 0) > 0 && !chapterData.isPurchased;
 
@@ -1121,9 +1174,16 @@ export default function ReaderPage() {
             transition: "font-size 0.2s, line-height 0.2s",
           }}
         >
-          {paragraphs.map((p, i) => (
-            <p key={i}>{p}</p>
-          ))}
+          {isHtmlContent ? (
+            <div
+              style={{ fontSize, fontFamily, lineHeight }}
+              dangerouslySetInnerHTML={{ __html: rawContent }}
+            />
+          ) : (
+            paragraphs.map((p, i) => (
+              <p key={i}>{p}</p>
+            ))
+          )}
         </div>
       )}
 
