@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { Ico } from "@/components/Icons";
 import { StarRating } from "@/components/ui";
 import { useStoryStore } from "@/stores/storyStore";
@@ -10,16 +10,15 @@ import { useGotoStory } from "@/hooks/useGotoStory";
 import useChapterService from "@/api/useChapter.service";
 import useStoryService from "@/api/useStory.service";
 import useReportService from "@/api/useReport.service";
+import useRatingService from "@/api/useRating.service";
+import useFollowService from "@/api/useFollow.service";
 import { useToast } from "@/hooks/use-toast";
 
-export function StoryDetailPage() {
+function StoryDetailContent() {
   const {
     allStories: stories,
-    likedStories,
-    toggleLike,
     unlockedChapters,
     unlockChapter,
-    reviews,
     chapters,
     setChapters,
   } = useStoryStore();
@@ -28,35 +27,195 @@ export function StoryDetailPage() {
   const gotoStory = useGotoStory();
   const { user } = useAuthStore();
   const router = useRouter();
-  const { getStoryDetail } = useStoryService();
+  const searchParams = useSearchParams();
+  const { getStory, getStoryDetail } = useStoryService();
+  const { getChaptersByStory } = useChapterService();
+  const { getRatingsByStory, rateStory, getMyRating } = useRatingService();
+  const { toggleFollow, getFollowStatus } = useFollowService();
 
-  // Clear stale chapters & fetch from API via story detail (includes published chapters)
+  const [followed, setFollowed] = useState(false);
+  const [followCount, setFollowCount] = useState<number | null>(null);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [storyLoading, setStoryLoading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [myScore, setMyScore] = useState(0);
+  const [myReview, setMyReview] = useState("");
+  const [ratingHover, setRatingHover] = useState(0);
+  const [ratingSubmitting, setRatingSubmitting] = useState(false);
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
+  const [ratingModalOpen, setRatingModalOpen] = useState(false);
+
+  // Load story from URL ?id param when navStore is empty (e.g., on page refresh or direct URL)
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (story || !id) return;
+    setStoryLoading(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getStory(id).then((res: any) => {
+      const s = res?.data ?? res;
+      if (!s?.id) return;
+      const isRealCover = (url?: string) =>
+        !!url && !url.includes("placeholder.com") && !url.includes("placeholder");
+      const COVER_GRADIENTS = [
+        "linear-gradient(135deg,#f093fb,#f5576c)",
+        "linear-gradient(135deg,#4facfe,#00f2fe)",
+        "linear-gradient(135deg,#43e97b,#38f9d7)",
+        "linear-gradient(135deg,#fa709a,#fee140)",
+        "linear-gradient(135deg,#a18cd1,#fbc2eb)",
+        "linear-gradient(135deg,#667eea,#764ba2)",
+      ];
+      setSelectedStory({
+        id: s.id,
+        title: s.title ?? "",
+        author: s.authorName ?? s.author?.fullName ?? "",
+        penName: s.authorName ?? s.author?.fullName ?? "",
+        cover: isRealCover(s.coverUrl)
+          ? `url("${s.coverUrl}")`
+          : COVER_GRADIENTS[s.id % COVER_GRADIENTS.length],
+        coverUrl: s.coverUrl ?? "",
+        genre: s.categories?.[0]?.name ?? s.genre ?? "",
+        categoryId: s.categories?.[0]?.id ?? null,
+        tags: s.tags ?? [],
+        rating: s.avgRating ?? s.averageRating ?? 0,
+        reads: s.viewCount != null ? String(s.viewCount) : "0",
+        favorites: s.favoriteCount ?? s.followCount ?? 0,
+        chapters: s.allChaptersCount ?? s.totalChapterCount ?? s.chapterCount ?? 0,
+        reviewCount: s.ratingCount ?? 0,
+        description: s.summary ?? s.description ?? "",
+        status: s.status === "COMPLETED" || s.isCompleted ? "done" : "ongoing",
+      });
+    }).catch(() => {}).finally(() => setStoryLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  // Load chapter list. Uses getStoryDetail as the primary reliable source (public endpoint,
+  // includes isPurchased per chapter). Falls back to getChaptersByStory result when the
+  // detail endpoint is unavailable. Authors see all chapters via getChaptersByStory.
   useEffect(() => {
     if (!story?.id) return;
-    setChapters([]);  // prevent stale mock-data from being used
+    setChapters([]);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    getStoryDetail(story.id).then((res: any) => {
-      // API envelope: { code, data: StoryDetailResponse, message }
-      const detail = res?.data ?? res;
+    const applyChapters = (list: any[], purchasedIds?: Set<number>) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const list: any[] = Array.isArray(detail?.chapters) ? detail.chapters : [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mapped = list.map((ch: any) => ({
-        id: ch.id,
-        title: ch.title,
-        chapterOrder: ch.chapterOrder ?? ch.chapterNumber ?? 0,
-        coinPrice: ch.coinPrice ?? ch.price ?? 0,
-        isPurchased: ch.isPurchased ?? false,
-        words: 0,
-        readTime: "—",
-        publishedAt: ch.publishAt
-          ? new Date(ch.publishAt).toLocaleDateString("vi-VN")
-          : undefined,
-        locked: (ch.coinPrice ?? ch.price ?? 0) > 0 && !(ch.isPurchased ?? false),
-        price: ch.coinPrice ?? ch.price ?? 0,
-      }));
+      const mapped = list.map((ch: any) => {
+        const purchased = purchasedIds != null ? purchasedIds.has(ch.id) : (ch.isPurchased ?? false);
+        return {
+          id: ch.id,
+          title: ch.title,
+          chapterOrder: ch.chapterOrder ?? ch.chapterNumber ?? 0,
+          coinPrice: ch.coinPrice ?? ch.price ?? 0,
+          isPurchased: purchased,
+          words: 0,
+          readTime: "\u2014",
+          publishedAt: ch.publishAt
+            ? new Date(ch.publishAt).toLocaleDateString("vi-VN")
+            : undefined,
+          locked: (ch.coinPrice ?? ch.price ?? 0) > 0 && !purchased,
+          price: ch.coinPrice ?? ch.price ?? 0,
+        };
+      });
       setChapters(mapped);
-    }).catch(() => {});
+    };
+
+    // Helper: load chapters via story detail endpoint (public, includes isPurchased)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const loadFromDetail = (): Promise<any> =>
+      getStoryDetail(story.id)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .then((r: any) => {
+          const detail = r?.data ?? r;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const detailList: any[] = Array.isArray(detail?.chapters) ? detail.chapters : [];
+          applyChapters(detailList);
+        });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getChaptersByStory(story.id).then((res: any) => {
+      const list: any[] = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+      if (!list.length) {
+        // Empty list — fall back to story detail to get published chapters
+        return loadFromDetail().catch(() => {});
+      }
+      if (user) {
+        // Merge isPurchased from story detail for authenticated users
+        return getStoryDetail(story.id)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .then((r: any) => {
+            const detail = r?.data ?? r;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const detailChaps: any[] = Array.isArray(detail?.chapters) ? detail.chapters : [];
+            const purchasedIds = new Set<number>(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              detailChaps.filter((c: any) => c.isPurchased).map((c: any) => c.id as number)
+            );
+            applyChapters(list, purchasedIds);
+          })
+          .catch(() => applyChapters(list));
+      }
+      applyChapters(list);
+    }).catch(() => {
+      // getChaptersByStory failed (e.g. auth required) — load from story detail instead
+      loadFromDetail().catch(() => {});
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [story?.id, user]);
+
+  // Load my existing rating for this story
+  useEffect(() => {
+    if (!story?.id || !user) return;
+    getMyRating(story.id)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((res: any) => {
+        const r = res?.data ?? res;
+        if (r?.score) {
+          setMyScore(r.score);
+          setMyReview(r.review ?? "");
+          setRatingSubmitted(true);
+        }
+      })
+      .catch(() => {}); // 404 = chưa đánh giá → bỏ qua
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [story?.id, user]);
+
+  // Initialize followCount from story data (set by the API response field followCount)
+  useEffect(() => {
+    if (!story) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const s = story as any;
+    if (s.followCount != null) setFollowCount(s.followCount);
+    // Use isFollowing if present (null = not logged in, true/false = logged in)
+    if (user && s.isFollowing != null) setFollowed(!!s.isFollowing);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [story?.id]);
+
+  // Load follow status for this story (fallback when isFollowing not in story data)
+  useEffect(() => {
+    if (!story?.id || !user) { if (!user) setFollowed(false); return; }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const s = story as any;
+    if (s.isFollowing != null) return; // already set from story data
+    getFollowStatus(story.id)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((res: any) => {
+        const val = res?.data ?? res;
+        setFollowed(!!val);
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [story?.id, user]);
+
+  // Load real ratings/reviews for this story
+  useEffect(() => {
+    if (!story?.id) return;
+    getRatingsByStory(story.id)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((res: any) => {
+        const list: any[] = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setReviews(list.map((r: any) => ({ ...r, rating: r.score ?? r.rating ?? 0 })));
+      })
+      .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [story?.id]);
   // Report
@@ -81,14 +240,60 @@ export function StoryDetailPage() {
     }
   };
 
-  if (!story) return null;
+  if (!story) {
+    if (storyLoading) {
+      return (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh", fontSize: 14, color: "#9e8e82" }}>
+          <div>⏳ Đang tải thông tin truyện...</div>
+        </div>
+      );
+    }
+    return (
+      <div style={{ textAlign: "center", padding: "80px 24px" }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>😕</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: "#1c1512", marginBottom: 8 }}>Không tìm thấy truyện</div>
+        <div style={{ fontSize: 14, color: "#9e8e82", marginBottom: 24 }}>Truyện không tồn tại hoặc đã bị xóa.</div>
+        <button
+          onClick={() => router.push("/homePage")}
+          style={{ padding: "10px 24px", borderRadius: 10, border: "none", background: "#c23d3f", color: "#fff", fontWeight: 600, cursor: "pointer" }}
+        >
+          ← Về trang chủ
+        </button>
+      </div>
+    );
+  }
 
   const requireAuth = (cb: () => void) => {
     if (!user) { router.push("?login"); return; }
     cb();
   };
 
-  const liked = likedStories.includes(story.id);
+  const handleToggleFollow = async () => {
+    if (!user) { router.push("?login"); return; }
+    if (!story || followLoading) return;
+    setFollowLoading(true);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const res: any = await toggleFollow(story.id);
+      const data = res?.data ?? res;
+      const status = data?.status ?? res?.status;
+      if (status === "FOLLOWED") {
+        setFollowed(true);
+        if (data?.followCount != null) setFollowCount(data.followCount);
+        else setFollowCount((c) => (c ?? 0) + 1);
+        toast.success("Đã thêm vào yêu thích!");
+      } else {
+        setFollowed(false);
+        if (data?.followCount != null) setFollowCount(data.followCount);
+        else setFollowCount((c) => Math.max(0, (c ?? 1) - 1));
+        toast.success("Đã bỏ yêu thích.");
+      }
+    } catch {
+      toast.error("Không thể thực hiện. Thử lại sau.");
+    } finally {
+      setFollowLoading(false);
+    }
+  };
 
   const avgRating = reviews.length
     ? (reviews.reduce((a, r) => a + r.rating, 0) / reviews.length).toFixed(1)
@@ -189,10 +394,12 @@ export function StoryDetailPage() {
               >
                 {[
                   { num: story.reads, label: "Lượt đọc" },
-                  { num: chapters.length, label: "Chương" },
-                  { num: reviews.length, label: "Đánh giá" },
+                  { num: chapters.length || story.chapters || 0, label: "Chương" },
+                  { num: reviews.length || story.reviewCount || 0, label: "Đánh giá" },
                   {
-                    num: (story.favorites || 0).toLocaleString(),
+                    num: followCount != null
+                      ? followCount.toLocaleString("vi-VN")
+                      : (story.favorites || 0).toLocaleString("vi-VN"),
                     label: "Yêu thích",
                   },
                 ].map(({ num, label }, i) => (
@@ -228,48 +435,69 @@ export function StoryDetailPage() {
               </div>
 
               {/* CTA */}
-              <div className="detail-actions" style={{ marginTop: 4 }}>
+              <div className="detail-actions" style={{ marginTop: 4, flexWrap: "nowrap", gap: 6 }}>
                 <button
                   className="btn-hero btn-hero-primary"
-                  style={{ fontSize: 14 }}
-                  onClick={() =>
-                    requireAuth(() => {
-                      const first = chapters[0];
-                      if (first?.id) {
-                        setSelectedChapterId(first.id);
-                        router.push("/readerPage");
-                      }
-                    })
-                  }
+                  style={{ fontSize: 12, padding: "8px 14px", gap: 5 }}
+                  onClick={() => {
+                    const first = chapters[0];
+                    if (!first?.id) return;
+                    const firstLocked = first.locked && !unlockedChapters?.includes(first.id);
+                    if (firstLocked) {
+                      // First chapter is paid — require login
+                      requireAuth(() => {});
+                    } else {
+                      setSelectedChapterId(first.id);
+                      router.push("/readerPage");
+                    }
+                  }}
                 >
                   <Ico.Book /> Đọc từ đầu
                 </button>
 
                 <button
-                  className={`btn-hero ${liked ? "btn-hero-primary" : "btn-hero-outline"}`}
+                  className={`btn-hero ${followed ? "btn-hero-primary" : "btn-hero-outline"}`}
                   style={
-                    liked
+                    followed
                       ? {
                           background: "#fde8e8",
                           color: "#c23d3f",
                           borderColor: "#c23d3f",
-                          fontSize: 14,
+                          fontSize: 12,
+                          padding: "8px 14px",
+                          gap: 5,
+                          opacity: followLoading ? 0.6 : 1,
                         }
                       : {
                           borderColor: "#c23d3f",
                           color: "#c23d3f",
-                          fontSize: 14,
+                          fontSize: 12,
+                          padding: "8px 14px",
+                          gap: 5,
+                          opacity: followLoading ? 0.6 : 1,
                         }
                   }
-                  onClick={() => requireAuth(() => toggleLike(story.id))}
+                  disabled={followLoading}
+                  onClick={handleToggleFollow}
                 >
-                  <Ico.Heart f={liked} />
-                  {liked ? "Đã lưu" : "Yêu thích"}
+                  <Ico.Heart f={followed} />
+                  {followed ? "Đã yêu thích" : "Yêu thích"}
+                </button>
+                <button
+                  className="btn-hero btn-hero-outline"
+                  style={{ fontSize: 12, padding: "8px 14px", color: ratingSubmitted ? "#c23d3f" : "#6b5a4e", borderColor: ratingSubmitted ? "#c23d3f" : "#e8e0d6" }}
+                  onClick={() => {
+                    if (!user) { router.push("?login"); return; }
+                    setRatingModalOpen(true);
+                  }}
+                >
+                  ⭐ {ratingSubmitted ? `${myScore}/5` : "Đánh giá"}
                 </button>
                 <button
                   className="btn-hero btn-hero-outline"
                   style={{
-                    fontSize: 13,
+                    fontSize: 12,
+                    padding: "8px 14px",
                     color: "#9ca3af",
                     borderColor: "#e8e0d6",
                   }}
@@ -403,18 +631,19 @@ export function StoryDetailPage() {
                 <div
                   key={ch.id}
                   className={`chapter-item${isLocked ? " chapter-locked" : ""}`}
-                  onClick={() =>
-                    requireAuth(() => {
-                      if (!isLocked && ch.id) {
-                        setSelectedChapterId(ch.id);
-                        router.push("/readerPage");
-                      }
-                    })
-                  }
+                  onClick={() => {
+                    if (!isLocked && ch.id) {
+                      setSelectedChapterId(ch.id);
+                      router.push("/readerPage");
+                    } else if (isLocked) {
+                      // Paid chapter — require login to unlock
+                      requireAuth(() => {});
+                    }
+                  }}
                   style={
                     isLocked
                       ? {
-                          cursor: "default",
+                          cursor: "pointer",
                           background: "#fdf7f0",
                           borderColor: "#f0dfc8",
                         }
@@ -492,7 +721,209 @@ export function StoryDetailPage() {
               );
             })}
           </div>
+
+          {/* ── ĐÁNH GIÁ ─────────────────────────────────────────────────────── */}
+          <div style={{ marginTop: 28 }}>
+          <div className="sec-head" style={{ marginBottom: 16 }}>
+            <div className="sec-title" style={{ fontSize: 18 }}>
+              ⭐ Đánh giá
+              <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: 14, fontWeight: 400, color: "#9e8e82", marginLeft: 6 }}>
+                ({reviews.length})
+              </span>
+            </div>
+          </div>
+
+          {/* Đánh giá của tôi (nếu đã có) */}
+          {ratingSubmitted && (
+            <div style={{ background: "#fdfaf7", border: "1.5px solid #f0b4b5", borderRadius: 14, padding: "14px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: "50%",
+                background: "linear-gradient(135deg,#c23d3f,#9e2d2f)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 13, fontWeight: 900, color: "#fff", flexShrink: 0,
+              }}>
+                {(user?.fullName ?? user?.email ?? "?")[0].toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#1c1512" }}>Đánh giá của bạn</span>
+                  <div style={{ display: "flex", gap: 2 }}>
+                    {[1,2,3,4,5].map((s) => (
+                      <span key={s} style={{ fontSize: 14, color: myScore >= s ? "#f59e0b" : "#e5ddd5" }}>★</span>
+                    ))}
+                  </div>
+                  <span style={{ fontSize: 12, color: "#c23d3f", fontWeight: 600 }}>{myScore}/5</span>
+                </div>
+                {myReview && <div style={{ fontSize: 13, color: "#6b5a4e", lineHeight: 1.5 }}>{myReview}</div>}
+              </div>
+              <button
+                onClick={() => setRatingModalOpen(true)}
+                style={{ flexShrink: 0, padding: "6px 14px", borderRadius: 8, border: "1.5px solid #e8e0d6", background: "#fff", color: "#6b5a4e", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+              >
+                Sửa
+              </button>
+            </div>
+          )}
+
+          {/* Danh sách reviews */}
+          {reviews.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {reviews.map((r, i) => (
+                <div key={r.id ?? i} style={{ background: "#fff", border: "1.5px solid #ece6dc", borderRadius: 12, padding: "14px 16px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: "50%",
+                      background: "linear-gradient(135deg,#c23d3f,#9e2d2f)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 13, fontWeight: 900, color: "#fff", flexShrink: 0,
+                    }}>
+                      {(r.userName ?? "?")[0].toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#1c1512" }}>{r.userName ?? "Người dùng"}</div>
+                      <div style={{ fontSize: 11, color: "#b0a096" }}>
+                        {r.createdAt ? new Date(r.createdAt).toLocaleDateString("vi-VN") : ""}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                      {[1,2,3,4,5].map((s) => (
+                        <span key={s} style={{ fontSize: 14, color: (r.rating ?? 0) >= s ? "#f59e0b" : "#e5ddd5" }}>★</span>
+                      ))}
+                    </div>
+                  </div>
+                  {r.review && (
+                    <div style={{ fontSize: 13, color: "#3d2f28", lineHeight: 1.6, marginLeft: 46 }}>{r.review}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ textAlign: "center", padding: "24px 0", color: "#b0a096", fontSize: 13 }}>
+              Chưa có đánh giá nào. Hãy là người đầu tiên! ⭐
+            </div>
+          )}
+          </div>
         </div>
+
+        {/* ── RATING MODAL ─────────────────────────────────────────────────── */}
+        {ratingModalOpen && (
+          <div
+            onClick={() => setRatingModalOpen(false)}
+            style={{
+              position: "fixed", inset: 0, zIndex: 9999,
+              background: "rgba(0,0,0,0.45)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: 16,
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: "#fff", borderRadius: 18, padding: "28px 28px 24px",
+                width: "100%", maxWidth: 420,
+                boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+              }}
+            >
+              {/* Header */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+                <div style={{ fontSize: 17, fontWeight: 800, color: "#1c1512" }}>
+                  {ratingSubmitted ? "✏️ Cập nhật đánh giá" : "⭐ Đánh giá truyện"}
+                </div>
+                <button
+                  onClick={() => setRatingModalOpen(false)}
+                  style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#9e8e82", lineHeight: 1 }}
+                  aria-label="Đóng"
+                >✕</button>
+              </div>
+
+              {/* Story title */}
+              <div style={{ fontSize: 13, color: "#6b5a4e", marginBottom: 16, fontStyle: "italic" }}>{story?.title}</div>
+
+              {/* Star selector */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 8, justifyContent: "center" }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onMouseEnter={() => setRatingHover(star)}
+                    onMouseLeave={() => setRatingHover(0)}
+                    onClick={() => setMyScore(star)}
+                    style={{
+                      background: "none", border: "none", cursor: "pointer", padding: 2,
+                      fontSize: 36, lineHeight: 1,
+                      color: (ratingHover || myScore) >= star ? "#f59e0b" : "#d1c9be",
+                      transition: "color 0.1s, transform 0.1s",
+                      transform: (ratingHover || myScore) >= star ? "scale(1.18)" : "scale(1)",
+                    }}
+                  >★</button>
+                ))}
+              </div>
+              <div style={{ textAlign: "center", fontSize: 13, color: "#f59e0b", fontWeight: 700, marginBottom: 16, minHeight: 20 }}>
+                {myScore > 0 ? ["" ,"Tệ","Không hay","Tạm được","Hay","Xuất sắc"][myScore] : ""}
+              </div>
+
+              {/* Review textarea */}
+              <textarea
+                value={myReview}
+                onChange={(e) => setMyReview(e.target.value)}
+                placeholder="Nhận xét của bạn (không bắt buộc)..."
+                rows={3}
+                style={{
+                  width: "100%", padding: "10px 12px", borderRadius: 10,
+                  border: "1.5px solid #e8e0d6", fontSize: 13, color: "#3d2f28",
+                  resize: "none", fontFamily: "inherit", outline: "none",
+                  boxSizing: "border-box", background: "#fdfaf7",
+                }}
+              />
+
+              {/* Actions */}
+              <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                {ratingSubmitted && (
+                  <button
+                    onClick={() => { setMyScore(0); setMyReview(""); setRatingSubmitted(false); setRatingModalOpen(false); }}
+                    style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "1.5px solid #e8e0d6", background: "#fff", color: "#9e8e82", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                  >
+                    Xóa đánh giá
+                  </button>
+                )}
+                <button
+                  disabled={myScore === 0 || ratingSubmitting}
+                  onClick={async () => {
+                    if (!story || myScore === 0) return;
+                    setRatingSubmitting(true);
+                    try {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      await (rateStory as any)({ storyId: story.id, score: myScore, review: myReview.trim() || undefined });
+                      toast.success(ratingSubmitted ? "Đã cập nhật đánh giá!" : "Cảm ơn bạn đã đánh giá! ⭐");
+                      setRatingSubmitted(true);
+                      setRatingModalOpen(false);
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      getRatingsByStory(story.id).then((res: any) => {
+                        const list: any[] = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        setReviews(list.map((r: any) => ({ ...r, rating: r.score ?? r.rating ?? 0 })));
+                      }).catch(() => {});
+                    } catch {
+                      toast.error("Không thể gửi đánh giá. Thử lại sau.");
+                    } finally {
+                      setRatingSubmitting(false);
+                    }
+                  }}
+                  style={{
+                    flex: 2, padding: "10px 0", borderRadius: 10, border: "none",
+                    background: myScore === 0 || ratingSubmitting ? "#e5ddd5" : "#c23d3f",
+                    color: myScore === 0 || ratingSubmitting ? "#9e8e82" : "#fff",
+                    fontSize: 14, fontWeight: 700,
+                    cursor: myScore === 0 || ratingSubmitting ? "not-allowed" : "pointer",
+                    transition: "background 0.15s",
+                  }}
+                >
+                  {ratingSubmitting ? "Đang gửi..." : ratingSubmitted ? "Cập nhật" : "Gửi đánh giá"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── SIDEBAR ──────────────────────────────────────────────────────── */}
         <div className="detail-sidebar">
@@ -556,6 +987,9 @@ export function StoryDetailPage() {
                         width: 52,
                         height: 72,
                         background: s.cover,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        backgroundRepeat: "no-repeat",
                         position: "relative",
                       }}
                     >
@@ -658,14 +1092,15 @@ export function StoryDetailPage() {
                 ["Tác giả", story.author],
                 [
                   "Trạng thái",
-                  story.status === "done" ? "Hoàn thành" : "Đang cập nhật",
+                  story.status === "done" ? "Hoàn thành" : "Đã xuất bản",
                 ],
                 [
                   "Số chương",
                   `${chapters.length || story.chapters || 0} chương`,
                 ],
                 ["Lượt đọc", story.reads],
-                ["Đánh giá", `${avgRating}/5 (${reviews.length} đánh giá)`],
+                ["Yêu thích", `${(followCount ?? story.favorites ?? 0).toLocaleString("vi-VN")} người`],
+                ["Đánh giá", `${avgRating}/5 (${reviews.length || story.reviewCount || 0} đánh giá)`],
               ] as [string, string][]
             ).map(([k, v], i, arr) => (
               <div
@@ -694,6 +1129,18 @@ export function StoryDetailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export function StoryDetailPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh", fontSize: 14, color: "#9e8e82" }}>
+        <div>⏳ Đang tải thông tin truyện...</div>
+      </div>
+    }>
+      <StoryDetailContent />
+    </Suspense>
   );
 }
 

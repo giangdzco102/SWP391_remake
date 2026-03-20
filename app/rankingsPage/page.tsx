@@ -1,12 +1,44 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   TrophyOutlined,
   CrownOutlined,
   HeartOutlined,
 } from "@ant-design/icons";
-import { useStoryStore } from "@/stores/storyStore";
+import useStoryService from "@/api/useStory.service";
 import { useGotoStory } from "@/hooks/useGotoStory";
+
+const COVER_GRADIENTS = [
+  "linear-gradient(135deg,#f093fb,#f5576c)",
+  "linear-gradient(135deg,#4facfe,#00f2fe)",
+  "linear-gradient(135deg,#43e97b,#38f9d7)",
+  "linear-gradient(135deg,#fa709a,#fee140)",
+  "linear-gradient(135deg,#a18cd1,#fbc2eb)",
+  "linear-gradient(135deg,#667eea,#764ba2)",
+];
+
+const isRealCover = (url?: string) =>
+  !!url && !url.includes("placeholder.com") && !url.includes("placeholder");
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toStoryShape(s: any, idx: number) {
+  return {
+    id: s.id,
+    title: s.title ?? "",
+    author: s.authorName ?? "",
+    penName: s.authorName ?? "",
+    cover: isRealCover(s.coverUrl)
+      ? `url("${s.coverUrl}")`
+      : COVER_GRADIENTS[idx % COVER_GRADIENTS.length],
+    genre: s.categories?.[0]?.name ?? "",
+    rating: s.avgRating ?? 0,
+    reads: s.viewCount != null ? String(s.viewCount) : "0",
+    views: s.viewCount ?? 0,
+    favorites: s.followCount ?? s.favoriteCount ?? 0,
+    chapters: s.publishedChapterCount ?? s.totalChapterCount ?? 0,
+    status: s.isCompleted ? "done" : "ongoing",
+  };
+}
 
 const PAGE_SIZE = 10;
 
@@ -71,13 +103,31 @@ function Pagination({
 }
 
 export function RankingsPage() {
-  const { allStories } = useStoryStore();
+  const { getAllStories } = useStoryService();
   const gotoStory = useGotoStory();
   const [tab, setTab] = useState("reads");
   const [page, setPage] = useState(1);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [allStories, setAllStories] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    getAllStories({ size: 200 })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((res: any) => {
+        const list: any[] = Array.isArray(res?.data?.content) ? res.data.content
+          : Array.isArray(res?.data) ? res.data
+          : Array.isArray(res) ? res : [];
+        setAllStories(list.map(toStoryShape));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const sorted = [...allStories].sort((a, b) => {
-    if (tab === "reads") return parseFloat(b.reads) - parseFloat(a.reads);
+    if (tab === "reads") return (b.views || 0) - (a.views || 0);
     if (tab === "rating") return (b.rating || 0) - (a.rating || 0);
     return (b.favorites || 0) - (a.favorites || 0);
   });
@@ -88,6 +138,14 @@ export function RankingsPage() {
 
   const handleTabChange = (t: string) => { setTab(t); setPage(1); };
   const handlePageChange = (p: number) => { setPage(p); window.scrollTo({ top: 0, behavior: "smooth" }); };
+
+  if (loading) return (
+    <div className="w-screen flex justify-center !mt-[20px]">
+      <div className="flex flex-col py-12 px-4 font-sans w-full gap-7 mx-auto max-w-7xl items-center pt-[120px]">
+        <div style={{ fontSize: 14, color: "#9e8e82" }}>⏳ Đang tải bảng xếp hạng...</div>
+      </div>
+    </div>
+  );
 
   const getRankStyle = (rank) => {
     if (rank === 1) return "text-yellow-500 font-black text-4xl drop-shadow-sm";

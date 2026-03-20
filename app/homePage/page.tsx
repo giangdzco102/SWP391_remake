@@ -13,6 +13,8 @@ import useStoryService from "@/api/useStory.service";
 import useCategoryService, { CategoryItem } from "@/api/useCategory.service";
 import { timeStartToNow } from "@/utils/time";
 import { BannerHomepage } from "@/components/ui/Bannerhomepage";
+import useFollowService from "@/api/useFollow.service";
+import { useAuthStore } from "@/stores";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // CONSTANTS
@@ -86,14 +88,14 @@ const toStoryShape = (s: any, idx: number) => ({
   genre: s.categories?.[0]?.name ?? s.genre ?? "",
   categoryId: s.categories?.[0]?.id ?? null,
   tags: s.tags ?? [],
-  rating: s.averageRating ?? 0,
+  rating: s.avgRating ?? s.averageRating ?? s.rating ?? 0,
   reviewCount: s.reviewCount ?? 0,
   reads: s.viewCount != null ? formatViews(s.viewCount) : "0",
   views: s.viewCount ?? 0,
-  favorites: s.favoriteCount ?? 0,
-  chapters: s.totalChapters ?? 0,
+  favorites: s.favoriteCount ?? s.followCount ?? 0,
+  chapters: s.publishedChapterCount ?? s.allChaptersCount ?? s.totalChapters ?? s.chapterCount ?? (Array.isArray(s.chapters) ? s.chapters.length : 0),
   description: s.summary ?? s.description ?? "",
-  status: s.status === "COMPLETED" ? "done" : "ongoing",
+  status: s.status === "COMPLETED" || s.isCompleted ? "done" : "ongoing",
   featured: s.featured ?? false,
   excerpt: s.summary ?? "",
   updatedAt: s.updatedAt ?? s.createdAt ?? "",
@@ -516,9 +518,26 @@ function Sidebar({ top5, categories, filters, onStory, onGenreToggle }: {
 // MAIN PAGE  (state + handlers only — no JSX logic here)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export function HomePage() {
-  const { likedStories, toggleLike } = useStoryStore();
+  const { } = useStoryStore();
+  const { user } = useAuthStore();
+  const { toggleFollow, getFollowedStories } = useFollowService();
   const gotoStory = useGotoStory();
   const toast = useToast();
+
+  // followed story IDs (strings to match StoryShape.id which is string)
+  const [followedIds, setFollowedIds] = useState<string[]>([]);
+
+  // Load followed stories when user logs in
+  useEffect(() => {
+    if (!user) { setFollowedIds([]); return; }
+    getFollowedStories()
+      .then((res: any) => {
+        const list: any[] = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+        setFollowedIds(list.map((s: any) => String(s.id)));
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   // Filter + pagination
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
@@ -550,9 +569,21 @@ export function HomePage() {
     setNewPage(p);
     document.getElementById("new-updates-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
-  const handleLike = (id: string, wasLiked: boolean) => {
-    toggleLike(id);
-    toast.success(wasLiked ? "Đã bỏ yêu thích" : "Đã thêm vào yêu thích ❤");
+  const handleLike = async (id: string, wasLiked: boolean) => {
+    if (!user) { toast.error("Vui lòng đăng nhập để yêu thích truyện!"); return; }
+    try {
+      const res: any = await toggleFollow(Number(id));
+      const status = res?.data?.status ?? res?.status;
+      if (status === "FOLLOWED") {
+        setFollowedIds((prev) => [...prev, id]);
+        toast.success("Đã thêm vào yêu thích ❤");
+      } else {
+        setFollowedIds((prev) => prev.filter((x) => x !== id));
+        toast.success("Đã bỏ yêu thích");
+      }
+    } catch {
+      toast.error("Không thể thực hiện. Thử lại sau.");
+    }
   };
   const handleGenreToggle = (name: string) => {
     setFilters((f) => ({ ...f, genres: toggleItem(f.genres, name) }));
@@ -614,7 +645,7 @@ export function HomePage() {
       {/* 3. Main grid: content left | sidebar right */}
       <div className="section" style={{ paddingTop: 20, display: "grid", gridTemplateColumns: "1fr 300px", gap: 28, alignItems: "start" }}>
         <div>
-          <HotSection stories={hotStories} loading={loadingHot} filters={filters} onStory={gotoStory} likedStories={likedStories} onLike={handleLike} />
+          <HotSection stories={hotStories} loading={loadingHot} filters={filters} onStory={gotoStory} likedStories={followedIds} onLike={handleLike} />
           <NewUpdatesSection stories={newStories} loading={loadingNew} page={newPage} totalPages={totalPages} onPageChange={handlePageChange} onStory={gotoStory} />
         </div>
         <Sidebar top5={top5} categories={categories} filters={filters} onStory={gotoStory} onGenreToggle={handleGenreToggle} />

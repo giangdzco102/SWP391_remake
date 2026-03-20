@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import APP_CONFIG from "@/config/app-config";
+import { useAuthStore } from "@/stores/auth-store";
 import axios, {
   AxiosInstance,
   AxiosRequestConfig,
@@ -147,8 +148,20 @@ export default function useHttpClient(
             return axiosAuth(originalRequest);
           } catch (err) {
             clearTokens();
-            if (typeof window !== "undefined" && pathname.includes("/")) {
-              router.push(`/`);
+            // Also clear in-memory auth state so the UI updates to logged-out
+            useAuthStore.getState().setUser(null);
+            // Only redirect to home for protected pages (dashboards, profile etc.)
+            // Public pages (story detail, reader, home) should stay put & show public content
+            const PUBLIC_PREFIXES = [
+              "/", "/homePage", "/storyDetailPage", "/readerPage",
+              "/searchResultsPage", "/categoriesPage", "/rankingsPage",
+              "/favoritesPage",
+            ];
+            const isPublicPage = PUBLIC_PREFIXES.some(
+              (p) => pathname === p || pathname.startsWith(p + "?")
+            );
+            if (!isPublicPage && typeof window !== "undefined") {
+              router.push("/");
             }
           }
         }

@@ -2747,7 +2747,35 @@ a {
   color: #c23d3f;
 }
 
-/* ──── TOAST ──── */
+/* ──── REACT-TOASTIFY OVERRIDES ──── */
+/* Push below the 62px sticky header */
+.Toastify__toast-container--top-right {
+  top: 70px !important;
+  right: 20px !important;
+  width: 320px !important;
+}
+.Toastify__toast {
+  border-radius: 12px !important;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.1) !important;
+  font-family: "DM Sans", sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  padding: 12px 14px !important;
+  border: 1.5px solid #ece6dc !important;
+  color: #1c1512 !important;
+  min-height: unset !important;
+}
+.Toastify__toast--success .Toastify__toast-icon svg { fill: #16a34a; }
+.Toastify__toast--error   .Toastify__toast-icon svg { fill: #c23d3f; }
+.Toastify__toast--warning .Toastify__toast-icon svg { fill: #b8921e; }
+.Toastify__toast--info    .Toastify__toast-icon svg { fill: #2563eb; }
+.Toastify__progress-bar--success { background: #16a34a !important; }
+.Toastify__progress-bar--error   { background: #c23d3f !important; }
+.Toastify__progress-bar--warning { background: #b8921e !important; }
+.Toastify__progress-bar--info    { background: #2563eb !important; }
+.Toastify__close-button { color: #9e8e82 !important; opacity: 1 !important; }
+
+/* ──── TOAST (legacy custom) ──── */
 .toast {
   position: fixed;
   bottom: 24px;

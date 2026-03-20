@@ -14,16 +14,25 @@ export function ToastProvider({ children }: ToastProviderProps) {
       {children}
       <ToastContainer
         position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
+        autoClose={4000}
+        hideProgressBar
+        newestOnTop
         closeOnClick
         rtl={false}
         pauseOnFocusLoss
         draggable
         pauseOnHover
-        theme="colored"
+        theme="light"
         className="toast-container"
+        style={{ top: "70px", right: "20px", width: "320px" }}
+        toastStyle={{
+          borderRadius: "12px",
+          boxShadow: "0 6px 24px rgba(0,0,0,0.12)",
+          fontSize: "13px",
+          fontWeight: 500,
+          padding: "12px 16px",
+          border: "1.5px solid #ece6dc",
+        }}
       />
     </>
   );
