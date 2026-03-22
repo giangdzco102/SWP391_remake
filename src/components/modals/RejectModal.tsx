@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Ico } from '../Icons';
-import { GENRES } from '../../utils/mockData';
 export function RejectModal({ onClose, onConfirm, story }) {
     const [note, setNote] = useState("");
     const presets = ["Nội dung chưa đủ chất lượng", "Vi phạm quy định nội dung", "Cần bổ sung và chỉnh sửa thêm", "Cốt truyện thiếu logic", "Lỗi chính tả, ngữ pháp quá nhiều"];

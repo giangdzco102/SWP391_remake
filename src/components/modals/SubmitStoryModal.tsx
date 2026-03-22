@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Ico } from '../Icons';
-import { GENRES } from '../../utils/mockData';
+
 export function SubmitStoryModal({ user, onClose, onSuccess }) {
     const [form, setForm] = useState({ title: "", genre: "", excerpt: "", content: "" });
     const [err, setErr] = useState("");
@@ -26,7 +26,7 @@ export function SubmitStoryModal({ user, onClose, onSuccess }) {
           <div className="modal-sections">
             <div className="form-group"><label className="form-label-bold">Tiêu đề <span style={{ color: "#c23d3f" }}>*</span></label><input className="form-input" placeholder="Tên truyện của bạn…" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}/></div>
             <div className="form-group"><label className="form-label-bold">Thể loại <span style={{ color: "#c23d3f" }}>*</span></label>
-              <select className="form-input form-select" value={form.genre} onChange={e => setForm(f => ({ ...f, genre: e.target.value }))}><option value="">-- Chọn --</option>{GENRES.map(g => <option key={g} value={g}>{g}</option>)}</select>
+              <select className="form-input form-select" value={form.genre} onChange={e => setForm(f => ({ ...f, genre: e.target.value }))}><option value="">-- Chọn --</option></select>
             </div>
             <div className="form-group"><label className="form-label-bold">Tóm tắt</label><textarea className="form-textarea" rows={2} placeholder="Mô tả ngắn về nội dung truyện…" value={form.excerpt} onChange={e => setForm(f => ({ ...f, excerpt: e.target.value }))}/></div>
             <div className="form-group">

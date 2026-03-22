@@ -1,7 +1,7 @@
 "use client";
 import { useModalStore } from "@/stores/modalStore";
 
-export function ModalProvider() {
+export  function ProviderModal() {
   const { modal: ModalComponent, modalProps, closeModal } = useModalStore();
   if (!ModalComponent) return null;
 

@@ -1,11 +1,6 @@
 // stores/storyStore.ts
 import { create } from "zustand";
-import {
-  CHAPTER_TEXTS,
-  MOCK_CHAPTERS,
-  MOCK_REVIEWS,
-  MOCK_STORIES,
-} from "@/utils/mockData";
+
 
 interface Story {
   id: number;
@@ -88,18 +83,18 @@ interface StoryStore {
 }
 
 export const useStoryStore = create<StoryStore>((set) => ({
-  stories: MOCK_STORIES,
-  allStories: MOCK_STORIES,
+  stories: [],
+  allStories: [],
   activeGenre: "all",
   likedStories: [],
   readProgress: {},
   searchQ: "",
-  reviews: MOCK_REVIEWS,
+  reviews: [],
   chapters: [],
   unlockedChapters: [],
   fontSize: 18,
   selectedChapter: 0,
-  chapterTexts: CHAPTER_TEXTS,
+  chapterTexts: [],
 
   setReviews: (reviews) => set({ reviews }),
   unlockChapter: (chapterId) =>

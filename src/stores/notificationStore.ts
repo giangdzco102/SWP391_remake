@@ -1,6 +1,5 @@
 // stores/notificationStore.ts
 import { create } from "zustand";
-import { MOCK_NOTIFICATIONS } from "@/utils/mockData";
 
 interface Notification {
   id: number;
@@ -14,7 +13,6 @@ interface Notification {
 
 interface NotificationStore {
   notifications: Notification[];
-  unreadCount: number;
 
   setNotifications: (notifications: Notification[]) => void;
   addNotification: (notification: Notification) => void;
@@ -23,13 +21,11 @@ interface NotificationStore {
 }
 
 export const useNotificationStore = create<NotificationStore>((set, get) => ({
-  notifications: MOCK_NOTIFICATIONS,
-  unreadCount: MOCK_NOTIFICATIONS.filter((n) => !n.read).length,
+  notifications: [],
 
   setNotifications: (notifications) =>
     set({
-      notifications,
-      unreadCount: notifications.filter((n) => !n.read).length,
+      notifications
     }),
 
   addNotification: (notification) =>
@@ -54,7 +50,6 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       );
       return {
         notifications,
-        unreadCount: notifications.filter((n) => !n.read).length,
       };
     }),
 }));

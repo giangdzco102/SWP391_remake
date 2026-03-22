@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Ico } from '../Icons';
-import { StarRating, AvatarComp, Toast } from '../ui';
-import { MOCK_CHAPTERS } from '../../utils/mockData';
+
 export function MyStoriesPage({ user, stories, myChapters, openModal, show, onStory, deleteChapter }) {
     const [expandedStory, setExpandedStory] = useState(null);
     return (<div className="section fade-in">
@@ -13,7 +12,7 @@ export function MyStoriesPage({ user, stories, myChapters, openModal, show, onSt
           <button className="btn-nav btn-primary" style={{ margin: "20px auto", display: "flex", alignItems: "center", gap: 6 }} onClick={() => openModal("submit-story")}><Ico.Plus />Đăng tác phẩm</button>
         </div>) : (<div>
           {stories.map((s) => {
-                const chs = myChapters[s.id] || MOCK_CHAPTERS;
+                const chs = myChapters[s.id];
                 const isExpanded = expandedStory === s.id;
                 return (<div key={s.id} className="pending-card" style={{ marginBottom: 16 }}>
                 <div className="pending-card-header" style={{ cursor: "pointer" }} onClick={() => setExpandedStory(isExpanded ? null : s.id)}>

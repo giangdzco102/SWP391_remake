@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Ico } from '../Icons';
-import { GENRES } from '../../utils/mockData';
+
 export function AddChapterModal({ storyId, onClose, onSuccess }) {
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");

@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
-import { Modal } from "antd";
 import { Ico } from "../Icons";
-import { GENRES } from "@/utils/mockData";
 import { useToast } from "@/hooks/use-toast";
 import useRoleChangeService from "@/api/useRoleChange.service";
 
@@ -619,11 +617,7 @@ export function BecomeAuthorModal({ onClose, onSuccess }) {
                 onChange={(e) => setGenre(e.target.value)}
               >
                 <option value="">-- Chọn --</option>
-                {GENRES.map((g) => (
-                  <option key={g} value={g}>
-                    {g}
-                  </option>
-                ))}
+                
               </select>
             </div>
             <div className="form-group">

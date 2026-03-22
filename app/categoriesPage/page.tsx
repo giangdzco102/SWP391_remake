@@ -51,7 +51,7 @@ const toShape = (s: any, idx: number) => ({
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export function CategoriesPage() {
-  const { likedStories, toggleLike, allStories } = useStoryStore();
+  const { likedStories, toggleLike } = useStoryStore();
   const gotoStory = useGotoStory();
   const { getAllStories } = useStoryService();
   const { getCategories } = useCategoryService();
@@ -102,7 +102,7 @@ export function CategoriesPage() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="fade-in flex flex-col w-screen items-center !mt-[20px] !px-10">
+    <div className="fade-in flex flex-col w-screen items-center mt-5! px-10!">
       <div className="page-title">📚 Thể Loại</div>
       <div className="page-sub">Khám phá tất cả thể loại truyện</div>
 

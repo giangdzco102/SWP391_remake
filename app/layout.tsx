@@ -11,7 +11,7 @@ import { ToastProvider } from "@/utils/toast-provider";
 import AuthProvider from "@/components/AuthProvider";
 import { Layout } from "antd";
 import Header from "@/components/ui/Header";
-import { ModalProvider } from "@/components/popup/ModalProvider";
+import { ProviderModal } from "@/components/popup/ProviderModal";
 import { Footer } from "@/components/ui/Footer";
 
 // Extract metadata configuration for better maintainability
@@ -77,8 +77,7 @@ export default function RootLayout({
         <ThemeProvider>
           <AntdThemeProvider>
             <ToastProvider>
-              {/* layout */}
-              <Layout>
+
                 {/* sidebar */}
                 <Layout className="relative">
                   <main className="bg-background">
@@ -90,11 +89,10 @@ export default function RootLayout({
                         {children}
                         <Footer/>
                       </div>
-                      <ModalProvider />
+                      <ProviderModal />
                     </AuthProvider>
                   </main>
                 </Layout>
-              </Layout>
               {/* notification auth */}
               <NotiAuth />
               {/* popup auth */}
