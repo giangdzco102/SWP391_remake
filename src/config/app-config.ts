@@ -104,6 +104,15 @@ export default class APP_CONFIG {
     TRANSACTIONS: "/wallet/transactions",
   };
 
+  // ── Payment (PayOS) ───────────────────────────────────────────────────────
+  static PAYMENT = {
+    PACKAGES:    "/payment/packages",
+    CREATE_LINK: "/payment/create-link",
+    HISTORY:     "/payment/history",
+    VERIFY:      (orderCode: string | number) => `/payment/verify/${orderCode}`,
+    RECOVER:     "/payment/recover",
+  };
+
   // ── Gift ──────────────────────────────────────────────────────────────────
   static GIFT = {
     SEND:     "/gifts",

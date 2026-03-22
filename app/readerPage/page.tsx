@@ -7,6 +7,7 @@ import { useAuthStore } from "@/stores";
 import useChapterService from "@/api/useChapter.service";
 import useCommentService from "@/api/useComment.service";
 import useReportService from "@/api/useReport.service";
+import useStoryService from "@/api/useStory.service";
 import { useStoryStore } from "@/stores/storyStore";
 import { Ico } from "@/components/Icons";
 import { useToast } from "@/hooks/use-toast";
@@ -738,6 +739,7 @@ export default function ReaderPage() {
   const { chapters, setChapters } = useStoryStore();
   const { user } = useAuthStore();
   const { getChapter, getChaptersByStory } = useChapterService();
+  const { getStoryDetail } = useStoryService();
   const commentService = useCommentService();
   const commentServiceRef = useRef(commentService);
   commentServiceRef.current = commentService;
@@ -778,13 +780,11 @@ export default function ReaderPage() {
   useEffect(() => {
     const storyId = chapterData?.storyId;
     if (!storyId || chapters.length > 0) return;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    getChaptersByStory(storyId).then((res: any) => {
-      // API envelope: { code, data: List<ChapterResponse>, message }
-      const list: any[] = res?.data ?? res ?? [];
-      if (!Array.isArray(list)) return;
+    const mapChapters = (list: any[]) =>
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mapped = list.map((ch: any) => ({
+      list.map((ch: any) => ({
         id: ch.id,
         title: ch.title,
         chapterOrder: ch.chapterOrder ?? 0,
@@ -798,8 +798,31 @@ export default function ReaderPage() {
         locked: (ch.coinPrice ?? 0) > 0 && !(ch.isPurchased ?? false),
         price: ch.coinPrice ?? 0,
       }));
-      setChapters(mapped);
-    }).catch(() => {});
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const loadFromDetail = () =>
+      getStoryDetail(storyId)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .then((r: any) => {
+          const det = r?.data ?? r;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const detList: any[] = Array.isArray(det?.chapters) ? det.chapters : [];
+          if (detList.length) setChapters(mapChapters(detList));
+        })
+        .catch(() => {});
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getChaptersByStory(storyId).then((res: any) => {
+      // API envelope: { success, status, data: [...] }
+      const list: any[] = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+      if (!list.length) {
+        return loadFromDetail();
+      }
+      setChapters(mapChapters(list));
+    }).catch(() => {
+      // getChaptersByStory failed — try story detail for published chapters
+      loadFromDetail();
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chapterData?.storyId]);
 
@@ -952,13 +975,21 @@ export default function ReaderPage() {
             {chapterError}
           </div>
         )}
-        <div>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", marginTop: 8 }}>
           <button
             onClick={() => router.back()}
-            style={{ marginTop: 8, padding: "10px 24px", borderRadius: 10, border: "none", background: "#c23d3f", color: "#fff", fontWeight: 600, cursor: "pointer" }}
+            style={{ padding: "10px 24px", borderRadius: 10, border: "1.5px solid #e8e0d6", background: "#fff", color: "#6b5a4e", fontWeight: 600, cursor: "pointer", fontSize: 13 }}
           >
             ← Quay lại
           </button>
+          {!user && (
+            <button
+              onClick={() => router.push("?login")}
+              style={{ padding: "10px 24px", borderRadius: 10, border: "none", background: "#c23d3f", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 13 }}
+            >
+              Đăng nhập
+            </button>
+          )}
         </div>
       </div>
     );
@@ -1142,7 +1173,7 @@ export default function ReaderPage() {
               🪙 {chapterData.coinPrice} xu
             </div>
           </div>
-          <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             <button
               onClick={() => router.back()}
               style={{
@@ -1158,6 +1189,23 @@ export default function ReaderPage() {
             >
               ← Quay lại
             </button>
+            {!user && (
+              <button
+                onClick={() => router.push("?login")}
+                style={{
+                  padding: "10px 24px",
+                  borderRadius: 9,
+                  border: "none",
+                  background: "#c23d3f",
+                  color: "#fff",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Đăng nhập để mở khóa
+              </button>
+            )}
           </div>
         </div>
       ) : (

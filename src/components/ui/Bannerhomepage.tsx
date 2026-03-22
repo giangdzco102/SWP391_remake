@@ -32,6 +32,14 @@ const formatViews = (n: number) =>
 
 // ── toBannerShape — đồng nhất với toStoryShape của homePage ──────────────────
 function toBannerShape(s: any, idx: number) {
+  const chapterCount =
+    s.publishedChapterCount ??
+    s.allChaptersCount ??
+    s.totalChapters ??
+    s.chapterCount ??
+    (Array.isArray(s.chapters) ? s.chapters.length : 0);
+  const viewCount = s.viewCount ?? s.viewsCount ?? 0;
+  const avgRating = s.avgRating ?? s.averageRating ?? s.rating ?? 0;
   return {
     id:          String(s.id),
     title:       s.title ?? "",
@@ -44,14 +52,14 @@ function toBannerShape(s: any, idx: number) {
     genre:       s.categories?.[0]?.name ?? s.genre ?? "",
     categoryId:  s.categories?.[0]?.id ?? null,
     tags:        s.tags ?? [],
-    rating:      s.averageRating ?? 0,
+    rating:      avgRating,
     reviewCount: s.reviewCount ?? 0,
-    reads:       formatViews(s.viewCount ?? 0),
-    views:       s.viewCount ?? 0,
-    favorites:   s.favoriteCount ?? 0,
-    chapters:    s.totalChapters ?? 0,
+    reads:       formatViews(viewCount),
+    views:       viewCount,
+    favorites:   s.favoriteCount ?? s.followCount ?? 0,
+    chapters:    chapterCount,
     description: s.summary ?? s.description ?? "",
-    status:      s.status === "COMPLETED" ? "done" : ("ongoing" as "done" | "ongoing"),
+    status:      s.status === "COMPLETED" || s.isCompleted ? "done" : ("ongoing" as "done" | "ongoing"),
     featured:    s.featured ?? false,
     excerpt:     s.summary ?? "",
     updatedAt:   s.updatedAt ?? s.createdAt ?? "",
@@ -283,7 +291,10 @@ export function BannerHomepage() {
     setLoading(true);
     getStories({ size: 6, sort: "viewCount,desc" })
       .then((res: any) => {
-        const list: any[] = res?.data ?? res ?? [];
+        const raw: any = res?.data ?? res;
+        const list: any[] = Array.isArray(raw?.content) ? raw.content
+          : Array.isArray(raw) ? raw
+          : [];
         if (list.length > 0) setStories(list.map(toBannerShape));
       })
       .catch(() => {})

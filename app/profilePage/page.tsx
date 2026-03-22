@@ -1,8 +1,10 @@
 "use client";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useAuthStore } from "@/stores";
 import useAuthService from "@/api/useAuth.service";
+import useStoryService from "@/api/useStory.service";
+import useWalletService from "@/api/useWallet.service";
 import { PayloadUpdateProfile } from "@/types/auth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -517,12 +519,60 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
 export function ProfilePage() {
   const { user } = useAuthStore();
   const { uploadAvatar, updateProfile } = useAuthService();
+  const { getMyStories } = useStoryService();
+  const { getTransactions } = useWalletService();
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<TabKey>("info");
   const [showEdit, setShowEdit] = useState(false);
   const [showChangePw, setShowChangePw] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const quickAvatarRef = useRef<HTMLInputElement>(null);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [myStories, setMyStories] = useState<any[]>([]);
+  const [storiesLoading, setStoriesLoading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [coinTxs, setCoinTxs] = useState<any[]>([]);
+  const [coinLoading, setCoinLoading] = useState(false);
+
+  const TX_TYPE_MAP: Record<string, { label: string; type: "earn" | "spend" }> = {
+    TOPUP:        { label: "Nạp coin",         type: "earn"  },
+    BUY:          { label: "Mua chương VIP",   type: "spend" },
+    GIFT_SENT:    { label: "Tặng quà",         type: "spend" },
+    GIFT_RECEIVED:{ label: "Nhận quà",         type: "earn"  },
+    REWARD:       { label: "Thưởng duyệt bài", type: "earn"  },
+    EDIT_REWARD:  { label: "Thưởng biên tập",  type: "earn"  },
+  };
+
+  useEffect(() => {
+    if (!user || activeTab !== "stories") return;
+    setStoriesLoading(true);
+    getMyStories()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((res: any) => {
+        const list: any[] = Array.isArray(res?.data?.content) ? res.data.content
+          : Array.isArray(res?.data) ? res.data
+          : Array.isArray(res) ? res : [];
+        setMyStories(list);
+      })
+      .catch(() => {})
+      .finally(() => setStoriesLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, user]);
+
+  useEffect(() => {
+    if (!user || activeTab !== "coins") return;
+    setCoinLoading(true);
+    getTransactions()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((res: any) => {
+        const list: any[] = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+        setCoinTxs(list);
+      })
+      .catch(() => {})
+      .finally(() => setCoinLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, user]);
 
   const primaryRole   = user?.roles?.[0] ?? "READER";
   const roleLabel     = ROLE_LABEL[primaryRole]     ?? "Độc giả";
@@ -721,7 +771,42 @@ export function ProfilePage() {
 
       {activeTab === "stories" && (
         <div className="fade-in">
-          <div className="empty-state">Chưa có tác phẩm nào</div>
+          {storiesLoading ? (
+            <div className="empty-state">⏳ Đang tải tác phẩm...</div>
+          ) : myStories.length === 0 ? (
+            <div className="empty-state">Chưa có tác phẩm nào</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {myStories.map((s: any) => (
+                <div key={s.id} style={{
+                  background: "#fff", borderRadius: 14, border: "1.5px solid #ece6dc",
+                  padding: "14px 18px", display: "flex", alignItems: "center", gap: 14,
+                }}>
+                  {s.coverUrl && !s.coverUrl.includes("placeholder") ? (
+                    <img src={s.coverUrl} alt={s.title} style={{ width: 48, height: 68, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: 48, height: 68, borderRadius: 8, background: "linear-gradient(135deg,#f093fb,#f5576c)", flexShrink: 0 }} />
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: "#1c1512", marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
+                    <div style={{ fontSize: 12, color: "#9e8e82" }}>
+                      {s.categories?.[0]?.name ?? ""} · {s.publishedChapterCount ?? s.totalChapterCount ?? 0} chương
+                    </div>
+                    <div style={{ fontSize: 11, marginTop: 4 }}>
+                      <span style={{
+                        padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 700,
+                        background: s.status === "PUBLISHED" ? "#dcfce7" : s.status === "PENDING_REVIEW" ? "#fef3c7" : "#f5f5f5",
+                        color: s.status === "PUBLISHED" ? "#166534" : s.status === "PENDING_REVIEW" ? "#92400e" : "#6b5a4e",
+                      }}>
+                        {s.status === "PUBLISHED" ? "Đã xuất bản" : s.status === "PENDING_REVIEW" ? "Chờ duyệt" : s.status === "DRAFT" ? "Nháp" : s.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -733,7 +818,38 @@ export function ProfilePage() {
 
       {activeTab === "coins" && (
         <div className="fade-in">
-          <div className="empty-state">Chưa có lịch sử coin</div>
+          {coinLoading ? (
+            <div className="empty-state">⏳ Đang tải lịch sử coin...</div>
+          ) : coinTxs.length === 0 ? (
+            <div className="empty-state">Chưa có lịch sử coin</div>
+          ) : (
+            <div className="coin-history">
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {coinTxs.map((tx: any, i: number) => {
+                const mapped = TX_TYPE_MAP[tx.type] ?? { label: tx.type ?? "Giao dịch", type: "earn" as const };
+                return (
+                  <div key={tx.id ?? i} className="coin-tx">
+                    <div className="coin-tx-info">
+                      <div className={`coin-tx-icon ${mapped.type === "earn" ? "coin-tx-earn" : "coin-tx-spend"}`}>
+                        {mapped.type === "earn" ? "🪙" : "💸"}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: "#1c1512" }}>
+                          {tx.description ?? mapped.label}
+                        </div>
+                        <div style={{ fontSize: 12, color: "#9e8e82" }}>
+                          {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString("vi-VN") : ""}
+                        </div>
+                      </div>
+                    </div>
+                    <div className={`coin-tx-amount ${mapped.type === "earn" ? "coin-earn-color" : "coin-spend-color"}`}>
+                      {mapped.type === "earn" ? "+" : "-"}{tx.amount}🪙
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
