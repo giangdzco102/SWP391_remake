@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import APP_CONFIG from "@/config/app-config";
 import useHttpClient from "./useHttpClient";
+import { useMemo } from "react";
 
 export interface CoinPackage {
   id: string;          // "BASIC" | "SAVING" | "POPULAR" | "ADVANCED" | "VIP"
@@ -56,7 +57,8 @@ const usePaymentService = () => {
   const recoverPayments = (): Promise<PaymentHistoryItem[]> =>
     httpClient.post<PaymentHistoryItem[]>(APP_CONFIG.PAYMENT.RECOVER, {});
 
-  return { getPackages, createPaymentLink, getPaymentHistory, verifyPayment, recoverPayments };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => ({ getPackages, createPaymentLink, getPaymentHistory, verifyPayment, recoverPayments }), [httpClient]);
 };
 
 export default usePaymentService;

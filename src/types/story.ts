@@ -124,3 +124,29 @@ export interface CommentListParams {
   page?: number;
   size?: number;
 }
+
+export interface ReaderCommentItem {
+  id: number;
+  userId: number;
+  userName: string;
+  content: string;
+  createdAt: string;
+  parentId?: number | null;
+  replies: ReaderCommentItem[];
+  user?: { id?: number; fullName?: string; name?: string };
+}
+
+export interface ReaderChapterData {
+  id: number;
+  storyId: number;
+  storyTitle: string;
+  title: string;
+  content: string;
+  coinPrice: number;
+  chapterOrder: number;
+  status: string;
+  publishAt: string;
+  createdAt: string;
+  updatedAt: string;
+  isPurchased: boolean;
+}

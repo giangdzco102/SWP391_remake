@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useAuthStore } from "@/stores";
+import { useMemo } from "react";
 import APP_CONFIG from "@/config/app-config";
 import {
   PayloadSignin,
@@ -191,7 +192,8 @@ const useAuthService = (): ResultAuthService => {
 
 
 
-  return {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => ({
     signout,
     signin,
     signup,
@@ -204,7 +206,7 @@ const useAuthService = (): ResultAuthService => {
     resetPassword,
     updateProfile,
     uploadAvatar,
-  };
+  }), [httpClient, setUser]);
 };
 
 export default useAuthService;

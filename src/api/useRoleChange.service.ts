@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import APP_CONFIG from "@/config/app-config";
 import useHttpClient from "./useHttpClient";
+import { useMemo } from "react";
 
 export type PayloadRoleChangeRequest = {
   requestedRole: "AUTHOR" | "REVIEWER" | "EDITOR";
@@ -23,7 +24,8 @@ const useRoleChangeService = (): ResultRoleChangeService => {
   const getMyRequests = (): Promise<any> =>
     httpClient.get(APP_CONFIG.ROLE_CHANGE.MY);
 
-  return { createRequest, getMyRequests };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => ({ createRequest, getMyRequests }), [httpClient]);
 };
 
 export default useRoleChangeService;

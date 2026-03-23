@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import APP_CONFIG from "@/config/app-config";
 import useHttpClient from "./useHttpClient";
+import { useMemo } from "react";
 
 const useRatingService = () => {
   const httpClient = useHttpClient();
@@ -17,7 +18,8 @@ const useRatingService = () => {
   const getMyRating = (storyId: number | string): Promise<any> =>
     httpClient.get(`/ratings/my/${storyId}`);
 
-  return { rateStory, getRatingsByStory, getMyRating };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => ({ rateStory, getRatingsByStory, getMyRating }), [httpClient]);
 };
 
 export default useRatingService;

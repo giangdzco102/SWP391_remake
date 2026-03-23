@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import APP_CONFIG from "@/config/app-config";
 import useHttpClient from "./useHttpClient";
+import { useMemo } from "react";
 
 export type AdminDashboardStats = {
   totalUsers: number;
@@ -197,7 +198,8 @@ const useAdminService = (): ResultAdminService => {
   const deleteMission = (id: number): Promise<any> =>
     httpClient.delete(APP_CONFIG.ADMIN.DELETE_MISSION(id), {});
 
-  return {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => ({
     getDashboard,
     getAllUsers,
     updateUserRoles,
@@ -218,7 +220,7 @@ const useAdminService = (): ResultAdminService => {
     createMission,
     updateMission,
     deleteMission,
-  };
+  }), [httpClient]);
 };
 
 export default useAdminService;

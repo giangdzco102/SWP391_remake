@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import APP_CONFIG from "@/config/app-config";
 import useHttpClient from "./useHttpClient";
+import { useMemo } from "react";
 
 const useFollowService = () => {
   const httpClient = useHttpClient();
@@ -17,7 +18,8 @@ const useFollowService = () => {
   const getFollowStatus = (storyId: number | string): Promise<boolean> =>
     httpClient.get(APP_CONFIG.FOLLOW.STATUS(storyId));
 
-  return { toggleFollow, getFollowedStories, getFollowStatus };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => ({ toggleFollow, getFollowedStories, getFollowStatus }), [httpClient]);
 };
 
 export default useFollowService;

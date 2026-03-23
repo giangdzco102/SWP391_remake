@@ -8,7 +8,7 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { getAccessToken } from "@/utils/index";
 
 const createBaseInstance = (baseURL?: string): AxiosInstance => {
@@ -260,12 +260,13 @@ export default function useHttpClient(
       .then((e) => (isConvert ? e : handleSuccess(e)) as T);
   };
 
-  return {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => ({
     get: getAuth,
     post: postAuth,
     put: putAuth,
     patch: patchAuth,
     delete: deleteAuth,
     axiosBase,
-  };
+  }), []);
 }

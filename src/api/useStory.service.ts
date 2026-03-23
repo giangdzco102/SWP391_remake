@@ -2,6 +2,7 @@
 import APP_CONFIG from "@/config/app-config";
 import { Story, StoryDetail, StoryListParams, StorySearchParams } from "@/types/story";
 import useHttpClient from "./useHttpClient";
+import { useMemo } from "react";
 
 export type ResultStoryService = {
   /** GET /stories — danh sách truyện đã publish (có filter/sort/page) */
@@ -41,7 +42,8 @@ const useStoryService = (): ResultStoryService => {
   const getStoryDetail = (id: string | number): Promise<StoryDetail> =>
     httpClient.get<StoryDetail>(APP_CONFIG.STORY.DETAIL(id));
 
-  return { getStories, getAllStories, getMyStories, searchStories, getStory, getStoryDetail };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => ({ getStories, getAllStories, getMyStories, searchStories, getStory, getStoryDetail }), [httpClient]);
 };
 
 export default useStoryService;

@@ -107,3 +107,16 @@ export const checkImage = (fileName: string): boolean => {
   const regex = /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i;
   return regex.test(fileName);
 };
+
+export const timeAgo = (iso: string) => {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins} phút trước`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} giờ trước`;
+  return `${Math.floor(hrs / 24)} ngày trước`;
+};
+
+import { avatarColors } from "./constants";
+export const getAvatarColor = (name: string) =>
+  avatarColors[name.charCodeAt(0) % avatarColors.length];

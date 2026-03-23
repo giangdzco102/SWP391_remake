@@ -2,6 +2,7 @@
 import APP_CONFIG from "@/config/app-config";
 import { Chapter, ChapterSummary } from "@/types/story";
 import useHttpClient from "./useHttpClient";
+import { useMemo } from "react";
 
 export type ResultChapterService = {
   /** GET /api/chapters/story/:storyId — danh sách chapter của một truyện */
@@ -24,10 +25,11 @@ const useChapterService = (): ResultChapterService => {
     return httpClient.get<Chapter>(APP_CONFIG.CHAPTER.GET(id));
   };
 
-  return {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => ({
     getChaptersByStory,
     getChapter,
-  };
+  }), [httpClient]);
 };
 
 export default useChapterService;

@@ -2,6 +2,7 @@
 import APP_CONFIG from "@/config/app-config";
 import { CommentListParams } from "@/types/story";
 import useHttpClient from "./useHttpClient";
+import { useMemo } from "react";
 
 export type ResultCommentService = {
   /** GET /comments/chapter/:chapterId */
@@ -30,7 +31,8 @@ const useCommentService = (): ResultCommentService => {
     return httpClient.delete(APP_CONFIG.COMMENT.DELETE(id), {});
   };
 
-  return { getCommentsByChapter, createComment, deleteComment };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => ({ getCommentsByChapter, createComment, deleteComment }), [httpClient]);
 };
 
 export default useCommentService;

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import APP_CONFIG from "@/config/app-config";
 import useHttpClient from "./useHttpClient";
+import { useMemo } from "react";
 
 export type ResultReportService = {
   /** POST /reports */
@@ -14,7 +15,8 @@ const useReportService = (): ResultReportService => {
     return httpClient.post(APP_CONFIG.REPORT.CREATE, payload);
   };
 
-  return { createReport };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => ({ createReport }), [httpClient]);
 };
 
 export default useReportService;
