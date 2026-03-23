@@ -1232,26 +1232,42 @@ function ReportDetailModal({
 }
 
 // ─── ReportResolveModal ───────────────────────────────────────────────────────
-const RESOLVE_ACTIONS = [
+const ALL_RESOLVE_ACTIONS = [
   {
-    value: "WARNING",
+    value: "WARN_ONLY",
     label: "⚠️ Cảnh báo",
-    desc: "Gửi cảnh báo đến người vi phạm",
+    desc: "Đánh dấu đã xử lý, gửi cảnh báo đến người vi phạm",
+    targets: ["STORY", "CHAPTER", "COMMENT"],
   },
   {
-    value: "REMOVE_CONTENT",
+    value: "HIDE_CONTENT",
+    label: "🙈 Ẩn nội dung",
+    desc: "Ẩn nội dung vi phạm khỏi người dùng",
+    targets: ["STORY", "CHAPTER", "COMMENT"],
+  },
+  {
+    value: "DELETE_CONTENT",
     label: "🗑 Xóa nội dung",
-    desc: "Xóa nội dung bị báo cáo",
+    desc: "Xóa vĩnh viễn nội dung vi phạm",
+    targets: ["STORY", "CHAPTER", "COMMENT"],
   },
   {
     value: "BAN_USER",
     label: "🔒 Khóa tài khoản",
-    desc: "Tạm khóa hoặc khóa vĩnh viễn",
+    desc: "Khóa tài khoản tác giả, không ẩn nội dung",
+    targets: ["STORY", "CHAPTER", "COMMENT"],
   },
   {
-    value: "NO_ACTION",
-    label: "✅ Bỏ qua",
-    desc: "Báo cáo không hợp lệ, không xử lý",
+    value: "HIDE_AND_BAN",
+    label: "🙈🔒 Ẩn + Khóa TK",
+    desc: "Ẩn nội dung vi phạm và khóa tài khoản tác giả",
+    targets: ["STORY", "CHAPTER"],
+  },
+  {
+    value: "DELETE_AND_BAN",
+    label: "🗑🔒 Xóa + Khóa TK",
+    desc: "Xóa nội dung vi phạm và khóa tài khoản tác giả",
+    targets: ["STORY", "CHAPTER", "COMMENT"],
   },
 ];
 const BAN_OPTIONS = [
@@ -1271,10 +1287,12 @@ function ReportResolveModal({
   onSubmit: (payload: any) => void;
   onClose: () => void;
 }) {
-  const [action, setAction] = useState("WARNING");
+  const targetType: string = report?.targetType ?? "COMMENT";
+  const availableActions = ALL_RESOLVE_ACTIONS.filter((a) => a.targets.includes(targetType));
+  const [action, setAction] = useState(availableActions[0]?.value ?? "WARN_ONLY");
   const [banDays, setBanDays] = useState(7);
   const [adminNote, setAdminNote] = useState("");
-  const requiresBan = action === "BAN_USER";
+  const requiresBan = ["BAN_USER", "HIDE_AND_BAN", "DELETE_AND_BAN"].includes(action);
 
   return (
     <div style={overlayStyle}>
@@ -1303,7 +1321,7 @@ function ReportResolveModal({
               Chọn hành động xử lý:
             </span>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {RESOLVE_ACTIONS.map((a) => (
+              {availableActions.map((a) => (
                 <label
                   key={a.value}
                   style={{

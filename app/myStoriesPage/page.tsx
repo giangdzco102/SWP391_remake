@@ -8,6 +8,7 @@ import useChapterService from "@/api/useChapter.service";
 import useHttpClient from "@/api/useHttpClient";
 import APP_CONFIG from "@/config/app-config";
 import { useToast } from "@/hooks/use-toast";
+import usePaymentService, { CoinPackage } from "@/api/usePayment.service";
 
 /* ================================================================
    TYPES
@@ -35,13 +36,25 @@ interface EditRequest {
 interface StoryItem {
   id: number;
   title: string;
+  // API returns 'summary'; keep 'description' as fallback for older cached data
+  summary?: string;
   description?: string;
   coverUrl?: string;
   status: string;
   viewCount: number;
-  totalChapters?: number;
+  // API returns 'totalChapterCount' and 'publishedChapterCount'
+  totalChapterCount?: number;
+  publishedChapterCount?: number;
+  totalChapters?: number;  // legacy fallback
+  avgRating?: number;
+  ratingCount?: number;
+  followCount?: number;
+  isCompleted?: boolean;
+  isDeleted?: boolean;
   reviewNote?: string;
-  author: { id: number; fullName: string };
+  authorId?: number;
+  authorName?: string;
+  author?: { id: number; fullName: string };
   categories?: { id: number; name: string }[];
   categoryIds?: number[];
   categoryNames?: string[];
@@ -262,25 +275,45 @@ function RichEditor({ value, onChange }: { value: string; onChange: (h: string) 
 /* ================================================================
    CHAPTER FORM MODAL
    ================================================================ */
-function ChapterFormModal({ storyId, chapter, onClose, onSaved }: { storyId: number; chapter?: ChapterItem | null; onClose: () => void; onSaved: () => void }) {
+function ChapterFormModal({ storyId, chapter, nextOrder, onClose, onSaved }: { storyId: number; chapter?: ChapterItem | null; nextOrder?: number; onClose: () => void; onSaved: () => void }) {
   const httpClient = useHttpClient();
   const toast = useToast();
+  const isEdit = !!chapter;
   const [title, setTitle] = useState(chapter?.title ?? "");
   const [content, setContent] = useState(chapter?.content ?? "");
+  const [chapterOrder, setChapterOrder] = useState(chapter?.chapterOrder ?? nextOrder ?? 1);
   const [coinPrice, setCoinPrice] = useState(chapter?.coinPrice ?? 0);
   const [publishAt, setPublishAt] = useState(chapter?.publishAt ?? "");
   const [saving, setSaving] = useState(false);
+  const [loadingContent, setLoadingContent] = useState(isEdit && !chapter?.content);
+
+  // Chapter list API doesn’t return content — fetch full chapter when editing
+  useEffect(() => {
+    if (!isEdit || chapter!.content) return;
+    setLoadingContent(true);
+    httpClient.get(APP_CONFIG.CHAPTER.GET(chapter!.id))
+      .then((res: any) => {
+        const data = res?.data ?? res ?? {};
+        setContent(data.content ?? "");
+        if (data.title) setTitle(data.title);
+        if (data.chapterOrder !== undefined) setChapterOrder(data.chapterOrder);
+        if (data.coinPrice !== undefined) setCoinPrice(data.coinPrice);
+        if (data.publishAt) setPublishAt(data.publishAt);
+      })
+      .catch(() => toast.error("Không tải được nội dung chương."))
+      .finally(() => setLoadingContent(false));
+  }, []);// eslint-disable-line react-hooks/exhaustive-deps
+
   const wordCount = stripHtml(content).split(/\s+/).filter(Boolean).length;
   const hasContent = stripHtml(content).trim().length > 0;
-  const isEdit = !!chapter;
 
   const handleSave = async () => {
-    if (!title.trim() || !content.trim()) return;
+    const plainText = stripHtml(content).trim();
+    if (!title.trim() || !plainText) return;
     setSaving(true);
     try {
-      const body: any = { title: title.trim(), content: content.trim(), coinPrice };
+      const body: any = { title: title.trim(), content, coinPrice, chapterOrder };
       if (publishAt) body.publishAt = publishAt;
-      if (!isEdit) body.chapterOrder = 0; // let backend assign
       if (isEdit) {
         await httpClient.put(APP_CONFIG.CHAPTER.UPDATE(chapter!.id), body);
         toast.success("Đã cập nhật chương!");
@@ -290,8 +323,8 @@ function ChapterFormModal({ storyId, chapter, onClose, onSaved }: { storyId: num
       }
       onSaved();
       onClose();
-    } catch {
-      toast.error("Không thể lưu chương. Thử lại sau.");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Không thể lưu chương. Thử lại sau.");
     } finally {
       setSaving(false);
     }
@@ -316,9 +349,19 @@ function ChapterFormModal({ storyId, chapter, onClose, onSaved }: { storyId: num
               <label style={{ ...fLabel(), margin: 0 }}>Nội dung *</label>
               <span style={{ fontSize: 11, color: T.textMuted }}>{wordCount.toLocaleString()} chữ</span>
             </div>
-            <RichEditor value={content} onChange={setContent} />
+            {loadingContent ? (
+              <div style={{ padding: "40px 0", textAlign: "center", fontSize: 13, color: T.textMuted, border: `1.5px solid ${T.border}`, borderRadius: T.radius }}>
+                ⏳ Đang tải nội dung chương…
+              </div>
+            ) : (
+              <RichEditor value={content} onChange={setContent} />
+            )}
           </div>
           <div style={{ display: "flex", gap: 16 }}>
+            <div style={{ flex: 1 }}>
+              <label style={fLabel()}>Số thứ tự chương *</label>
+              <input type="number" min={1} value={chapterOrder} onChange={(e) => setChapterOrder(Math.max(1, Number(e.target.value)))} style={fInput()} />
+            </div>
             <div style={{ flex: 1 }}>
               <label style={fLabel()}>Giá xu (0 = miễn phí)</label>
               <input type="number" min={0} value={coinPrice} onChange={(e) => setCoinPrice(Math.max(0, Number(e.target.value)))} style={fInput()} />
@@ -348,7 +391,7 @@ function StoryFormModal({ story, onClose, onSaved }: { story?: StoryItem | null;
   const toast = useToast();
   const isEdit = !!story;
   const [title, setTitle] = useState(story?.title ?? "");
-  const [description, setDescription] = useState(story?.description ?? "");
+  const [description, setDescription] = useState(story?.summary ?? story?.description ?? "");
   const [coverUrl, setCoverUrl] = useState(story?.coverUrl ?? "");
   const [selectedCategories, setSelectedCategories] = useState<number[]>(
     story?.categoryIds ?? story?.categories?.map((c) => c.id) ?? []
@@ -372,7 +415,7 @@ function StoryFormModal({ story, onClose, onSaved }: { story?: StoryItem | null;
     try {
       const body: any = {
         title: title.trim(),
-        description: description.trim() || undefined,
+        summary: description.trim() || undefined,
         coverUrl: coverUrl.trim() || undefined,
         categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
       };
@@ -600,14 +643,93 @@ function AuthorReviewEditModal({ request, originalContent, onClose, onAction }: 
 /* ================================================================
    WALLET SECTION
    ================================================================ */
-function WalletSection({ wallet, transactions, onTopup, loadingTx }: { wallet: WalletInfo | null; transactions: WalletTx[]; onTopup: (amount: number) => void; loadingTx: boolean }) {
-  const [amount, setAmount] = useState(100);
+const WALLET_FALLBACK_PKGS: CoinPackage[] = [
+  { id: "BASIC",    displayName: "Cơ Bản",      amountVnd: 10000,  coinAmount: 10000,  bonusPercent: 0  },
+  { id: "SAVING",   displayName: "Tiết Kiệm",   amountVnd: 50000,  coinAmount: 56000,  bonusPercent: 12 },
+  { id: "POPULAR",  displayName: "Phổ Biến ⭐", amountVnd: 100000, coinAmount: 118000, bonusPercent: 18 },
+  { id: "ADVANCED", displayName: "Nâng Cao",    amountVnd: 200000, coinAmount: 244000, bonusPercent: 22 },
+  { id: "VIP",      displayName: "VIP",          amountVnd: 500000, coinAmount: 650000, bonusPercent: 30 },
+];
+
+function WalletSection({ wallet, transactions, loadingTx }: { wallet: WalletInfo | null; transactions: WalletTx[]; loadingTx: boolean }) {
+  const [packages, setPackages] = useState<CoinPackage[]>(WALLET_FALLBACK_PKGS);
+  const [buyingId, setBuyingId] = useState<string | null>(null);
+  const paymentService = usePaymentService();
+  const toastW = useToast();
+  const httpClientW = useHttpClient();
+
+  // Withdraw state
+  const [withdrawTab, setWithdrawTab] = useState<"form" | "history">("form");
+  const [withdrawHistory, setWithdrawHistory] = useState<any[]>([]);
+  const [loadingWH, setLoadingWH] = useState(false);
+  const [submittingWD, setSubmittingWD] = useState(false);
+  const [withdrawForm, setWithdrawForm] = useState({ amount: "", bankName: "", bankAccount: "", bankOwner: "", note: "" });
+
+  useEffect(() => {
+    paymentService.getPackages().then((res: any) => {
+      const list: CoinPackage[] = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+      if (list.length > 0) setPackages(list);
+    }).catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadWithdrawHistory = async () => {
+    setLoadingWH(true);
+    try {
+      const res: any = await httpClientW.get(APP_CONFIG.WITHDRAW.MY);
+      const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+      setWithdrawHistory(list);
+    } catch { /* silent */ } finally { setLoadingWH(false); }
+  };
+
+  useEffect(() => {
+    if (withdrawTab === "history") loadWithdrawHistory();
+  }, [withdrawTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleWithdraw = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amount = parseInt(withdrawForm.amount, 10);
+    if (!amount || amount <= 0) { toastW.error("Số xu phải lớn hơn 0."); return; }
+    if (!withdrawForm.bankName.trim()) { toastW.error("Vui lòng nhập tên ngân hàng."); return; }
+    if (!withdrawForm.bankAccount.trim()) { toastW.error("Vui lòng nhập số tài khoản."); return; }
+    if (!withdrawForm.bankOwner.trim()) { toastW.error("Vui lòng nhập tên chủ tài khoản."); return; }
+    setSubmittingWD(true);
+    try {
+      await httpClientW.post(APP_CONFIG.WITHDRAW.CREATE, { amount, bankName: withdrawForm.bankName.trim(), bankAccount: withdrawForm.bankAccount.trim(), bankOwner: withdrawForm.bankOwner.trim(), note: withdrawForm.note.trim() || undefined });
+      toastW.success("Yêu cầu rút tiền đã được gửi!");
+      setWithdrawForm({ amount: "", bankName: "", bankAccount: "", bankOwner: "", note: "" });
+      setWithdrawTab("history");
+    } catch (err: any) {
+      toastW.error(err?.response?.data?.message ?? "Không thể tạo yêu cầu rút tiền.");
+    } finally { setSubmittingWD(false); }
+  };
+
+  const wdStatusStyle = (status: string) => {
+    if (status === "APPROVED") return { background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0" };
+    if (status === "REJECTED") return { background: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca" };
+    return { background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a" }; // PENDING
+  };
+
   const txColorMap: Record<string, string> = {
     TOPUP: T.success, BUY: T.info, GIFT: T.purple, REWARD: T.accent, LOCK: T.warn, RELEASE: T.success,
   };
+
+  const handleBuy = async (pkgId: string) => {
+    setBuyingId(pkgId);
+    try {
+      const res: any = await paymentService.createPaymentLink(pkgId);
+      const d = res?.data ?? res;
+      const url: string = d?.checkoutUrl ?? d?.checkout_url ?? "";
+      if (url) window.location.href = url;
+      else toastW.error("Không lấy được link thanh toán.");
+    } catch (err: any) {
+      toastW.error(err?.response?.data?.message ?? "Không thể tạo đơn thanh toán.");
+    } finally { setBuyingId(null); }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+      {/* Balance row */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         <div style={{ background: T.successBg, border: `1.5px solid ${T.successBorder}`, borderRadius: T.radius, padding: "18px 20px" }}>
           <div style={{ fontSize: 12, color: T.success, fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Số dư khả dụng</div>
           <div style={{ fontSize: 28, fontWeight: 800, color: T.success }}>{(wallet?.balance ?? 0).toLocaleString()} <span style={{ fontSize: 14 }}>xu</span></div>
@@ -616,14 +738,105 @@ function WalletSection({ wallet, transactions, onTopup, loadingTx }: { wallet: W
           <div style={{ fontSize: 12, color: T.warn, fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Đang khoá</div>
           <div style={{ fontSize: 28, fontWeight: 800, color: T.warn }}>{(wallet?.lockedBalance ?? 0).toLocaleString()} <span style={{ fontSize: 14 }}>xu</span></div>
         </div>
-        <div style={{ background: T.card, border: `1.5px solid ${T.border}`, borderRadius: T.radius, padding: "18px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ fontSize: 12, color: T.textSec, fontWeight: 700, textTransform: "uppercase" }}>Nạp coin</div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <input type="number" min={1} value={amount} onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))} style={{ ...fInput(), flex: 1, padding: "8px 10px" }} />
-            <button onClick={() => onTopup(amount)} style={btnPrimary}>Nạp</button>
-          </div>
+      </div>
+
+      {/* PayOS package selection */}
+      <div style={{ background: T.card, border: `1.5px solid ${T.border}`, borderRadius: T.radius, padding: "18px 20px" }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 4 }}>💳 Nạp coin qua PayOS</div>
+        <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 14 }}>Thanh toán an toàn · Coin vào ngay sau khi thanh toán thành công</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
+          {packages.map((pkg) => (
+            <button
+              key={pkg.id}
+              onClick={() => !buyingId && handleBuy(pkg.id)}
+              disabled={!!buyingId}
+              style={{ padding: "12px 8px", borderRadius: T.radiusSm, border: `1.5px solid ${buyingId === pkg.id ? T.accent : T.border}`, background: buyingId === pkg.id ? T.accentLight : T.card, cursor: buyingId ? "wait" : "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, transition: "all 0.15s", opacity: buyingId && buyingId !== pkg.id ? 0.55 : 1, fontFamily: T.font }}
+            >
+              {pkg.bonusPercent > 0 && (
+                <span style={{ fontSize: 9, fontWeight: 700, background: T.warnBg, color: T.warn, border: `1px solid ${T.warnBorder}`, borderRadius: 10, padding: "1px 6px" }}>+{pkg.bonusPercent}%</span>
+              )}
+              <span style={{ fontSize: 11, fontWeight: 700, color: T.text }}>{pkg.displayName}</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: T.accent }}>🪙 {pkg.coinAmount.toLocaleString()}</span>
+              <span style={{ fontSize: 11, color: T.textMuted }}>{pkg.amountVnd.toLocaleString()}đ</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", background: buyingId === pkg.id ? T.textMuted : T.accent, borderRadius: 6, padding: "3px 10px", marginTop: 2 }}>
+                {buyingId === pkg.id ? "⏳" : "Nạp"}
+              </span>
+            </button>
+          ))}
         </div>
       </div>
+
+      {/* Withdraw section */}
+      <div style={{ background: T.card, border: `1.5px solid ${T.border}`, borderRadius: T.radius, overflow: "hidden" }}>
+        {/* Header with sub-tabs */}
+        <div style={{ padding: "14px 18px", borderBottom: `1px solid ${T.borderLight}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: T.text }}>💸 Rút tiền</div>
+          <div style={{ display: "flex", gap: 4 }}>
+            {(["form", "history"] as const).map((wt) => (
+              <button key={wt} onClick={() => setWithdrawTab(wt)} style={{ padding: "4px 14px", borderRadius: 20, border: `1.5px solid ${withdrawTab === wt ? T.accent : T.border}`, background: withdrawTab === wt ? T.accentLight : "transparent", color: withdrawTab === wt ? T.accent : T.textSec, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                {wt === "form" ? "Tạo yêu cầu" : "Lịch sử"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {withdrawTab === "form" && (
+          <form onSubmit={handleWithdraw} style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ fontSize: 12, color: T.textMuted }}>Yêu cầu quy đổi xu sang tiền mặt. Quản trị viên sẽ xử lý trong vòng 1-3 ngày làm việc.</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: T.text, display: "block", marginBottom: 4 }}>Số xu muốn rút <span style={{ color: T.danger }}>*</span></label>
+                <input type="number" min={1} value={withdrawForm.amount} onChange={(e) => setWithdrawForm((f) => ({ ...f, amount: e.target.value }))} placeholder="VD: 50000" style={{ width: "100%", padding: "8px 12px", borderRadius: T.radiusSm, border: `1.5px solid ${T.border}`, background: T.bg, color: T.text, fontSize: 13, boxSizing: "border-box" as const }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: T.text, display: "block", marginBottom: 4 }}>Ngân hàng <span style={{ color: T.danger }}>*</span></label>
+                <input type="text" value={withdrawForm.bankName} onChange={(e) => setWithdrawForm((f) => ({ ...f, bankName: e.target.value }))} placeholder="VD: Vietcombank" style={{ width: "100%", padding: "8px 12px", borderRadius: T.radiusSm, border: `1.5px solid ${T.border}`, background: T.bg, color: T.text, fontSize: 13, boxSizing: "border-box" as const }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: T.text, display: "block", marginBottom: 4 }}>Số tài khoản <span style={{ color: T.danger }}>*</span></label>
+                <input type="text" value={withdrawForm.bankAccount} onChange={(e) => setWithdrawForm((f) => ({ ...f, bankAccount: e.target.value }))} placeholder="VD: 1234567890" style={{ width: "100%", padding: "8px 12px", borderRadius: T.radiusSm, border: `1.5px solid ${T.border}`, background: T.bg, color: T.text, fontSize: 13, boxSizing: "border-box" as const }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: T.text, display: "block", marginBottom: 4 }}>Chủ tài khoản <span style={{ color: T.danger }}>*</span></label>
+                <input type="text" value={withdrawForm.bankOwner} onChange={(e) => setWithdrawForm((f) => ({ ...f, bankOwner: e.target.value }))} placeholder="VD: NGUYEN VAN A" style={{ width: "100%", padding: "8px 12px", borderRadius: T.radiusSm, border: `1.5px solid ${T.border}`, background: T.bg, color: T.text, fontSize: 13, boxSizing: "border-box" as const }} />
+              </div>
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: T.text, display: "block", marginBottom: 4 }}>Ghi chú (tuỳ chọn)</label>
+              <input type="text" value={withdrawForm.note} onChange={(e) => setWithdrawForm((f) => ({ ...f, note: e.target.value }))} placeholder="Thông tin thêm cho quản trị viên…" style={{ width: "100%", padding: "8px 12px", borderRadius: T.radiusSm, border: `1.5px solid ${T.border}`, background: T.bg, color: T.text, fontSize: 13, boxSizing: "border-box" as const }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button type="submit" disabled={submittingWD} style={{ padding: "9px 24px", borderRadius: T.radiusSm, border: "none", background: T.accent, color: "#fff", fontSize: 13, fontWeight: 700, cursor: submittingWD ? "wait" : "pointer", opacity: submittingWD ? 0.7 : 1 }}>
+                {submittingWD ? "⏳ Đang gửi…" : "💸 Gửi yêu cầu rút tiền"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {withdrawTab === "history" && (
+          <div style={{ maxHeight: 360, overflowY: "auto" }}>
+            {loadingWH ? (
+              <div style={{ padding: 20, textAlign: "center", color: T.textMuted }}>Đang tải…</div>
+            ) : withdrawHistory.length === 0 ? (
+              <div style={{ padding: 20, textAlign: "center", color: T.textMuted }}>Chưa có yêu cầu rút tiền nào.</div>
+            ) : (
+              withdrawHistory.map((wr: any) => (
+                <div key={wr.id} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 18px", borderBottom: `1px solid ${T.borderLight}` }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 6, padding: "2px 8px", whiteSpace: "nowrap", ...wdStatusStyle(wr.status) }}>{wr.status === "APPROVED" ? "✅ Đã duyệt" : wr.status === "REJECTED" ? "❌ Từ chối" : "⏳ Chờ duyệt"}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{(wr.amount ?? 0).toLocaleString()} xu</div>
+                    <div style={{ fontSize: 12, color: T.textSec }}>{wr.bankName} · {wr.bankAccount} · {wr.bankOwner}</div>
+                    {wr.rejectedReason && <div style={{ fontSize: 11, color: T.danger, marginTop: 2 }}>Lý do từ chối: {wr.rejectedReason}</div>}
+                  </div>
+                  <div style={{ fontSize: 11, color: T.textMuted, whiteSpace: "nowrap" }}>{new Date(wr.createdAt).toLocaleDateString("vi-VN")}</div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Transaction history */}
       <div style={{ background: T.card, border: `1.5px solid ${T.border}`, borderRadius: T.radius, overflow: "hidden" }}>
         <div style={{ padding: "14px 18px", borderBottom: `1px solid ${T.borderLight}`, fontWeight: 700, fontSize: 14, color: T.text }}>📜 Lịch sử giao dịch</div>
         <div style={{ maxHeight: 320, overflowY: "auto" }}>
@@ -654,7 +867,7 @@ export default function MyStoriesPage() {
   const httpClient = useHttpClient();
   const toast = useToast();
 
-  type Tab = "stories" | "editRequests" | "wallet";
+  type Tab = "stories" | "editRequests" | "wallet" | "missions" | "reports";
   const [tab, setTab] = useState<Tab>("stories");
   const [stories, setStories] = useState<StoryItem[]>([]);
   const [editRequests, setEditRequests] = useState<EditRequest[]>([]);
@@ -663,9 +876,10 @@ export default function MyStoriesPage() {
   const [reviewEditModal, setReviewEditModal] = useState<EditRequest | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [chaptersMap, setChaptersMap] = useState<Record<number, ChapterItem[]>>({});
+  const [chapterTotalMap, setChapterTotalMap] = useState<Record<number, number>>({});
   const [loadingChapters, setLoadingChapters] = useState<Record<number, boolean>>({});
   const [showStoryForm, setShowStoryForm] = useState<StoryItem | null | false>(false);
-  const [chapterModal, setChapterModal] = useState<{ storyId: number; chapter?: ChapterItem | null } | null>(null);
+  const [chapterModal, setChapterModal] = useState<{ storyId: number; chapter?: ChapterItem | null; nextOrder?: number } | null>(null);
   const [deletingChapter, setDeletingChapter] = useState<number | null>(null);
   const [submittingStory, setSubmittingStory] = useState<number | null>(null);
   const [submittingChapter, setSubmittingChapter] = useState<number | null>(null);
@@ -676,6 +890,21 @@ export default function MyStoriesPage() {
   const [loadingTx, setLoadingTx] = useState(false);
   const [erFilter, setErFilter] = useState<string>("ALL");
   const [storyFilter, setStoryFilter] = useState<string>("ALL");
+  const [storySearch, setStorySearch] = useState("");
+  const [storySort, setStorySort] = useState<"newest" | "oldest">("newest");
+  const [deletingStory, setDeletingStory] = useState<number | null>(null);
+  const [confirmDeleteStory, setConfirmDeleteStory] = useState<{ id: number; title: string } | null>(null);
+
+  // Missions & Streak state
+  const [missions, setMissions] = useState<any[]>([]);
+  const [streakStatus, setStreakStatus] = useState<{ hasClaimedToday: boolean; currentStreak: number } | null>(null);
+  const [loadingMissions, setLoadingMissions] = useState(false);
+  const [checkingIn, setCheckingIn] = useState(false);
+  const [claimingMission, setClaimingMission] = useState<number | null>(null);
+
+  // My Reports state
+  const [myReports, setMyReports] = useState<any[]>([]);
+  const [loadingReports, setLoadingReports] = useState(false);
 
   /* ── Data loading ── */
   const loadStories = useCallback(async () => {
@@ -724,7 +953,55 @@ export default function MyStoriesPage() {
   useEffect(() => {
     if (tab === "editRequests" && editRequests.length === 0) loadEditRequests();
     if (tab === "wallet" && walletTxs.length === 0) loadWalletTxs();
+    if (tab === "missions") loadMissionsAndStreak();
+    if (tab === "reports") loadMyReports();
   }, [tab]);// eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadMissionsAndStreak = async () => {
+    setLoadingMissions(true);
+    try {
+      const [mRes, sRes]: any[] = await Promise.all([
+        httpClient.get(APP_CONFIG.MISSION.MY),
+        httpClient.get(APP_CONFIG.STREAK.STATUS),
+      ]);
+      const mList = Array.isArray(mRes?.data) ? mRes.data : Array.isArray(mRes) ? mRes : [];
+      setMissions(mList);
+      const sData = sRes?.data ?? sRes;
+      setStreakStatus(sData ?? null);
+    } catch { /* silent */ } finally { setLoadingMissions(false); }
+  };
+
+  const handleCheckIn = async () => {
+    setCheckingIn(true);
+    try {
+      const res: any = await httpClient.post(APP_CONFIG.STREAK.CHECK_IN, {});
+      const earned = res?.data?.coinEarned ?? res?.coinEarned ?? 0;
+      toast.success(`🎉 Điểm danh thành công! Nhận được ${earned.toLocaleString()} xu!`);
+      setStreakStatus((prev) => prev ? { ...prev, hasClaimedToday: true, currentStreak: prev.currentStreak + 1 } : prev);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Không thể điểm danh.");
+    } finally { setCheckingIn(false); }
+  };
+
+  const handleClaimMission = async (missionId: number) => {
+    setClaimingMission(missionId);
+    try {
+      await httpClient.post(APP_CONFIG.MISSION.COMPLETE(missionId), {});
+      toast.success("🎁 Đã nhận phần thưởng nhiệm vụ!");
+      setMissions((prev) => prev.map((m) => m.id === missionId ? { ...m, completed: true, completedAt: new Date().toISOString() } : m));
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Không thể nhận phần thưởng.");
+    } finally { setClaimingMission(null); }
+  };
+
+  const loadMyReports = async () => {
+    setLoadingReports(true);
+    try {
+      const res: any = await httpClient.get(APP_CONFIG.REPORT.MY);
+      const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+      setMyReports(list);
+    } catch { /* silent */ } finally { setLoadingReports(false); }
+  };
 
   /* ── Actions ── */
   const handleActionEditReq = async (reqId: number, isApprove: boolean, note: string) => {
@@ -755,7 +1032,9 @@ export default function MyStoriesPage() {
     try {
       const res: any = await chapterService.getChaptersByStory(storyId, { page: 0, size: 200 });
       const list: ChapterItem[] = res?.data?.content ?? res?.data ?? res?.content ?? res ?? [];
+      const total: number = res?.data?.totalElements ?? res?.totalElements ?? (Array.isArray(list) ? list.length : 0);
       setChaptersMap((p) => ({ ...p, [storyId]: Array.isArray(list) ? list : [] }));
+      setChapterTotalMap((p) => ({ ...p, [storyId]: total }));
     } catch { setChaptersMap((p) => ({ ...p, [storyId]: [] })); }
     finally { setLoadingChapters((p) => ({ ...p, [storyId]: false })); }
   };
@@ -798,20 +1077,26 @@ export default function MyStoriesPage() {
     finally { setPublishingChapter(null); }
   };
 
-  const handleTopup = async (amount: number) => {
-    try { await httpClient.post(APP_CONFIG.WALLET.TOPUP, { amount }); toast.success(`Đã nạp ${amount} xu!`); loadWallet(); loadWalletTxs(); }
-    catch { toast.error("Nạp coin thất bại."); }
+  const handleDeleteStory = async (sId: number) => {
+    setDeletingStory(sId);
+    try { await httpClient.delete(APP_CONFIG.STORY.DELETE(sId), {}); toast.success("Đã xóa truyện."); loadStories(); if (expandedId === sId) setExpandedId(null); }
+    catch (err: any) { toast.error(err?.response?.data?.message ?? "Không thể xóa truyện này."); }
+    finally { setDeletingStory(null); }
   };
 
   /* ── Stats ── */
   const totalViews = stories.reduce((s, st) => s + (st.viewCount ?? 0), 0);
-  const totalChapters = stories.reduce((s, st) => s + (st.totalChapters ?? 0), 0);
-  const publishedCount = stories.filter((s) => s.status === "PUBLISHED" || s.status === "APPROVED").length;
+  const totalChapters = stories.reduce((s, st) => s + (st.totalChapters ?? st.totalChapterCount ?? 0), 0);
+  const publishedCount = stories.filter((s) => s.status === "APPROVED").length;
   const getChapterWordCount = (ch: ChapterItem) => ch.wordCount ?? (ch.content ? ch.content.trim().split(/\s+/).filter(Boolean).length : 0);
 
-  const filteredStories = storyFilter === "ALL" ? stories
-    : storyFilter === "PUBLISHED" ? stories.filter((s) => s.status === "PUBLISHED" || s.status === "APPROVED")
-    : stories.filter((s) => s.status === storyFilter);
+  const filteredStories = stories
+    .filter((s) => storyFilter === "ALL" || s.status === storyFilter)
+    .filter((s) => !storySearch.trim() || s.title.toLowerCase().includes(storySearch.trim().toLowerCase()))
+    .sort((a, b) => storySort === "newest"
+      ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      : new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
   const filteredEditReqs = erFilter === "ALL" ? editRequests : editRequests.filter((r) => r.status === erFilter);
 
   if (loading) {
@@ -819,9 +1104,11 @@ export default function MyStoriesPage() {
   }
 
   const TABS: { id: Tab; label: string; icon: string }[] = [
-    { id: "stories",      label: "Tác phẩm",      icon: "📖" },
-    { id: "editRequests", label: "Yêu cầu biên tập", icon: "🎨" },
-    { id: "wallet",       label: "Ví của tôi",     icon: "💰" },
+    { id: "stories",      label: "Tác phẩm",         icon: "📖" },
+    { id: "editRequests", label: "Yêu cầu biên tập",  icon: "🎨" },
+    { id: "wallet",       label: "Ví của tôi",        icon: "💰" },
+    { id: "missions",     label: "Nhiệm vụ",          icon: "🎯" },
+    { id: "reports",      label: "Báo cáo của tôi",   icon: "📢" },
   ];
 
   return (
@@ -875,13 +1162,29 @@ export default function MyStoriesPage() {
         {/* ──── TAB: STORIES ──── */}
         {tab === "stories" && (
           <>
-            {/* Filter bar */}
-            <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
-              {["ALL", "DRAFT", "PENDING", "PUBLISHED", "REJECTED"].map((f) => (
-                <button key={f} onClick={() => setStoryFilter(f)} style={{ padding: "6px 14px", borderRadius: 20, border: `1.5px solid ${storyFilter === f ? T.accent : T.border}`, background: storyFilter === f ? T.accentLight : T.card, color: storyFilter === f ? T.accent : T.textSec, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                  {f === "ALL" ? "Tất cả" : f === "DRAFT" ? "Bản nháp" : f === "PENDING" ? "Chờ duyệt" : f === "PUBLISHED" ? "Đã duyệt & Xuất bản" : "Từ chối"}
-                </button>
-              ))}
+            {/* Filter + Search bar */}
+            <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+              <input
+                type="text"
+                placeholder="🔍 Tìm theo tên truyện…"
+                value={storySearch}
+                onChange={(e) => setStorySearch(e.target.value)}
+                style={{ ...fInput(), maxWidth: 260, padding: "7px 14px", fontSize: 13 }}
+              />
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {["ALL", "DRAFT", "PENDING", "PUBLISHED", "REJECTED"].map((f) => (
+                  <button key={f} onClick={() => setStoryFilter(f)} style={{ padding: "6px 14px", borderRadius: 20, border: `1.5px solid ${storyFilter === f ? T.accent : T.border}`, background: storyFilter === f ? T.accentLight : T.card, color: storyFilter === f ? T.accent : T.textSec, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                    {f === "ALL" ? "Tất cả" : f === "DRAFT" ? "Bản nháp" : f === "PENDING" ? "Chờ duyệt" : f === "PUBLISHED" ? "Đã duyệt" : "Từ chối"}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
+                {(["newest", "oldest"] as const).map((s) => (
+                  <button key={s} onClick={() => setStorySort(s)} style={{ padding: "6px 14px", borderRadius: 20, border: `1.5px solid ${storySort === s ? T.accent : T.border}`, background: storySort === s ? T.accentLight : T.card, color: storySort === s ? T.accent : T.textSec, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                    {s === "newest" ? "🔽 Mới nhất" : "🔼 Cũ nhất"}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {filteredStories.length === 0 ? (
@@ -897,6 +1200,7 @@ export default function MyStoriesPage() {
                   const isExpanded = expandedId === story.id;
                   const chapters = chaptersMap[story.id] ?? [];
                   const isLoadingCh = loadingChapters[story.id];
+                  const allChaptersCount = chapterTotalMap[story.id] ?? story.totalChapters ?? story.totalChapterCount;
                   const totalWords = chapters.reduce((s, ch) => s + getChapterWordCount(ch), 0);
                   const canEdit = story.status !== "PENDING" && story.status !== "APPROVED";
 
@@ -912,8 +1216,8 @@ export default function MyStoriesPage() {
                             <span style={{ fontFamily: T.fontSerif, fontSize: 16, fontWeight: 700, color: T.text }}>{story.title}</span>
                             <StatusBadge status={story.status} />
                           </div>
-                          {story.description && (
-                            <div style={{ fontSize: 13, color: T.textSec, marginBottom: 8, lineHeight: 1.5, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>{story.description}</div>
+                          {(story.summary ?? story.description) && (
+                            <div style={{ fontSize: 13, color: T.textSec, marginBottom: 8, lineHeight: 1.5, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>{story.summary ?? story.description}</div>
                           )}
                           {/* Review note for rejected stories */}
                           {story.status === "REJECTED" && story.reviewNote && (
@@ -923,7 +1227,8 @@ export default function MyStoriesPage() {
                           )}
                           <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 12, color: T.textMuted }}>
                             <span>👁 {(story.viewCount ?? 0).toLocaleString()} lượt đọc</span>
-                            <span>📄 {chaptersMap[story.id] !== undefined ? chaptersMap[story.id].length : (story.totalChapters ?? 0)} chương</span>
+                            <span>📄 {allChaptersCount !== undefined ? allChaptersCount : (story.totalChapters ?? story.totalChapterCount ?? 0)} chương</span>
+                            {(story.avgRating ?? 0) > 0 && <span>⭐ {Number(story.avgRating).toFixed(1)} ({story.ratingCount ?? 0})</span>}
                             <span>{(story.categoryNames?.join(", ") || story.categories?.map((c) => c.name).join(", ")) || "Chưa phân loại"}</span>
                             <span>{timeAgo(story.createdAt)}</span>
                           </div>
@@ -938,6 +1243,11 @@ export default function MyStoriesPage() {
                                 {submittingStory === story.id ? "…" : "📤 Nộp duyệt"}
                               </button>
                             )}
+                            {(story.status === "DRAFT" || story.status === "REJECTED") && (
+                              <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteStory({ id: story.id, title: story.title }); }} disabled={deletingStory === story.id} style={{ ...btnOutline, fontSize: 11, padding: "5px 10px", color: T.danger, border: `1.5px solid ${T.dangerBorder}` }}>
+                                {deletingStory === story.id ? "…" : "🗑 Xóa"}
+                              </button>
+                            )}
                           </div>
                           <span style={{ fontSize: 16, color: T.textMuted, transition: "transform 0.2s", transform: isExpanded ? "rotate(180deg)" : "rotate(0)" }}>▼</span>
                         </div>
@@ -948,10 +1258,10 @@ export default function MyStoriesPage() {
                         <div style={{ borderTop: `1.5px solid ${T.borderLight}`, padding: "16px 20px", background: T.bg }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                             <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>
-                              Chương ({isLoadingCh ? "…" : chapters.length})
+                              Chương ({isLoadingCh ? "…" : (allChaptersCount ?? chapters.length)})
                               {chapters.length > 0 && <span style={{ fontSize: 12, fontWeight: 400, color: T.textMuted, marginLeft: 8 }}>· {totalWords.toLocaleString()} chữ</span>}
                             </div>
-                            <button onClick={() => setChapterModal({ storyId: story.id, chapter: null })} style={{ ...btnPrimary, fontSize: 12 }}>+ Thêm chương</button>
+                            <button onClick={() => setChapterModal({ storyId: story.id, chapter: null, nextOrder: (chaptersMap[story.id]?.length ?? 0) + 1 })} style={{ ...btnPrimary, fontSize: 12 }}>+ Thêm chương</button>
                           </div>
 
                           {isLoadingCh ? (
@@ -976,12 +1286,12 @@ export default function MyStoriesPage() {
                                         <span>⏱ ~{readMins} phút</span>
                                         {(ch.coinPrice ?? 0) > 0 && <span>🪙 {ch.coinPrice} xu</span>}
                                       </div>
-                                      {ch.reviewNote && ch.status === "DRAFT" && (
+                                      {ch.reviewNote && (ch.status === "DRAFT" || ch.status === "REJECTED") && (
                                         <div style={{ fontSize: 11, color: T.danger, background: T.dangerBg, borderRadius: 6, padding: "3px 8px", marginTop: 4, border: `1px solid ${T.dangerBorder}` }}>⚠️ {ch.reviewNote}</div>
                                       )}
                                     </div>
                                     <div style={{ display: "flex", gap: 5, flexShrink: 0, alignItems: "center", flexWrap: "wrap" }}>
-                                      {(ch.status === "DRAFT" || ch.status === "EDITED") && (
+                                      {(ch.status === "DRAFT" || ch.status === "EDITED" || ch.status === "REJECTED") && (
                                         <button onClick={() => handleSubmitChapter(ch.id, story.id)} disabled={submittingChapter === ch.id} style={{ ...btnWarn, fontSize: 11, padding: "4px 8px" }}>
                                           {submittingChapter === ch.id ? "…" : "📤 Nộp"}
                                         </button>
@@ -992,9 +1302,11 @@ export default function MyStoriesPage() {
                                         </button>
                                       )}
                                       <button onClick={() => setChapterModal({ storyId: story.id, chapter: ch })} style={{ ...btnOutline, fontSize: 11, padding: "4px 8px" }}>✏️</button>
-                                      <button onClick={() => handleDeleteChapter(ch.id, story.id)} disabled={deletingChapter === ch.id} style={{ ...btnOutline, fontSize: 11, padding: "4px 8px", color: T.danger }}>
-                                        {deletingChapter === ch.id ? "…" : "🗑"}
-                                      </button>
+                                      {(ch.status === "DRAFT" || ch.status === "REJECTED") && (
+                                        <button onClick={() => handleDeleteChapter(ch.id, story.id)} disabled={deletingChapter === ch.id} style={{ ...btnOutline, fontSize: 11, padding: "4px 8px", color: T.danger }}>
+                                          {deletingChapter === ch.id ? "…" : "🗑"}
+                                        </button>
+                                      )}
                                       {(ch.status === "DRAFT" || ch.status === "EDITED" || ch.status === "PUBLISHED") && (
                                         <button onClick={() => setEditRequestModal(ch)} style={{ ...btnPurple, fontSize: 11, padding: "4px 8px" }}>🎨 Edit</button>
                                       )}
@@ -1070,7 +1382,134 @@ export default function MyStoriesPage() {
 
         {/* ──── TAB: WALLET ──── */}
         {tab === "wallet" && (
-          <WalletSection wallet={wallet} transactions={walletTxs} onTopup={handleTopup} loadingTx={loadingTx} />
+          <WalletSection wallet={wallet} transactions={walletTxs} loadingTx={loadingTx} />
+        )}
+
+        {/* ──── TAB: MY REPORTS ──── */}
+        {tab === "reports" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {loadingReports ? (
+              <div style={{ padding: 40, textAlign: "center", color: T.textMuted }}>⏳ Đang tải báo cáo…</div>
+            ) : myReports.length === 0 ? (
+              <div style={{ padding: 40, textAlign: "center", color: T.textMuted }}>📢 Bạn chưa gửi báo cáo vi phạm nào.</div>
+            ) : (
+              myReports.map((r: any) => {
+                const isResolved = r.status === "RESOLVED";
+                const targetTypeBg: Record<string, { bg: string; color: string; border: string }> = {
+                  STORY:   { bg: "#eff6ff", color: "#1e40af", border: "#bfdbfe" },
+                  CHAPTER: { bg: "#f0fdf4", color: "#166534", border: "#bbf7d0" },
+                  COMMENT: { bg: "#fef3c7", color: "#92400e", border: "#fde68a" },
+                };
+                const ttStyle = targetTypeBg[r.targetType] ?? { bg: T.grayBg, color: T.textSec, border: T.borderLight };
+                const RESOLVE_ACTION_LABELS: Record<string, string> = {
+                  WARN_ONLY: "⚠️ Cảnh báo", HIDE_CONTENT: "🙈 Ẩn nội dung", DELETE_CONTENT: "🗑 Xóa nội dung",
+                  BAN_USER: "🔒 Khóa tài khoản", HIDE_AND_BAN: "🙈🔒 Ẩn + Khóa TK", DELETE_AND_BAN: "🗑🔒 Xóa + Khóa TK",
+                };
+                return (
+                  <div key={r.id} style={{ background: T.card, border: `1.5px solid ${T.border}`, borderRadius: T.radius, padding: "14px 18px" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 10, padding: "2px 8px", ...ttStyle }}>{r.targetType}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 10, padding: "2px 8px", background: isResolved ? "#dcfce7" : "#fef3c7", color: isResolved ? "#166534" : "#92400e", border: `1px solid ${isResolved ? "#bbf7d0" : "#fde68a"}` }}>
+                            {isResolved ? "✅ Đã xử lý" : "⏳ Chờ xử lý"}
+                          </span>
+                          <span style={{ fontSize: 11, color: T.textMuted }}>#{r.id}</span>
+                        </div>
+                        <div style={{ fontSize: 13, color: T.text, marginBottom: 4 }}>{r.reason}</div>
+                        {isResolved && r.resolvedAction && (
+                          <div style={{ fontSize: 12, color: T.success, marginTop: 4 }}>Hành động: {RESOLVE_ACTION_LABELS[r.resolvedAction] ?? r.resolvedAction}</div>
+                        )}
+                        {r.adminNote && <div style={{ fontSize: 12, color: T.textSec, marginTop: 2 }}>📝 Ghi chú admin: {r.adminNote}</div>}
+                      </div>
+                      <div style={{ fontSize: 11, color: T.textMuted, whiteSpace: "nowrap", flexShrink: 0 }}>{new Date(r.createdAt).toLocaleDateString("vi-VN")}</div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* ──── TAB: MISSIONS ──── */}
+        {tab === "missions" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {loadingMissions ? (
+              <div style={{ padding: 40, textAlign: "center", color: T.textMuted }}>⏳ Đang tải nhiệm vụ…</div>
+            ) : (
+              <>
+                {/* Streak card */}
+                <div style={{ background: "linear-gradient(135deg, #ff6600 0%, #ff9900 100%)", borderRadius: T.radius, padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, color: "#fff" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{ fontSize: 40 }}>🔥</div>
+                    <div>
+                      <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1 }}>{streakStatus?.currentStreak ?? 0} ngày</div>
+                      <div style={{ fontSize: 13, opacity: 0.85, marginTop: 2 }}>Chuỗi đăng nhập liên tiếp</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleCheckIn}
+                    disabled={!!streakStatus?.hasClaimedToday || checkingIn}
+                    style={{ padding: "10px 24px", borderRadius: T.radiusSm, border: "2px solid rgba(255,255,255,0.5)", background: streakStatus?.hasClaimedToday ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.25)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: streakStatus?.hasClaimedToday ? "default" : "pointer", backdropFilter: "blur(4px)", transition: "all 0.15s", opacity: checkingIn ? 0.7 : 1 }}
+                  >
+                    {checkingIn ? "⏳ Đang điểm danh…" : streakStatus?.hasClaimedToday ? "✅ Đã điểm danh hôm nay" : "🎁 Điểm danh nhận xu"}
+                  </button>
+                </div>
+
+                {/* Missions list */}
+                <div style={{ background: T.card, border: `1.5px solid ${T.border}`, borderRadius: T.radius, overflow: "hidden" }}>
+                  <div style={{ padding: "14px 18px", borderBottom: `1px solid ${T.borderLight}`, fontWeight: 700, fontSize: 14, color: T.text }}>🎯 Nhiệm vụ</div>
+                  {missions.length === 0 ? (
+                    <div style={{ padding: 24, textAlign: "center", color: T.textMuted }}>Chưa có nhiệm vụ nào.</div>
+                  ) : (
+                    missions.map((m: any) => {
+                      const progress = m.progress ?? 0;
+                      const target = m.targetCount ?? 1;
+                      const pct = Math.min(100, Math.round((progress / target) * 100));
+                      const canClaim = pct >= 100 && !m.completed;
+                      const reward = m.rewardCoin ?? m.rewardCoins ?? m.coin ?? 0;
+                      const isDaily = (m.type ?? "").toString().toUpperCase().includes("DAILY");
+                      const ACTION_LABELS: Record<string, string> = {
+                        LOGIN: "Đăng nhập", READ_CHAPTER: "Đọc chương", COMMENT: "Bình luận",
+                        FOLLOW_STORY: "Theo dõi truyện", BUY_CHAPTER: "Mua chương", SEND_GIFT: "Tặng quà",
+                      };
+                      const actionLabel = m.action ? (ACTION_LABELS[m.action] ?? m.action) : null;
+                      return (
+                        <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", borderBottom: `1px solid ${T.borderLight}` }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{m.title ?? m.name ?? `Nhiệm vụ #${m.id}`}</span>
+                              <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 10, padding: "1px 7px", background: isDaily ? "#fef3c7" : "#eff6ff", color: isDaily ? "#92400e" : "#1e40af", border: `1px solid ${isDaily ? "#fde68a" : "#bfdbfe"}` }}>
+                                {isDaily ? "🔄 Hàng ngày" : "📚 Tích lũy"}
+                              </span>
+                              {actionLabel && (
+                                <span style={{ fontSize: 10, fontWeight: 600, borderRadius: 10, padding: "1px 7px", background: T.grayBg, color: T.textSec, border: `1px solid ${T.borderLight}` }}>{actionLabel}</span>
+                              )}
+                            </div>
+                            {m.description && <div style={{ fontSize: 12, color: T.textSec, marginBottom: 6 }}>{m.description}</div>}
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div style={{ flex: 1, height: 8, borderRadius: 999, background: T.grayBg, overflow: "hidden" }}>
+                                <div style={{ height: "100%", width: `${pct}%`, background: m.completed ? T.success : T.accent, borderRadius: 999, transition: "width 0.3s" }} />
+                              </div>
+                              <span style={{ fontSize: 11, color: T.textMuted, whiteSpace: "nowrap" }}>{progress}/{target}</span>
+                            </div>
+                          </div>
+                          {reward > 0 && <div style={{ fontSize: 13, fontWeight: 700, color: T.accent, whiteSpace: "nowrap" }}>🪙 {reward.toLocaleString()}</div>}
+                          <button
+                            onClick={() => canClaim && handleClaimMission(m.id)}
+                            disabled={!canClaim || claimingMission === m.id}
+                            style={{ padding: "7px 16px", borderRadius: T.radiusSm, border: "none", background: m.completed ? T.successBg : canClaim ? T.accent : T.grayBg, color: m.completed ? T.success : canClaim ? "#fff" : T.textMuted, fontSize: 12, fontWeight: 700, cursor: canClaim && !claimingMission ? "pointer" : "default", whiteSpace: "nowrap", minWidth: 110 }}
+                          >
+                            {claimingMission === m.id ? "⏳…" : m.completed ? "✓ Đã nhận" : canClaim ? "🎁 Nhận thưởng" : "Chưa đủ tiến độ"}
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         )}
       </div>
 
@@ -1079,13 +1518,81 @@ export default function MyStoriesPage() {
         <StoryFormModal story={showStoryForm} onClose={() => setShowStoryForm(false)} onSaved={loadStories} />
       )}
       {chapterModal && (
-        <ChapterFormModal storyId={chapterModal.storyId} chapter={chapterModal.chapter} onClose={() => setChapterModal(null)} onSaved={() => loadChapters(chapterModal.storyId)} />
+        <ChapterFormModal storyId={chapterModal.storyId} chapter={chapterModal.chapter} nextOrder={chapterModal.nextOrder} onClose={() => setChapterModal(null)} onSaved={() => loadChapters(chapterModal.storyId)} />
       )}
       {editRequestModal && (
         <CreateEditRequestModal chapter={editRequestModal} walletBalance={wallet?.balance ?? 0} onClose={() => setEditRequestModal(null)} onCreated={() => { loadEditRequests(); loadWallet(); }} />
       )}
       {reviewEditModal && (
         <AuthorReviewEditModal request={reviewEditModal} onClose={() => setReviewEditModal(null)} onAction={handleActionEditReq} />
+      )}
+
+      {/* Delete Story Confirm Modal */}
+      {confirmDeleteStory && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 9999,
+            background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 20,
+          }}
+          onClick={() => !deletingStory && setConfirmDeleteStory(null)}
+        >
+          <div
+            style={{
+              background: "#fff", borderRadius: 20, padding: "32px 28px",
+              maxWidth: 420, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+              textAlign: "center",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 48, marginBottom: 12 }}>🗑️</div>
+            <h3 style={{ margin: "0 0 8px", fontFamily: T.fontSerif, fontSize: 20, fontWeight: 800, color: "#1c1512" }}>
+              Xóa truyện này?
+            </h3>
+            <p style={{ margin: "0 0 6px", fontSize: 14, color: "#6b5a4e", lineHeight: 1.6 }}>
+              Bạn sắp xóa vĩnh viễn:
+            </p>
+            <p style={{ margin: "0 0 20px", fontSize: 15, fontWeight: 700, color: "#1c1512" }}>
+              &ldquo;{confirmDeleteStory.title}&rdquo;
+            </p>
+            <div style={{
+              background: "#fef2f2", border: "1.5px solid #fca5a5",
+              borderRadius: 10, padding: "10px 16px", marginBottom: 24,
+              fontSize: 13, color: "#991b1b",
+            }}>
+              ⚠️ Hành động này không thể hoàn tác. Toàn bộ chương sẽ bị xóa.
+            </div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+              <button
+                disabled={!!deletingStory}
+                onClick={() => setConfirmDeleteStory(null)}
+                style={{
+                  flex: 1, padding: "11px 20px", borderRadius: 10,
+                  border: `1.5px solid ${T.border}`, background: "#fff",
+                  color: T.textSec, fontSize: 14, fontWeight: 600, cursor: "pointer",
+                }}
+              >
+                Hủy
+              </button>
+              <button
+                disabled={!!deletingStory}
+                onClick={async () => {
+                  await handleDeleteStory(confirmDeleteStory.id);
+                  setConfirmDeleteStory(null);
+                }}
+                style={{
+                  flex: 1, padding: "11px 20px", borderRadius: 10, border: "none",
+                  background: deletingStory ? "#a0a0a0" : T.danger,
+                  color: "#fff", fontSize: 14, fontWeight: 700,
+                  cursor: deletingStory ? "not-allowed" : "pointer",
+                }}
+              >
+                {deletingStory ? "⏳ Đang xóa..." : "🗑️ Xóa truyện"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

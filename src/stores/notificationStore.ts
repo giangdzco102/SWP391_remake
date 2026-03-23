@@ -1,35 +1,26 @@
 // stores/notificationStore.ts
 import { create } from "zustand";
-import { MOCK_NOTIFICATIONS } from "@/utils/mockData";
-
-interface Notification {
-  id: number;
-  type: string;
-  title: string;
-  body: string;
-  time: string;
-  read: boolean;
-  storyId?: number;
-}
+import type { NotificationResponse } from "@/api/useNotification.service";
 
 interface NotificationStore {
-  notifications: Notification[];
+  notifications: NotificationResponse[];
   unreadCount: number;
 
-  setNotifications: (notifications: Notification[]) => void;
-  addNotification: (notification: Notification) => void;
+  setNotifications: (notifications: NotificationResponse[]) => void;
+  addNotification: (notification: NotificationResponse) => void;
   markAllRead: () => void;
   markOneRead: (id: number) => void;
+  removeNotification: (id: number) => void;
 }
 
-export const useNotificationStore = create<NotificationStore>((set, get) => ({
-  notifications: MOCK_NOTIFICATIONS,
-  unreadCount: MOCK_NOTIFICATIONS.filter((n) => !n.read).length,
+export const useNotificationStore = create<NotificationStore>((set) => ({
+  notifications: [],
+  unreadCount: 0,
 
   setNotifications: (notifications) =>
     set({
       notifications,
-      unreadCount: notifications.filter((n) => !n.read).length,
+      unreadCount: notifications.filter((n) => !n.isRead).length,
     }),
 
   addNotification: (notification) =>
@@ -37,24 +28,33 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       const notifications = [notification, ...state.notifications];
       return {
         notifications,
-        unreadCount: notifications.filter((n) => !n.read).length,
+        unreadCount: notifications.filter((n) => !n.isRead).length,
       };
     }),
 
   markAllRead: () =>
     set((state) => ({
-      notifications: state.notifications.map((n) => ({ ...n, read: true })),
+      notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
       unreadCount: 0,
     })),
 
   markOneRead: (id) =>
     set((state) => {
       const notifications = state.notifications.map((n) =>
-        n.id === id ? { ...n, read: true } : n,
+        n.id === id ? { ...n, isRead: true } : n,
       );
       return {
         notifications,
-        unreadCount: notifications.filter((n) => !n.read).length,
+        unreadCount: notifications.filter((n) => !n.isRead).length,
+      };
+    }),
+
+  removeNotification: (id) =>
+    set((state) => {
+      const notifications = state.notifications.filter((n) => n.id !== id);
+      return {
+        notifications,
+        unreadCount: notifications.filter((n) => !n.isRead).length,
       };
     }),
 }));

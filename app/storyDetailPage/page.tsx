@@ -12,6 +12,7 @@ import useStoryService from "@/api/useStory.service";
 import useReportService from "@/api/useReport.service";
 import useRatingService from "@/api/useRating.service";
 import useFollowService from "@/api/useFollow.service";
+import useGiftService from "@/api/useGift.service";
 import { useToast } from "@/hooks/use-toast";
 
 function StoryDetailContent() {
@@ -29,9 +30,10 @@ function StoryDetailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { getStory, getStoryDetail } = useStoryService();
-  const { getChaptersByStory } = useChapterService();
+  const { getChaptersByStory, purchaseChapter } = useChapterService();
   const { getRatingsByStory, rateStory, getMyRating } = useRatingService();
   const { toggleFollow, getFollowStatus } = useFollowService();
+  const { sendGift } = useGiftService();
 
   const [followed, setFollowed] = useState(false);
   const [followCount, setFollowCount] = useState<number | null>(null);
@@ -45,6 +47,11 @@ function StoryDetailContent() {
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
   const [ratingModalOpen, setRatingModalOpen] = useState(false);
+  const [purchasingChapterId, setPurchasingChapterId] = useState<number | null>(null);
+  const [confirmPurchase, setConfirmPurchase] = useState<{ id: number; title: string; price: number } | null>(null);
+  // Rating stats from API (more reliable than computing from reviews list)
+  const [displayRating, setDisplayRating] = useState(0);
+  const [displayRatingCount, setDisplayRatingCount] = useState(0);
 
   // Load story from URL ?id param when navStore is empty (e.g., on page refresh or direct URL)
   useEffect(() => {
@@ -127,6 +134,9 @@ function StoryDetailContent() {
           const detail = r?.data ?? r;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const detailList: any[] = Array.isArray(detail?.chapters) ? detail.chapters : [];
+          // Also update rating stats from fresh detail response
+          if (detail?.avgRating != null) setDisplayRating(detail.avgRating);
+          if (detail?.ratingCount != null) setDisplayRatingCount(detail.ratingCount);
           applyChapters(detailList);
         });
 
@@ -143,6 +153,9 @@ function StoryDetailContent() {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .then((r: any) => {
             const detail = r?.data ?? r;
+            // Also update rating stats from fresh detail response
+            if (detail?.avgRating != null) setDisplayRating(detail.avgRating);
+            if (detail?.ratingCount != null) setDisplayRatingCount(detail.ratingCount);
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const detailChaps: any[] = Array.isArray(detail?.chapters) ? detail.chapters : [];
             const purchasedIds = new Set<number>(
@@ -178,7 +191,7 @@ function StoryDetailContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [story?.id, user]);
 
-  // Initialize followCount from story data (set by the API response field followCount)
+  // Initialize followCount / rating stats from story data
   useEffect(() => {
     if (!story) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -186,6 +199,9 @@ function StoryDetailContent() {
     if (s.followCount != null) setFollowCount(s.followCount);
     // Use isFollowing if present (null = not logged in, true/false = logged in)
     if (user && s.isFollowing != null) setFollowed(!!s.isFollowing);
+    // Sync rating stats — story.rating = avgRating, story.reviewCount = ratingCount
+    if (s.rating != null) setDisplayRating(s.rating);
+    if (s.reviewCount != null) setDisplayRatingCount(s.reviewCount);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [story?.id]);
 
@@ -222,6 +238,9 @@ function StoryDetailContent() {
   const { createReport } = useReportService();
   const toast = useToast();
   const [storyReportOpen, setStoryReportOpen] = useState(false);
+  const [giftOpen, setGiftOpen] = useState(false);
+  const [giftAmount, setGiftAmount] = useState(100);
+  const [giftSending, setGiftSending] = useState(false);
   const [storyReportReason, setStoryReportReason] = useState("");
   const [storyReporting, setStoryReporting] = useState(false);
 
@@ -268,6 +287,21 @@ function StoryDetailContent() {
     cb();
   };
 
+  const handleSendGift = async () => {
+    if (!story || giftAmount < 1 || giftSending) return;
+    setGiftSending(true);
+    try {
+      await sendGift(story.id, giftAmount);
+      toast.success(`Đã tặng ${giftAmount} xu cho tác giả!`);
+      setGiftOpen(false);
+      setGiftAmount(100);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Không thể tặng quà. Thử lại sau.");
+    } finally {
+      setGiftSending(false);
+    }
+  };
+
   const handleToggleFollow = async () => {
     if (!user) { router.push("?login"); return; }
     if (!story || followLoading) return;
@@ -295,15 +329,16 @@ function StoryDetailContent() {
     }
   };
 
-  const avgRating = reviews.length
-    ? (reviews.reduce((a, r) => a + r.rating, 0) / reviews.length).toFixed(1)
-    : "—";
+  // Use API-provided avgRating/ratingCount as the source of truth.
+  // displayRating is synced from getStory / getStoryDetail responses.
+  const avgRating = displayRating > 0 ? Number(displayRating).toFixed(1) : "—";
 
   const relatedStories = stories
     .filter((s) => s.id !== story.id && s.genre === story.genre)
     .slice(0, 3);
 
   return (
+    <>
     <div className="fade-in">
       <div className="detail-wrap">
         {/* ── MAIN ─────────────────────────────────────────────────────────── */}
@@ -395,7 +430,7 @@ function StoryDetailContent() {
                 {[
                   { num: story.reads, label: "Lượt đọc" },
                   { num: chapters.length || story.chapters || 0, label: "Chương" },
-                  { num: reviews.length || story.reviewCount || 0, label: "Đánh giá" },
+                  { num: displayRatingCount, label: "Đánh giá" },
                   {
                     num: followCount != null
                       ? followCount.toLocaleString("vi-VN")
@@ -505,9 +540,114 @@ function StoryDetailContent() {
                 >
                   🚩 Báo cáo
                 </button>
+                <button
+                  className="btn-hero btn-hero-outline"
+                  style={{
+                    fontSize: 12,
+                    padding: "8px 14px",
+                    color: "#b08430",
+                    borderColor: "#f0daa8",
+                    background: giftOpen ? "#fef9ee" : undefined,
+                  }}
+                  onClick={() => requireAuth(() => setGiftOpen((o) => !o))}
+                >
+                  🎁 Tặng quà
+                </button>
               </div>
             </div>
           </div>
+
+          {/* Inline Gift */}
+          {giftOpen && (
+            <div
+              style={{
+                background: "#fef9ee",
+                border: "1.5px solid #f0daa8",
+                borderRadius: 14,
+                padding: "16px 18px",
+                marginBottom: 16,
+              }}
+            >
+              <div style={{ fontWeight: 700, fontSize: 14, color: "#1c1512", marginBottom: 4 }}>
+                🎁 Tặng xu cho tác giả: <em>{story.author}</em>
+              </div>
+              <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 12 }}>
+                Xu sẽ được chuyển thẳng vào ví tác giả ngay sau khi bạn xác nhận.
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+                {[10, 50, 100, 200, 500].map((preset) => (
+                  <button
+                    key={preset}
+                    onClick={() => setGiftAmount(preset)}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: 20,
+                      border: `1.5px solid ${giftAmount === preset ? "#b08430" : "#e8e0d6"}`,
+                      background: giftAmount === preset ? "#fef9ee" : "#fff",
+                      color: giftAmount === preset ? "#b08430" : "#6b5a4e",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    🪙 {preset} xu
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
+                <input
+                  type="number"
+                  min={1}
+                  value={giftAmount}
+                  onChange={(e) => setGiftAmount(Math.max(1, Number(e.target.value)))}
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: 10,
+                    border: "1.5px solid #e8e0d6",
+                    fontSize: 13,
+                    color: "#3d2f28",
+                    fontFamily: "inherit",
+                    outline: "none",
+                    width: 120,
+                  }}
+                />
+                <span style={{ fontSize: 12, color: "#9ca3af" }}>xu (tùy chỉnh)</span>
+              </div>
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <button
+                  onClick={() => { setGiftOpen(false); setGiftAmount(100); }}
+                  style={{
+                    padding: "8px 18px",
+                    borderRadius: 9,
+                    border: "1.5px solid #e8e0d6",
+                    background: "#fff",
+                    color: "#6b5a4e",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleSendGift}
+                  disabled={giftAmount < 1 || giftSending}
+                  style={{
+                    padding: "8px 18px",
+                    borderRadius: 9,
+                    border: "none",
+                    background: giftAmount < 1 || giftSending ? "#f3f4f6" : "#b08430",
+                    color: giftAmount < 1 || giftSending ? "#9ca3af" : "#fff",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: giftAmount < 1 || giftSending ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {giftSending ? "⏳ Đang gửi…" : `🎁 Tặng ${giftAmount} xu`}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Inline Story Report */}
           {storyReportOpen && (
@@ -693,24 +833,27 @@ function StoryDetailContent() {
 
                   {isLocked ? (
                     <button
+                      disabled={purchasingChapterId === ch.id}
                       onClick={(e) => {
                         e.stopPropagation();
-                        requireAuth(() => unlockChapter(ch.id, ch.price || 10));
+                        requireAuth(() => setConfirmPurchase({ id: ch.id, title: ch.title, price: ch.price || 10 }));
                       }}
                       className="flex items-center shrink-0 whitespace-nowrap font-bold"
                       style={{
                         gap: 5,
-                        background: "linear-gradient(135deg,#c69526,#9a7020)",
+                        background: purchasingChapterId === ch.id
+                          ? "#a0a0a0"
+                          : "linear-gradient(135deg,#c69526,#9a7020)",
                         color: "#fff",
                         border: "none",
                         borderRadius: 8,
                         padding: "7px 14px",
                         fontSize: 12,
-                        cursor: "pointer",
+                        cursor: purchasingChapterId === ch.id ? "not-allowed" : "pointer",
                         boxShadow: "0 2px 8px rgba(194,149,38,.3)",
                       }}
                     >
-                      🪙 {ch.price} xu
+                      {purchasingChapterId === ch.id ? "⏳ Đang mua..." : `🪙 ${ch.price} xu`}
                     </button>
                   ) : (
                     <div className="ch-arrow">
@@ -897,11 +1040,19 @@ function StoryDetailContent() {
                       toast.success(ratingSubmitted ? "Đã cập nhật đánh giá!" : "Cảm ơn bạn đã đánh giá! ⭐");
                       setRatingSubmitted(true);
                       setRatingModalOpen(false);
+                      // Refresh reviews list
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       getRatingsByStory(story.id).then((res: any) => {
                         const list: any[] = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         setReviews(list.map((r: any) => ({ ...r, rating: r.score ?? r.rating ?? 0 })));
+                      }).catch(() => {});
+                      // Refresh avgRating / ratingCount from the story endpoint
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      getStory(story.id).then((res: any) => {
+                        const s = res?.data ?? res;
+                        if (s?.avgRating != null) setDisplayRating(s.avgRating);
+                        if (s?.ratingCount != null) setDisplayRatingCount(s.ratingCount);
                       }).catch(() => {});
                     } catch {
                       toast.error("Không thể gửi đánh giá. Thử lại sau.");
@@ -1100,7 +1251,7 @@ function StoryDetailContent() {
                 ],
                 ["Lượt đọc", story.reads],
                 ["Yêu thích", `${(followCount ?? story.favorites ?? 0).toLocaleString("vi-VN")} người`],
-                ["Đánh giá", `${avgRating}/5 (${reviews.length || story.reviewCount || 0} đánh giá)`],
+                ["Đánh giá", `${avgRating}/5 (${displayRatingCount} đánh giá)`],
               ] as [string, string][]
             ).map(([k, v], i, arr) => (
               <div
@@ -1129,6 +1280,92 @@ function StoryDetailContent() {
         </div>
       </div>
     </div>
+
+      {/* ── Purchase Confirmation Modal ─────────────────────────────────── */}
+      {confirmPurchase && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 9999,
+            background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 20,
+          }}
+          onClick={() => !purchasingChapterId && setConfirmPurchase(null)}
+        >
+          <div
+            style={{
+              background: "#fff", borderRadius: 20, padding: "32px 28px",
+              maxWidth: 400, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+              textAlign: "center",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 48, marginBottom: 12 }}>🪙</div>
+            <h3 style={{ margin: "0 0 6px", fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 800, color: "#1c1512" }}>
+              Xác nhận mua chương
+            </h3>
+            <p style={{ margin: "0 0 20px", fontSize: 14, color: "#6b5a4e", lineHeight: 1.6 }}>
+              Bạn sắp mua{" "}
+              <strong style={{ color: "#1c1512" }}>&ldquo;{confirmPurchase.title}&rdquo;</strong>
+              {" "}với giá
+            </p>
+            <div style={{
+              background: "#fffbeb", border: "1.5px solid #fcd34d",
+              borderRadius: 12, padding: "14px 20px", marginBottom: 24, display: "inline-block",
+            }}>
+              <span style={{ fontSize: 28, fontWeight: 800, color: "#c69526" }}>
+                🪙 {confirmPurchase.price} xu
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+              <button
+                disabled={!!purchasingChapterId}
+                onClick={() => setConfirmPurchase(null)}
+                style={{
+                  flex: 1, padding: "11px 20px", borderRadius: 10,
+                  border: "1.5px solid #e8e0d6", background: "#fff",
+                  color: "#6b5a4e", fontSize: 14, fontWeight: 600, cursor: "pointer",
+                }}
+              >
+                Hủy
+              </button>
+              <button
+                disabled={!!purchasingChapterId}
+                onClick={async () => {
+                  const { id, title, price } = confirmPurchase;
+                  setPurchasingChapterId(id);
+                  try {
+                    await purchaseChapter(id);
+                    unlockChapter(id, price);
+                    setChapters(
+                      chapters.map(c =>
+                        c.id === id ? { ...c, locked: false, isPurchased: true } : c
+                      )
+                    );
+                    toast.success(`Chương "${title}" đã được mở khóa.`, "Mở khóa thành công!");
+                    setConfirmPurchase(null);
+                  } catch (err: any) {
+                    toast.error(err?.response?.data?.message ?? "Không đủ xu hoặc lỗi hệ thống.", "Mở khóa thất bại");
+                  } finally {
+                    setPurchasingChapterId(null);
+                  }
+                }}
+                style={{
+                  flex: 1, padding: "11px 20px", borderRadius: 10,
+                  border: "none",
+                  background: purchasingChapterId ? "#a0a0a0" : "linear-gradient(135deg,#c69526,#9a7020)",
+                  color: "#fff", fontSize: 14, fontWeight: 700,
+                  cursor: purchasingChapterId ? "not-allowed" : "pointer",
+                  boxShadow: purchasingChapterId ? "none" : "0 2px 8px rgba(194,149,38,.3)",
+                }}
+              >
+                {purchasingChapterId ? "⏳ Đang mua..." : "✅ Xác nhận mua"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

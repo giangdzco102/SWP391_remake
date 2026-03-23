@@ -39,13 +39,16 @@ interface ChapterItem {
 
 interface ReviewHistoryItem {
   id: number;
+  reviewerId?: number;
+  reviewerName?: string;
   targetType: "STORY" | "CHAPTER";
   targetId: number;
   targetTitle: string;
   storyTitle?: string;
-  decision: "APPROVED" | "REJECTED";
+  action: "APPROVE" | "REJECT";
   note?: string;
-  reviewedAt: string;
+  currentStatus?: string;
+  createdAt: string;
 }
 
 /* ================================================================
@@ -307,7 +310,12 @@ export default function ReviewerDashboardPage() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [storyModal, setStoryModal] = useState<StoryItem | null>(null);
   const [chapterModal, setChapterModal] = useState<ChapterItem | null>(null);
-  const [historyFilter, setHistoryFilter] = useState<"ALL" | "APPROVED" | "REJECTED">("ALL");
+  const [historyFilter, setHistoryFilter] = useState<"ALL" | "APPROVE" | "REJECT">("ALL");
+  const [historySort, setHistorySort] = useState<"newest" | "oldest">("newest");
+  const [storySearch, setStorySearch] = useState("");
+  const [storySort, setStorySort] = useState<"newest" | "oldest">("newest");
+  const [chapterSearch, setChapterSearch] = useState("");
+  const [chapterSort, setChapterSort] = useState<"newest" | "oldest">("newest");
 
   const loadPendingStories = useCallback(async () => {
     setLoadingStories(true);
@@ -355,7 +363,7 @@ export default function ReviewerDashboardPage() {
     try {
       await httpClient.post(APP_CONFIG.REVIEWER.REVIEW_STORY(storyId), {
         action: approved ? "APPROVE" : "REJECT",
-        note: note || undefined,
+        reason: note || undefined,
       });
       toast.success(approved ? "Đã duyệt truyện." : "Đã từ chối truyện.");
       setPendingStories((p) => p.filter((s) => s.id !== storyId));
@@ -379,7 +387,12 @@ export default function ReviewerDashboardPage() {
     }
   };
 
-  const filteredHistory = historyFilter === "ALL" ? reviewHistory : reviewHistory.filter((h) => h.decision === historyFilter);
+  const filteredHistory = (historyFilter === "ALL" ? reviewHistory : reviewHistory.filter((h) => h.action === historyFilter))
+    .sort((a, b) => historySort === "newest" ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() : new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  const filteredStories = (!storySearch.trim() ? pendingStories : pendingStories.filter((s) => s.title.toLowerCase().includes(storySearch.trim().toLowerCase()) || s.authorName.toLowerCase().includes(storySearch.trim().toLowerCase())))
+    .sort((a, b) => storySort === "newest" ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() : new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  const filteredChapters = (!chapterSearch.trim() ? pendingChapters : pendingChapters.filter((c) => c.title.toLowerCase().includes(chapterSearch.trim().toLowerCase()) || c.storyTitle.toLowerCase().includes(chapterSearch.trim().toLowerCase())))
+    .sort((a, b) => chapterSort === "newest" ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() : new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   const TABS: { id: Tab; label: string; icon: string; count?: number }[] = [
     { id: "stories", label: "Truyện", icon: "📖", count: pendingStories.length },
@@ -429,8 +442,25 @@ export default function ReviewerDashboardPage() {
         {/* ──── TAB: STORIES ──── */}
         {tab === "stories" && (
           <div>
+            <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
+              <input
+                type="text"
+                placeholder="🔍 Tìm theo tên truyện hoặc tác giả…"
+                value={storySearch}
+                onChange={(e) => setStorySearch(e.target.value)}
+                style={{ padding: "8px 14px", borderRadius: T.radiusSm, border: `1.5px solid ${T.border}`, fontSize: 13, color: T.text, fontFamily: T.font, outline: "none", width: 280, background: T.card }}
+              />
+              <span style={{ fontSize: 13, color: T.textMuted }}>{filteredStories.length} / {pendingStories.length} truyện</span>
+              <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                {(["newest", "oldest"] as const).map((s) => (
+                  <button key={s} onClick={() => setStorySort(s)} style={{ padding: "6px 14px", borderRadius: 20, border: `1.5px solid ${storySort === s ? T.accent : T.border}`, background: storySort === s ? T.accentLight : T.card, color: storySort === s ? T.accent : T.textSec, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                    {s === "newest" ? "🔽 Mới nhất" : "🔼 Cũ nhất"}
+                  </button>
+                ))}
+              </div>
+            </div>
             {loadingStories ? <div style={{ textAlign: "center", padding: "40px 0", color: T.textMuted }}>⏳ Đang tải truyện chờ duyệt…</div> :
-              pendingStories.length === 0 ? (
+              filteredStories.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "60px 0", background: T.card, borderRadius: 18, border: `1.5px dashed ${T.border}` }}>
                   <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
                   <div style={{ fontSize: 16, fontWeight: 700, color: T.text }}>Không có truyện nào cần duyệt</div>
@@ -438,7 +468,7 @@ export default function ReviewerDashboardPage() {
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))", gap: 14 }}>
-                  {pendingStories.map((story) => (
+                  {filteredStories.map((story) => (
                     <div key={story.id} style={{ background: T.card, border: `1.5px solid ${T.border}`, borderRadius: 16, overflow: "hidden", boxShadow: T.shadow, display: "flex", flexDirection: "column" }}>
                       {story.coverUrl && <img src={story.coverUrl} alt="" style={{ width: "100%", height: 150, objectFit: "cover" }} />}
                       <div style={{ padding: "14px 18px", flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
@@ -463,15 +493,32 @@ export default function ReviewerDashboardPage() {
         {/* ──── TAB: CHAPTERS ──── */}
         {tab === "chapters" && (
           <div>
+            <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
+              <input
+                type="text"
+                placeholder="🔍 Tìm theo tên chương hoặc truyện…"
+                value={chapterSearch}
+                onChange={(e) => setChapterSearch(e.target.value)}
+                style={{ padding: "8px 14px", borderRadius: T.radiusSm, border: `1.5px solid ${T.border}`, fontSize: 13, color: T.text, fontFamily: T.font, outline: "none", width: 280, background: T.card }}
+              />
+              <span style={{ fontSize: 13, color: T.textMuted }}>{filteredChapters.length} / {pendingChapters.length} chương</span>
+              <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                {(["newest", "oldest"] as const).map((s) => (
+                  <button key={s} onClick={() => setChapterSort(s)} style={{ padding: "6px 14px", borderRadius: 20, border: `1.5px solid ${chapterSort === s ? T.accent : T.border}`, background: chapterSort === s ? T.accentLight : T.card, color: chapterSort === s ? T.accent : T.textSec, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                    {s === "newest" ? "🔽 Mới nhất" : "🔼 Cũ nhất"}
+                  </button>
+                ))}
+              </div>
+            </div>
             {loadingChapters ? <div style={{ textAlign: "center", padding: "40px 0", color: T.textMuted }}>⏳ Đang tải chương chờ duyệt…</div> :
-              pendingChapters.length === 0 ? (
+              filteredChapters.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "60px 0", background: T.card, borderRadius: 18, border: `1.5px dashed ${T.border}` }}>
                   <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
                   <div style={{ fontSize: 16, fontWeight: 700, color: T.text }}>Không có chương nào cần duyệt</div>
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {pendingChapters.map((ch) => (
+                  {filteredChapters.map((ch) => (
                     <div key={ch.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", background: T.card, borderRadius: 14, border: `1.5px solid ${T.border}`, boxShadow: T.shadow }}>
                       <div style={{ width: 40, height: 40, borderRadius: 10, background: T.accentLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: T.accent, flexShrink: 0 }}>
                         {ch.chapterOrder}
@@ -495,12 +542,19 @@ export default function ReviewerDashboardPage() {
         {/* ──── TAB: HISTORY ──── */}
         {tab === "history" && (
           <div>
-            <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
-              {(["ALL", "APPROVED", "REJECTED"] as const).map((f) => (
+            <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+              {(["ALL", "APPROVE", "REJECT"] as const).map((f) => (
                 <button key={f} onClick={() => setHistoryFilter(f)} style={{ padding: "6px 14px", borderRadius: 20, border: `1.5px solid ${historyFilter === f ? T.accent : T.border}`, background: historyFilter === f ? T.accentLight : T.card, color: historyFilter === f ? T.accent : T.textSec, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                  {f === "ALL" ? "Tất cả" : f === "APPROVED" ? "✅ Đã duyệt" : "❌ Đã từ chối"}
+                  {f === "ALL" ? "Tất cả" : f === "APPROVE" ? "✅ Đã duyệt" : "❌ Đã từ chối"}
                 </button>
               ))}
+              <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                {(["newest", "oldest"] as const).map((s) => (
+                  <button key={s} onClick={() => setHistorySort(s)} style={{ padding: "6px 14px", borderRadius: 20, border: `1.5px solid ${historySort === s ? T.accent : T.border}`, background: historySort === s ? T.accentLight : T.card, color: historySort === s ? T.accent : T.textSec, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                    {s === "newest" ? "🔽 Mới nhất" : "🔼 Cũ nhất"}
+                  </button>
+                ))}
+              </div>
             </div>
             {loadingHistory ? <div style={{ textAlign: "center", padding: "40px 0", color: T.textMuted }}>⏳ Đang tải…</div> :
               filteredHistory.length === 0 ? (
@@ -511,18 +565,18 @@ export default function ReviewerDashboardPage() {
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {filteredHistory.map((h) => (
-                    <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: T.card, borderRadius: 12, border: `1.5px solid ${h.decision === "APPROVED" ? T.successBorder : T.dangerBorder}` }}>
-                      <span style={{ fontSize: 20 }}>{h.decision === "APPROVED" ? "✅" : "❌"}</span>
+                    <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: T.card, borderRadius: 12, border: `1.5px solid ${h.action === "APPROVE" ? T.successBorder : T.dangerBorder}` }}>
+                      <span style={{ fontSize: 20 }}>{h.action === "APPROVE" ? "✅" : "❌"}</span>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>
                           {h.targetType === "STORY" ? "📖 " : "📄 "}{h.targetTitle}
                         </div>
                         <div style={{ fontSize: 12, color: T.textMuted }}>
-                          {h.storyTitle ? `${h.storyTitle} · ` : ""}{new Date(h.reviewedAt).toLocaleDateString("vi-VN")}
+                          {h.storyTitle ? `${h.storyTitle} · ` : ""}{new Date(h.createdAt).toLocaleDateString("vi-VN")}
                         </div>
                       </div>
-                      <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, ...(h.decision === "APPROVED" ? { background: T.successBg, color: T.success } : { background: T.dangerBg, color: T.danger }) }}>
-                        {h.decision === "APPROVED" ? "Duyệt" : "Từ chối"}
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, ...(h.action === "APPROVE" ? { background: T.successBg, color: T.success } : { background: T.dangerBg, color: T.danger }) }}>
+                        {h.action === "APPROVE" ? "Duyệt" : "Từ chối"}
                       </span>
                       {h.note && <span style={{ fontSize: 12, color: T.textMuted, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={h.note}>📝 {h.note}</span>}
                     </div>

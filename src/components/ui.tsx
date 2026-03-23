@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { memo, useMemo } from "react";
 import { Ico } from "./Icons";
+import { timeStartToNow } from "@/utils/time";
 
 export function StarRating({ rating, size = 16 }: any) {
   return (
@@ -83,28 +84,31 @@ export function AvatarComp({ user, size = 36, onClick }: any) {
   );
 }
 const NOTIF_BG: any = {
-  review: "#fde8e8",
-  approve: "#d4edda",
-  reject: "#fde8e8",
-  task: "#dbeafe",
-  coin: "#fffbeb",
-  system: "#f0f0f0",
+  NEW_CHAPTER:      "#dbeafe",
+  STORY_APPROVED:   "#d4edda",
+  STORY_REJECTED:   "#fde8e8",
+  CHAPTER_APPROVED: "#d4edda",
+  CHAPTER_REJECTED: "#fde8e8",
+  GIFT_RECEIVED:    "#fffbeb",
+  SYSTEM:           "#f0f0f0",
 };
 const NOTIF_COLOR: any = {
-  review: "#c23d3f",
-  approve: "#1d6b3a",
-  reject: "#9e2d2f",
-  task: "#1a6fa3",
-  coin: "#9a7020",
-  system: "#6b5a4e",
+  NEW_CHAPTER:      "#1a6fa3",
+  STORY_APPROVED:   "#1d6b3a",
+  STORY_REJECTED:   "#9e2d2f",
+  CHAPTER_APPROVED: "#1d6b3a",
+  CHAPTER_REJECTED: "#9e2d2f",
+  GIFT_RECEIVED:    "#9a7020",
+  SYSTEM:           "#6b5a4e",
 };
 const NOTIF_ICON: any = {
-  review: "⭐",
-  approve: "✓",
-  reject: "✕",
-  task: "✏",
-  coin: "🪙",
-  system: "📢",
+  NEW_CHAPTER:      "📖",
+  STORY_APPROVED:   "✓",
+  STORY_REJECTED:   "✕",
+  CHAPTER_APPROVED: "✓",
+  CHAPTER_REJECTED: "✕",
+  GIFT_RECEIVED:    "🎁",
+  SYSTEM:           "📢",
 };
 export const NotificationPanel = memo(function NotificationPanel({
   notifications,
@@ -114,7 +118,7 @@ export const NotificationPanel = memo(function NotificationPanel({
   onViewAll,
 }: any) {
   const sorted = useMemo(
-    () => [...notifications].sort((a, b) => b.id - a.id),
+    () => (Array.isArray(notifications) ? [...notifications] : []).sort((a, b) => b.id - a.id),
     [notifications],
   );
   return (
@@ -169,8 +173,8 @@ export const NotificationPanel = memo(function NotificationPanel({
         sorted.map((n) => (
           <div
             key={n.id}
-            className={`notif-item${n.read ? "" : " unread"}`}
-            onClick={() => onMarkOne(n.id, n.storyId)}
+            className={`notif-item${n.isRead ? "" : " unread"}`}
+            onClick={() => onMarkOne(n.id)}
           >
             <div
               className="notif-icon"
@@ -181,7 +185,7 @@ export const NotificationPanel = memo(function NotificationPanel({
             <div className="mobile-user-info">
               <div className="notif-title">
                 {n.title}
-                {!n.read && (
+                {!n.isRead && (
                   <span
                     style={{
                       display: "inline-block",
@@ -195,7 +199,7 @@ export const NotificationPanel = memo(function NotificationPanel({
                   />
                 )}
               </div>
-              <div className="notif-text">{n.body}</div>
+              <div className="notif-text">{n.message}</div>
               <div
                 style={{
                   display: "flex",
@@ -204,7 +208,7 @@ export const NotificationPanel = memo(function NotificationPanel({
                   marginTop: 4,
                 }}
               >
-                <span className="notif-time">{n.time}</span>
+                <span className="notif-time">{n.createdAt ? timeStartToNow(n.createdAt) : ""}</span>
                 <span
                   className="notif-type-chip"
                   style={{
