@@ -1037,3 +1037,134 @@ export function MissionsTab({ missions, onAdd, onEdit, onDelete }: any) {
     </div>
   );
 }
+
+export function SystemOpsTab({
+  stats,
+  logs,
+  alerts,
+  onRunJob,
+}: any) {
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+        <h2 style={{ ...sectionTitle, marginBottom: 0 }}>⚙️ Vận hành hệ thống</h2>
+        <button
+          onClick={onRunJob}
+          style={{
+            padding: "8px 16px",
+            background: "#2563eb",
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            fontWeight: 600,
+            cursor: "pointer",
+            fontSize: 13,
+          }}
+        >
+          🚀 Chạy StatsAggregator (Batch)
+        </button>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 24 }}>
+        {[
+          { label: "DAU/MAU Ratio", v: stats?.dauMauRatio ?? "0.0%", c: "#2563eb", bg: "#dbeafe" },
+          { label: "Doanh thu (7 ngày)", v: (stats?.revenue7d ?? 0).toLocaleString() + " VND", c: "#059669", bg: "#d1fae5" },
+          { label: "Lỗi thanh toán", v: (stats?.paymentErrorRate ?? 0) + "%", c: "#dc2626", bg: "#fee2e2" },
+        ].map(k => (
+          <div key={k.label} style={{ background: "#fff", padding: "16px 20px", borderRadius: 12, border: "1.5px solid #f0ebe3" }}>
+            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>{k.label}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: k.c }}>{k.v}</div>
+          </div>
+        ))}
+      </div>
+
+      {alerts?.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: "#dc2626", marginBottom: 10 }}>⚠️ Cảnh báo bất thường</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {alerts.map((a: any, i: number) => (
+              <div key={i} style={{ background: "#fef2f2", padding: "10px 14px", borderRadius: 8, border: "1px solid #fee2e2", color: "#991b1b", fontSize: 13, fontWeight: 600 }}>
+                • {a.message}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <h3 style={{ fontSize: 14, fontWeight: 700, color: "#1c1512", marginBottom: 10 }}>📜 Server Logs (Severity)</h3>
+      <div style={tableWrap}>
+        <table style={tableStyle}>
+          <thead>
+            <tr style={{ background: "#f8f7f4" }}>
+              <th style={th}>Thời gian</th>
+              <th style={th}>Mức độ</th>
+              <th style={th}>Thành phần</th>
+              <th style={th}>Nội dung</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(logs ?? []).map((l: any, i: number) => (
+              <tr key={i}>
+                <td style={{ ...td, fontSize: 12, color: "#6b7280" }}>{l.timestamp ? new Date(l.timestamp).toLocaleString("vi-VN") : "—"}</td>
+                <td style={td}>
+                  <span style={{
+                    fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, color: "#fff",
+                    background: l.severity === "ERROR" ? "#dc2626" : l.severity === "WARN" ? "#d97706" : "#6b7280"
+                  }}>
+                    {l.severity}
+                  </span>
+                </td>
+                <td style={{ ...td, fontSize: 13, fontWeight: 600 }}>{l.component}</td>
+                <td style={{ ...td, fontSize: 13, color: "#374151" }}>{l.message}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+export function CoinMonitoringTab({
+  stats,
+  withdraws,
+  onApprove,
+  onReject,
+  onRunJob,
+}: any) {
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+        <h2 style={{ ...sectionTitle, marginBottom: 0 }}>💰 Giám sát hệ thống Coin</h2>
+        <button
+          onClick={onRunJob}
+          style={{
+            padding: "8px 16px",
+            background: "#d97706",
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            fontWeight: 600,
+            cursor: "pointer",
+            fontSize: 13,
+          }}
+        >
+          💳 Chạy MonthlySettlement (Batch)
+        </button>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
+        <div style={{ background: "#fff", padding: "20px", borderRadius: 14, border: "1.5px solid #f0ebe3" }}>
+          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Tổng nạp hôm nay</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: "#059669" }}>+ {(stats?.totalDepositToday ?? 0).toLocaleString()} VND</div>
+        </div>
+        <div style={{ background: "#fff", padding: "20px", borderRadius: 14, border: "1.5px solid #f0ebe3" }}>
+          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Tổng tiêu coin hôm nay</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: "#ff500a" }}>{(stats?.totalSpendToday ?? 0).toLocaleString()} 🪙</div>
+        </div>
+      </div>
+
+      <WithdrawsTab withdraws={withdraws} onApprove={onApprove} onReject={onReject} />
+    </div>
+  );
+}

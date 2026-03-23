@@ -1,14 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useNavStore } from "@/stores/navStore";
 import { useAuthStore } from "@/stores";
 import useChapterService from "@/api/useChapter.service";
 import useCommentService from "@/api/useComment.service";
 import useReportService from "@/api/useReport.service";
 import useStoryService from "@/api/useStory.service";
+import useGiftService from "@/api/useGift.service";
 import { useStoryStore } from "@/stores/storyStore";
+import { useGotoReader } from "@/hooks/useGotoReader";
+import Utils from "@/utils/utils";
 import { Ico } from "@/components/Icons";
 import { useToast } from "@/hooks/use-toast";
 
@@ -25,10 +28,12 @@ import { ReportModal } from "@/components/modals/ReportModal";
 // ── Main Page ─────────────────────────────────────────────────────────────
 export default function ReaderPage() {
   const router = useRouter();
-  const { selectedStory, selectedChapterId, setSelectedChapterId } =
+  const searchParams = useSearchParams();
+  const gotoReader = useGotoReader();
+  const { selectedStory, selectedChapterId, setSelectedChapterId, setSelectedStory } =
     useNavStore();
   const { chapters, setChapters } = useStoryStore();
-  const { user } = useAuthStore();
+  const { user, updateBalance } = useAuthStore();
   const { getChapter, getChaptersByStory, purchaseChapter } =
     useChapterService();
   const { getStoryDetail } = useStoryService();
@@ -36,6 +41,7 @@ export default function ReaderPage() {
   const commentServiceRef = useRef(commentService);
   commentServiceRef.current = commentService;
   const { createReport } = useReportService();
+  const { sendGift } = useGiftService();
   const toast = useToast();
 
   const [chapterData, setChapterData] = useState<ChapterData | null>(null);
@@ -60,6 +66,8 @@ export default function ReaderPage() {
     label: string;
   } | null>(null);
   const [reporting, setReporting] = useState(false);
+  const [giftAmount, setGiftAmount] = useState<number | null>(null);
+  const [showGiftOptions, setShowGiftOptions] = useState(false);
 
   // Load comments — use ref so it's never stale
   const loadComments = useCallback(async (chapterId: number) => {
@@ -78,11 +86,16 @@ export default function ReaderPage() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch chapter list for prev/next navigation when Zustand store is empty
-  // (happens on page refresh or direct URL access)
+  // Fetch chapter list for prev/next navigation
   useEffect(() => {
-    const storyId = chapterData?.storyId;
-    if (!storyId || chapters.length > 0) return;
+    const sId = searchParams.get("storyId");
+    const storyId = chapterData?.storyId || (sId ? Number(sId) : null);
+    if (!storyId || (chapters.length > 0 && chapters[0].id)) {
+      // If we have chapters and they match the current story, skip
+      // Actually, better to check if chapters[0] belongs to current storyId
+      // but let's keep it simple for now as per user request
+      return;
+    }
 
     const mapChapters = (list: any[]) =>
       list.map((ch: any) => ({
@@ -136,6 +149,28 @@ export default function ReaderPage() {
     setChapters,
   ]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Sync from URL ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    const sId = searchParams.get("storyId");
+    const cId = searchParams.get("chapterId");
+    if (!sId || !cId) return;
+
+    // Check if cId is numeric
+    if (!isNaN(Number(cId))) {
+      if (Number(cId) !== selectedChapterId) {
+        setSelectedChapterId(Number(cId));
+      }
+    } else if (chapters.length > 0) {
+      // Find by slug
+      const found = chapters.find(ch => Utils.slugify(ch.title) === cId);
+      if (found && found.id !== selectedChapterId) {
+        setSelectedChapterId(found.id);
+      } else if (!found) {
+        // Fallback: if slug doesnt match exactly (titles changed?), maybe use first chapter or error
+      }
+    }
+  }, [searchParams, selectedChapterId, chapters]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Scroll progress
   useEffect(() => {
     const handler = () => {
@@ -171,6 +206,10 @@ export default function ReaderPage() {
           setChapterError("Dữ liệu chương không hợp lệ (thiếu ID).");
         } else {
           setChapterData(data);
+          // Update selectedStory if missing
+          if (!selectedStory && data.storyId) {
+            setSelectedStory({ id: data.storyId, title: data.storyTitle });
+          }
         }
       })
       .catch((err: any) => {
@@ -199,13 +238,35 @@ export default function ReaderPage() {
     if (!commentText.trim() || !chapterData) return;
     setSubmitting(true);
     try {
+      // 1. Send gift if selected
+      if (giftAmount && giftAmount > 0) {
+        try {
+          await sendGift(chapterData.storyId, giftAmount);
+          updateBalance(giftAmount);
+          // Optional: toast.success(`Đã tặng ${giftAmount} xu!`);
+        } catch (err: any) {
+          toast.error(err?.response?.data?.message ?? "Không đủ xu để tặng quà.");
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      // 2. Post comment
+      let content = commentText.trim();
+      if (giftAmount && giftAmount > 0) {
+        content += `\n\n[DONATE:${giftAmount}]`;
+      }
+
       await commentServiceRef.current.createComment({
         chapterId: chapterData.id,
-        content: commentText.trim(),
+        content,
       });
+
       setCommentText("");
+      setGiftAmount(null);
+      setShowGiftOptions(false);
       await loadComments(chapterData.id);
-      toast.success("Đã đăng bình luận!");
+      toast.success(giftAmount ? "Đã tặng quà và đăng bình luận!" : "Đã đăng bình luận!");
     } catch {
       toast.error("Không thể đăng bình luận. Thử lại sau.");
     } finally {
@@ -275,7 +336,13 @@ export default function ReaderPage() {
     currentIdx < chapters.length - 1 ? chapters[currentIdx + 1] : null;
 
   const goToChapter = (id: number) => {
-    setSelectedChapterId(id);
+    const sId = searchParams.get("storyId") || selectedStory?.id;
+    if (sId) {
+      const ch = chapters.find(c => c.id === id);
+      gotoReader(sId, id, ch?.title);
+    } else {
+      setSelectedChapterId(id);
+    }
   };
 
   if (loading) {
@@ -770,48 +837,154 @@ export default function ReaderPage() {
           <div
             style={{
               display: "flex",
-              justifyContent: "flex-end",
-              marginTop: 8,
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginTop: 12,
               gap: 8,
             }}
           >
-            {!user && (
-              <button
-                onClick={() => router.push("?login")}
-                style={{
-                  fontSize: 13,
-                  color: "#c23d3f",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  fontWeight: 600,
-                }}
-              >
-                Đăng nhập để bình luận →
-              </button>
-            )}
-            {user && (
-              <button
-                onClick={handlePostComment}
-                disabled={!commentText.trim() || submitting}
-                style={{
-                  padding: "8px 20px",
-                  borderRadius: 9,
-                  border: "none",
-                  background:
-                    !commentText.trim() || submitting ? "#f3f4f6" : "#c23d3f",
-                  color: !commentText.trim() || submitting ? "#9ca3af" : "#fff",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor:
-                    !commentText.trim() || submitting
-                      ? "not-allowed"
-                      : "pointer",
-                }}
-              >
-                {submitting ? "Đang gửi..." : "Gửi"}
-              </button>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {user && (
+                <div style={{ position: "relative" }}>
+                  <button
+                    onClick={() => setShowGiftOptions(!showGiftOptions)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 13,
+                      color: giftAmount ? "#c69526" : "#9e8e82",
+                      background: giftAmount ? "#fef9ee" : "none",
+                      border: giftAmount ? "1px solid #fcd34d" : "1px solid #e8e0d6",
+                      borderRadius: 20,
+                      padding: "5px 12px",
+                      cursor: "pointer",
+                      fontWeight: 600,
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    <span>🎁</span>
+                    <span>{giftAmount ? `${giftAmount} xu` : "Tặng quà"}</span>
+                  </button>
+
+                  {showGiftOptions && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        bottom: "100%",
+                        left: 0,
+                        marginBottom: 10,
+                        background: "#fff",
+                        border: "1.5px solid #e8e0d6",
+                        borderRadius: 12,
+                        padding: "12px",
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                        zIndex: 100,
+                        width: 240,
+                      }}
+                    >
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#1c1512", marginBottom: 8 }}>Chọn mức tặng:</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+                        {[10, 50, 100, 200, 500].map((amt) => (
+                          <button
+                            key={amt}
+                            onClick={() => {
+                              setGiftAmount(amt);
+                              setShowGiftOptions(false);
+                            }}
+                            style={{
+                              fontSize: 11,
+                              padding: "4px 10px",
+                              borderRadius: 15,
+                              border: giftAmount === amt ? "1.5px solid #c69526" : "1.5px solid #e8e0d6",
+                              background: giftAmount === amt ? "#fef9ee" : "#fff",
+                              color: giftAmount === amt ? "#c69526" : "#6b5a4e",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {amt}
+                          </button>
+                        ))}
+                      </div>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button
+                          onClick={() => {
+                            setGiftAmount(null);
+                            setShowGiftOptions(false);
+                          }}
+                          style={{
+                            flex: 1,
+                            fontSize: 11,
+                            color: "#9ca3af",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            textAlign: "left",
+                          }}
+                        >
+                          Xóa chọn
+                        </button>
+                        <button
+                          onClick={() => setShowGiftOptions(false)}
+                          style={{
+                            fontSize: 11,
+                            color: "#c23d3f",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            fontWeight: 600,
+                          }}
+                        >
+                          Đóng
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 8 }}>
+              {!user && (
+                <button
+                  onClick={() => router.push("?login")}
+                  style={{
+                    fontSize: 13,
+                    color: "#c23d3f",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                  }}
+                >
+                  Đăng nhập để bình luận →
+                </button>
+              )}
+              {user && (
+                <button
+                  onClick={handlePostComment}
+                  disabled={!commentText.trim() || submitting}
+                  style={{
+                    padding: "8px 24px",
+                    borderRadius: 9,
+                    border: "none",
+                    background:
+                      !commentText.trim() || submitting ? "#f3f4f6" : "#c23d3f",
+                    color: !commentText.trim() || submitting ? "#9ca3af" : "#fff",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor:
+                      !commentText.trim() || submitting
+                        ? "not-allowed"
+                        : "pointer",
+                    boxShadow: !commentText.trim() || submitting ? "none" : "0 2px 8px rgba(194,61,63,0.2)",
+                  }}
+                >
+                  {submitting ? "⏳ Đang gửi..." : giftAmount ? "🎁 Tặng & Gửi" : "Gửi bình luận"}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -961,6 +1134,7 @@ export default function ReaderPage() {
                   setPurchasing(true);
                   try {
                     await purchaseChapter(chapterData.id);
+                    updateBalance(chapterData.coinPrice);
                     const res: any = await getChapter(chapterData.id);
                     const data = res?.data ?? res;
                     setChapterData(data);

@@ -109,17 +109,27 @@ export type ResultAdminService = {
 
   // Missions (list)
   getMissions: () => Promise<any>;
-
+ 
   // Withdraw requests
   getAllWithdrawRequests: () => Promise<any>;
   getPendingWithdrawRequests: () => Promise<any>;
   approveWithdraw: (id: number) => Promise<any>;
   rejectWithdraw: (id: number, reason?: string) => Promise<any>;
-
+ 
   // Missions
   createMission: (payload: Omit<AdminMission, "id">) => Promise<any>;
   updateMission: (id: number, payload: Partial<AdminMission>) => Promise<any>;
   deleteMission: (id: number) => Promise<any>;
+ 
+  // System Ops
+  getSystemStats: () => Promise<any>;
+  getSystemLogs: () => Promise<any>;
+  getSystemAlerts: () => Promise<any>;
+  runStatsJob: () => Promise<any>;
+ 
+  // Coins
+  getCoinStatsDaily: () => Promise<any>;
+  runSettlementJob: () => Promise<any>;
 };
 
 const useAdminService = (): ResultAdminService => {
@@ -220,6 +230,13 @@ const useAdminService = (): ResultAdminService => {
     createMission,
     updateMission,
     deleteMission,
+    // New
+    getSystemStats: () => httpClient.get(APP_CONFIG.ADMIN.SYSTEM_STATS),
+    getSystemLogs: () => httpClient.get(APP_CONFIG.ADMIN.SYSTEM_LOGS),
+    getSystemAlerts: () => httpClient.get(APP_CONFIG.ADMIN.SYSTEM_ALERTS),
+    runStatsJob: () => httpClient.post(APP_CONFIG.ADMIN.RUN_STATS_JOB, {}),
+    getCoinStatsDaily: () => httpClient.get(APP_CONFIG.ADMIN.COIN_STATS_DAILY),
+    runSettlementJob: () => httpClient.post(APP_CONFIG.ADMIN.RUN_SETTLEMENT_JOB, {}),
   }), [httpClient]);
 };
 

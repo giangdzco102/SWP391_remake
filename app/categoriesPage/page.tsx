@@ -7,6 +7,9 @@ import { useGotoStory } from "@/hooks/useGotoStory";
 import useStoryService from "@/api/useStory.service";
 import useCategoryService, { CategoryItem } from "@/api/useCategory.service";
 import { useRouter } from "next/navigation";
+import useFollowService from "@/api/useFollow.service";
+import { useAuthStore } from "@/stores";
+import { useToast } from "@/hooks/use-toast";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const COVER_GRADIENTS = [
@@ -55,6 +58,9 @@ export function CategoriesPage() {
   const gotoStory = useGotoStory();
   const { getAllStories } = useStoryService();
   const { getCategories } = useCategoryService();
+  const { toggleFollow } = useFollowService();
+  const { user } = useAuthStore();
+  const toast = useToast();
 
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [allData, setAllData] = useState<ReturnType<typeof toShape>[]>([]);
@@ -99,6 +105,17 @@ export function CategoriesPage() {
 
   const toggleExpand = (genre: string) =>
     setExpanded((prev) => ({ ...prev, [genre]: !prev[genre] }));
+  
+   const handleLike = async (id: number) => {          
+    if (!user) { router.push("?login"); return; }
+    toggleLike(id);
+    try {
+      await toggleFollow(id);
+    } catch {
+      toggleLike(id); // rollback
+      toast.error("Không thể thực hiện. Thử lại sau.");
+    }
+  };
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -114,7 +131,6 @@ export function CategoriesPage() {
 
       {genreList.map((genre) => {
         const cat = categories.find((c) => c.name === genre);
-        const icon = (cat as any)?.icon ?? "📖";
         const stories = storiesByGenre[genre] ?? [];
         const isExpanded = expanded[genre];
         const visible = isExpanded ? stories : stories.slice(0, DEFAULT_VISIBLE);
@@ -129,7 +145,7 @@ export function CategoriesPage() {
             {/* Header */}
             <div className="sec-head">
               <div className="flex items-center gap-2">
-                <div className="sec-title">{icon} {genre}</div>
+                <div className="sec-title">{genre}</div>
                 <div className="sec-sub">{stories.length} tác phẩm</div>
               </div>
               <div className="flex items-center gap-2">
@@ -156,7 +172,7 @@ export function CategoriesPage() {
                     story={s}
                     onStory={() => gotoStory(s)}
                     liked={likedStories.includes(s.id)}
-                    onLike={() => toggleLike(s.id)}
+                    onLike={() => handleLike(s.id)}
                   />
                 ))}
               </div>

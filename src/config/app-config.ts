@@ -111,12 +111,6 @@ export default class APP_CONFIG {
     MY:     "/role-change-requests/my",
   };
 
-  // ── Report ────────────────────────────────────────────────────────────────
-  static REPORT = {
-    CREATE: "/reports",
-    MY:     "/reports/my",
-  };
-
   // ── Withdraw Request ──────────────────────────────────────────────────────
   static WITHDRAW = {
     CREATE: "/withdraw-requests",
@@ -204,6 +198,14 @@ export default class APP_CONFIG {
     CREATE_MISSION:          "/admin/missions",
     UPDATE_MISSION:          (id: string | number) => `/admin/missions/${id}`,
     DELETE_MISSION:          (id: string | number) => `/admin/missions/${id}`,
+
+    // System Ops & Coin Monitoring
+    SYSTEM_STATS:            "/admin/system/stats",
+    SYSTEM_LOGS:             "/admin/system/logs",
+    SYSTEM_ALERTS:           "/admin/system/alerts",
+    RUN_STATS_JOB:           "/admin/jobs/stats-aggregator",
+    COIN_STATS_DAILY:        "/admin/coins/stats-daily",
+    RUN_SETTLEMENT_JOB:      "/admin/jobs/monthly-settlement",
   };
 }
 

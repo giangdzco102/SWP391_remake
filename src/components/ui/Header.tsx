@@ -22,6 +22,7 @@ import {
   SettingsModal,
 } from "@/components/popup/BecomeModal";
 import { useModalStore } from "@/stores/modalStore";
+import { useSyncFollowStatus } from "@/hooks/useSyncFollowStatus";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const SEARCH_COVER_FALLBACKS = [
@@ -76,7 +77,6 @@ function CategoryDropdown({
         {categories.map((cat) => (
           <button key={cat.id} style={itemStyle} onClick={() => onSelect(cat.name)}
             onMouseEnter={(e) => hover(e, true)} onMouseLeave={(e) => hover(e, false)}>
-            <span style={{ fontSize: 16, flexShrink: 0 }}>{(cat as any).icon ?? "📖"}</span>
             <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{cat.name}</span>
           </button>
         ))}
@@ -97,6 +97,7 @@ function CategoryDropdown({
 
 // ── Header ────────────────────────────────────────────────────────────────────
 export function Header({ pending, darkMode, setDarkMode }: any) {
+  useSyncFollowStatus();
   const { openModal, closeModal } = useModalStore();
   const { user, setLoading } = useAuthStore();
   const { navTo, page } = useNavStore();
@@ -213,6 +214,7 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
       { label: "Bảng xếp hạng", page: "/rankingsPage" },
       { label: "Thể loại", page: "/categoriesPage", isCat: true },
       { label: "Yêu thích", page: "/favoritesPage" },
+      { label: "Nhiệm vụ", page: "/missionsPage" },
       ...(user?.roles.includes("REVIEWER")
         ? [
             {
@@ -236,16 +238,28 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
   );
 
   const ROLE_LABEL: any = {
-    reviewer: "Reviewer",
-    author: "Tác giả",
-    editor: "Editor",
+    READER: "Độc giả",
+    AUTHOR: "Tác giả",
+    REVIEWER: "Reviewer",
+    EDITOR: "Editor",
+    ADMIN: "Quản trị",
+    // Keep lowercase for fallback
     reader: "Độc giả",
+    author: "Tác giả",
+    reviewer: "Reviewer",
+    editor: "Editor",
   };
   const ROLE_CHIP_CLASS: any = {
-    reviewer: "chip-role-reviewer",
-    author: "chip-role-author",
-    editor: "chip-role-editor",
+    READER: "chip-role-reader",
+    AUTHOR: "chip-role-author",
+    REVIEWER: "chip-role-reviewer",
+    EDITOR: "chip-role-editor",
+    ADMIN: "chip-role-admin",
+    // Keep lowercase for fallback
     reader: "chip-role-reader",
+    author: "chip-role-author",
+    reviewer: "chip-role-reviewer",
+    editor: "chip-role-editor",
   };
   const mobileAnd = (fn: () => void) => () => {
     setShowMobileMenu(false);
@@ -319,8 +333,9 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
                   <button className="mobile-nav-link" style={{ color: "#7c3aed", fontWeight: 700 }} onClick={mobileAnd(() => router.push("/adminDashboard"))}>⚙ Quản trị Admin</button>
                 )}
                 <button className="mobile-nav-link" onClick={mobileAnd(() => router.push("/profilePage"))}>👤 Hồ sơ của tôi</button>
+                <button className="mobile-nav-link" onClick={mobileAnd(() => router.push("/missionsPage"))}>🎯 Nhiệm vụ</button>
                 <button className="mobile-nav-link" onClick={mobileAnd(() => router.push("/coinShopPage"))}>🪙 Coin Shop</button>
-                <button className="mobile-nav-link" onClick={mobileAnd(() => navTo("notifications"))}>
+                <button className="mobile-nav-link" onClick={mobileAnd(() => router.push("/notificationsPage"))}>
                   🔔 Thông báo
                   {unreadCount > 0 && <span style={{ marginLeft: "auto", background: "#c23d3f", color: "#fff", borderRadius: "50%", fontSize: 10, padding: "2px 6px", fontWeight: 700 }}>{unreadCount}</span>}
                 </button>
@@ -424,8 +439,8 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
           ) : (
             <>
               {/* Wallet */}
-              {(user.roles.includes("reviewer") || user.roles.includes("editor")) && (
-                <div className="inline-flex cursor-pointer items-center gap-1 rounded-full border-[1.5px] border-[#fcd34d] bg-[#fffbeb] px-2.5 py-1 text-[12px] font-bold text-[#92400e] transition-all duration-150 hover:bg-[#fef3c7]" onClick={() => navTo("coin-shop")}>
+              {(user.roles.includes("REVIEWER") || user.roles.includes("EDITOR") || user.roles.includes("reviewer") || user.roles.includes("editor")) && (
+                <div className="inline-flex cursor-pointer items-center gap-1 rounded-full border-[1.5px] border-[#fcd34d] bg-[#fffbeb] px-2.5 py-1 text-[12px] font-bold text-[#92400e] transition-all duration-150 hover:bg-[#fef3c7]" onClick={() => router.push("/coinShopPage")}>
                   🪙 {user.walletBalance}
                 </div>
               )}
@@ -440,7 +455,7 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
                   {unreadCount > 0 && <span className="absolute right-1 top-1 h-2 w-2 animate-[pulse_2s_infinite] rounded-full border-2 border-white bg-[#c23d3f]" />}
                 </button>
                 {showNotif && (
-                  <NotificationPanel notifications={notifications} unreadCount={unreadCount} onMarkAll={handleMarkAll} onMarkOne={handleMarkOne} onViewAll={() => navTo("notifications")} />
+                  <NotificationPanel notifications={notifications} unreadCount={unreadCount} onMarkAll={handleMarkAll} onMarkOne={handleMarkOne} onViewAll={() => { setShowNotif(false); router.push("/notificationsPage"); }} />
                 )}
               </div>
 
@@ -458,7 +473,21 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <AvatarComp user={user} size={38} />
                         <div>
-                          <div className="dropdown-user-name">{user.fullName}</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <div className="dropdown-user-name">{user.fullName}</div>
+                            <span style={{
+                              background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+                              color: "#fff",
+                              fontSize: "10px",
+                              fontWeight: 800,
+                              padding: "1px 6px",
+                              borderRadius: "6px",
+                              textTransform: "uppercase",
+                              boxShadow: "0 2px 4px rgba(37,99,235,0.2)"
+                            }}>
+                              LV.{user.level ?? 1}
+                            </span>
+                          </div>
                           <div className="dropdown-email">{user.email}</div>
                           <span className={`dropdown-role-chip ${ROLE_CHIP_CLASS[primaryRole] ?? "chip-role-reader"}`}>
                             {ROLE_LABEL[primaryRole] ?? "Độc giả"}
@@ -477,21 +506,22 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
 
                     {/* Common */}
                     <button className="dropdown-item" onClick={() => { setShowUserMenu(false); router.push("/profilePage"); }}><Ico.User /> Hồ sơ của tôi</button>
-                    <button className="dropdown-item" onClick={() => { setShowUserMenu(false); navTo("notifications"); }}>
+                    <button className="dropdown-item" onClick={() => { setShowUserMenu(false); router.push("/notificationsPage"); }}>
                       <Ico.Bell /> Thông báo
                       {unreadCount > 0 && <span style={{ marginLeft: "auto", background: "#c23d3f", color: "#fff", borderRadius: 10, fontSize: 11, padding: "1px 6px" }}>{unreadCount}</span>}
                     </button>
 
                     {/* Role-based */}
-                    {user.roles.includes("AUTHOR") && <button className="dropdown-item" onClick={() => { setShowUserMenu(false); navTo("my-stories"); }}><Ico.Pen /> Tác phẩm của tôi</button>}
-                    {user.roles.includes("REVIEWER") && (
-                      <button className="dropdown-item" onClick={() => { setShowUserMenu(false); navTo("reviewer-dash"); }}>
+                    {(user.roles.includes("AUTHOR") || user.roles.includes("author")) && <button className="dropdown-item" onClick={() => { setShowUserMenu(false); router.push("/myStoriesPage"); }}><Ico.Pen /> Tác phẩm của tôi</button>}
+                    {(user.roles.includes("REVIEWER") || user.roles.includes("reviewer")) && (
+                      <button className="dropdown-item" onClick={() => { setShowUserMenu(false); router.push("/reviewerDashboard"); }}>
                         <Ico.Shield /> Bảng kiểm duyệt
                         {pending?.length > 0 && <span style={{ marginLeft: "auto", background: "#c23d3f", color: "#fff", borderRadius: 10, fontSize: 11, padding: "1px 6px" }}>{pending.length}</span>}
                       </button>
                     )}
-                    {user.roles.includes("EDITOR") && <button className="dropdown-item" onClick={() => { setShowUserMenu(false); navTo("editor-dash"); }}><Ico.Edit /> Bảng nhiệm vụ</button>}
-                    {user.roles.includes("ADMIN") && <button className="dropdown-item" style={{ color: "#7c3aed", fontWeight: 700 }} onClick={() => { setShowUserMenu(false); router.push("/adminDashboard"); }}><Ico.Shield /> Quản trị Admin</button>}
+                    <button className="dropdown-item" onClick={() => { setShowUserMenu(false); router.push("/missionsPage"); }}><Ico.Trophy /> Nhiệm vụ</button>
+                    {(user.roles.includes("EDITOR") || user.roles.includes("editor")) && <button className="dropdown-item" onClick={() => { setShowUserMenu(false); router.push("/editorDashboard"); }}><Ico.Edit /> Bảng nhiệm vụ</button>}
+                    {(user.roles.includes("ADMIN") || user.roles.includes("admin")) && <button className="dropdown-item" style={{ color: "#7c3aed", fontWeight: 700 }} onClick={() => { setShowUserMenu(false); router.push("/adminDashboard"); }}><Ico.Shield /> Quản trị Admin</button>}
 
                     <div className="dropdown-divider" />
 

@@ -90,9 +90,23 @@ export default class Utils {
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = fileName;
-    anchor.click();
-    window.URL.revokeObjectURL(url);
     anchor.remove();
+    window.URL.revokeObjectURL(url);
+  }
+
+  static slugify(text: string): string {
+    if (!text) return "";
+    const from = "àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ·/_,:;";
+    const to = "aaaaaaaaaaaaaaaaaeeeeeeeeeeeiiiiiooooooooooooooooouuuuuuuuuuuyyyyyd------";
+    let str = text.toLowerCase().trim();
+    for (let i = 0, l = from.length; i < l; i++) {
+      str = str.replace(new RegExp(from.charAt(i), "g"), to.charAt(i));
+    }
+
+    return str
+      .replace(/[^a-z0-9 -]/g, "") // remove invalid chars
+      .replace(/\s+/g, "-") // collapse whitespace and replace by -
+      .replace(/-+/g, "-"); // collapse dashes
   }
 }
 export const convertLocaltimeToUTC = (

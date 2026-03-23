@@ -141,7 +141,7 @@ function fInput(): React.CSSProperties { return { width: "100%", padding: "10px 
 /* ================================================================
    RICH TEXT EDITOR
    ================================================================ */
-function RichEditor({ value, onChange }: { value: string; onChange: (h: string) => void }) {
+function RichEditor({ value, onChange, height }: { value: string; onChange: (h: string) => void; height?: string | number }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => { if (ref.current) ref.current.innerHTML = toHtml(value); }, []);// eslint-disable-line react-hooks/exhaustive-deps
   const exec = (cmd: string, val?: string) => { document.execCommand(cmd, false, val); ref.current?.focus(); if (ref.current) onChange(ref.current.innerHTML); };
@@ -152,7 +152,7 @@ function RichEditor({ value, onChange }: { value: string; onChange: (h: string) 
   );
   const sep = <div style={{ width: 1, alignSelf: "stretch", background: T.border, margin: "0 2px" }} />;
   return (
-    <div style={{ border: `1.5px solid ${T.border}`, borderRadius: T.radius, overflow: "hidden", background: T.card }}>
+    <div style={{ border: `1.5px solid ${T.border}`, borderRadius: T.radius, overflow: "hidden", background: T.card, display: "flex", flexDirection: "column", height: height || "auto" }}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 3, padding: "8px 10px", background: T.grayBg, borderBottom: `1px solid ${T.border}`, alignItems: "center" }}>
         {tb("B", "bold", "Bold", undefined, { fontWeight: 800 })}
         {tb("I", "italic", "Italic", undefined, { fontStyle: "italic" })}
@@ -170,7 +170,7 @@ function RichEditor({ value, onChange }: { value: string; onChange: (h: string) 
         {tb("↻", "redo", "Redo")}
       </div>
       <div ref={ref} contentEditable suppressContentEditableWarning onInput={() => { if (ref.current) onChange(ref.current.innerHTML); }}
-        style={{ minHeight: 300, maxHeight: 500, overflowY: "auto", padding: "16px 20px", fontSize: 15, color: T.text, fontFamily: "'Lora', Georgia, serif", lineHeight: 1.85, outline: "none" }}
+        style={{ flex: 1, minHeight: 300, overflowY: "auto", padding: "16px 20px", fontSize: 15, color: T.text, fontFamily: "'Lora', Georgia, serif", lineHeight: 1.85, outline: "none", overflowWrap: "break-word", wordBreak: "break-word" }}
       />
     </div>
   );
@@ -186,7 +186,7 @@ function ChapterPreviewModal({ chapterId, onClose }: { chapterId: number; onClos
   useEffect(() => {
     httpClient.get(APP_CONFIG.CHAPTER.GET(chapterId))
       .then((res: any) => setChapter(res?.data ?? res ?? null))
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, [chapterId]);// eslint-disable-line react-hooks/exhaustive-deps
   const content = chapter?.content ?? "";
@@ -201,11 +201,11 @@ function ChapterPreviewModal({ chapterId, onClose }: { chapterId: number; onClos
           </div>
           <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: "50%", border: `1.5px solid ${T.border}`, background: T.bg, cursor: "pointer", fontSize: 16, color: T.textSec, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
         </div>
-        <div style={{ overflowY: "auto", padding: "20px 24px" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", minHeight: 0 }}>
           {loading ? <div style={{ textAlign: "center", padding: 20, color: T.textMuted }}>⏳ Đang tải nội dung…</div> :
             !content ? <div style={{ color: T.textMuted, fontStyle: "italic" }}>Không có nội dung.</div> :
-              isHtml ? <div style={{ fontSize: 15, color: T.text, lineHeight: 1.85, fontFamily: "'Lora',serif" }} dangerouslySetInnerHTML={{ __html: content }} /> :
-                content.split(/\n+/).filter(Boolean).map((p, i) => <p key={i} style={{ fontSize: 15, color: T.text, lineHeight: 1.85, fontFamily: "'Lora',serif", marginBottom: "1em" }}>{p}</p>)
+              isHtml ? <div style={{ fontSize: 15, color: T.text, lineHeight: 1.85, fontFamily: "'Lora',serif", overflowWrap: "break-word", wordBreak: "break-word" }} dangerouslySetInnerHTML={{ __html: content }} /> :
+                content.split(/\n+/).filter(Boolean).map((p, i) => <p key={i} style={{ fontSize: 15, color: T.text, lineHeight: 1.85, fontFamily: "'Lora',serif", marginBottom: "1em", overflowWrap: "break-word", wordBreak: "break-word" }}>{p}</p>)
           }
         </div>
         <div style={{ padding: "12px 22px", borderTop: `1px solid ${T.borderLight}`, display: "flex", justifyContent: "flex-end", flexShrink: 0 }}>
@@ -230,7 +230,7 @@ function EditorWorkModal({ request, onClose, onSubmit, onWithdraw }: { request: 
   useEffect(() => {
     httpClient.get(APP_CONFIG.CHAPTER.GET(request.chapterId))
       .then((res: any) => setOriginalContent(res?.data?.content ?? res?.content ?? ""))
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoadingOriginal(false));
   }, [request.chapterId]);// eslint-disable-line react-hooks/exhaustive-deps
 
@@ -284,32 +284,32 @@ function EditorWorkModal({ request, onClose, onSubmit, onWithdraw }: { request: 
         </div>
 
         {/* Main content — side by side */}
-        <div style={{ flex: 1, overflow: "hidden", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
+        <div style={{ flex: 1, overflow: "hidden", minHeight: 0, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
           {/* Left: Original */}
-          <div style={{ display: "flex", flexDirection: "column", borderRight: `1.5px solid ${T.borderLight}` }}>
+          <div style={{ display: "flex", flexDirection: "column", borderRight: `1.5px solid ${T.borderLight}`, minHeight: 0 }}>
             <div style={{ padding: "10px 16px", borderBottom: `1px solid ${T.borderLight}`, fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: "uppercase", flexShrink: 0 }}>📄 Nội dung gốc (readonly)</div>
             <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
               {loadingOriginal ? <div style={{ color: T.textMuted }}>Đang tải…</div> :
                 !originalContent ? <div style={{ color: T.textMuted, fontStyle: "italic" }}>Không có nội dung gốc.</div> :
                   /<[a-z]/i.test(originalContent) ?
-                    <div style={{ fontSize: 14, color: T.text, lineHeight: 1.8, fontFamily: "'Lora',serif" }} dangerouslySetInnerHTML={{ __html: originalContent }} /> :
-                    originalContent.split(/\n+/).filter(Boolean).map((p, i) => <p key={i} style={{ fontSize: 14, color: T.text, lineHeight: 1.8, fontFamily: "'Lora',serif", marginBottom: "0.8em" }}>{p}</p>)
+                    <div style={{ fontSize: 14, color: T.text, lineHeight: 1.8, fontFamily: "'Lora',serif", overflowWrap: "break-word", wordBreak: "break-word" }} dangerouslySetInnerHTML={{ __html: originalContent }} /> :
+                    originalContent.split(/\n+/).filter(Boolean).map((p, i) => <p key={i} style={{ fontSize: 14, color: T.text, lineHeight: 1.8, fontFamily: "'Lora',serif", marginBottom: "0.8em", overflowWrap: "break-word", wordBreak: "break-word" }}>{p}</p>)
               }
             </div>
           </div>
           {/* Right: Editor */}
-          <div style={{ display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
             <div style={{ padding: "10px 16px", borderBottom: `1px solid ${T.borderLight}`, fontSize: 12, fontWeight: 700, color: T.accent, textTransform: "uppercase", flexShrink: 0, display: "flex", justifyContent: "space-between" }}>
               <span>✏️ Bản chỉnh sửa</span>
               <span style={{ color: T.textMuted, fontWeight: 400 }}>{wordCount.toLocaleString()} chữ</span>
             </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "12px 16px", minHeight: 0 }}>
               {isSubmitted ? (
-                <div style={{ fontSize: 14, color: T.text, lineHeight: 1.8, fontFamily: "'Lora',serif", whiteSpace: "pre-wrap" }}>
+                <div style={{ flex: 1, overflowY: "auto", fontSize: 14, color: T.text, lineHeight: 1.8, fontFamily: "'Lora',serif", whiteSpace: "pre-wrap", overflowWrap: "break-word", wordBreak: "break-word" }}>
                   {editedContent || "(Trống)"}
                 </div>
               ) : (
-                <RichEditor value={editedContent} onChange={setEditedContent} />
+                <RichEditor value={editedContent} onChange={setEditedContent} height="100%" />
               )}
             </div>
           </div>
@@ -344,11 +344,11 @@ function EditorWorkModal({ request, onClose, onSubmit, onWithdraw }: { request: 
    WALLET SECTION (Editor)
    ================================================================ */
 const EDITOR_FALLBACK_PKGS: CoinPackage[] = [
-  { id: "BASIC",    displayName: "Cơ Bản",      amountVnd: 10000,  coinAmount: 10000,  bonusPercent: 0  },
-  { id: "SAVING",   displayName: "Tiết Kiệm",   amountVnd: 50000,  coinAmount: 56000,  bonusPercent: 12 },
-  { id: "POPULAR",  displayName: "Phổ Biến ⭐", amountVnd: 100000, coinAmount: 118000, bonusPercent: 18 },
-  { id: "ADVANCED", displayName: "Nâng Cao",    amountVnd: 200000, coinAmount: 244000, bonusPercent: 22 },
-  { id: "VIP",      displayName: "VIP",          amountVnd: 500000, coinAmount: 650000, bonusPercent: 30 },
+  { id: "BASIC", displayName: "Cơ Bản", amountVnd: 10000, coinAmount: 10000, bonusPercent: 0 },
+  { id: "SAVING", displayName: "Tiết Kiệm", amountVnd: 50000, coinAmount: 56000, bonusPercent: 12 },
+  { id: "POPULAR", displayName: "Phổ Biến ⭐", amountVnd: 100000, coinAmount: 118000, bonusPercent: 18 },
+  { id: "ADVANCED", displayName: "Nâng Cao", amountVnd: 200000, coinAmount: 244000, bonusPercent: 22 },
+  { id: "VIP", displayName: "VIP", amountVnd: 500000, coinAmount: 650000, bonusPercent: 30 },
 ];
 
 function WalletSection({ wallet, transactions, loadingTx }: { wallet: WalletInfo | null; transactions: WalletTx[]; loadingTx: boolean }) {
@@ -362,7 +362,7 @@ function WalletSection({ wallet, transactions, loadingTx }: { wallet: WalletInfo
     paymentService.getPackages().then((res: any) => {
       const list: CoinPackage[] = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
       if (list.length > 0) setPackages(list);
-    }).catch(() => {});
+    }).catch(() => { });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleBuy = async (pkgId: string) => {
@@ -502,7 +502,10 @@ export default function EditorDashboardPage() {
 
   useEffect(() => {
     if (!user) { router.push("/?login"); return; }
-    const hasEditor = user.roles?.some((r: string) => r === "EDITOR" || r === "ROLE_EDITOR" || r === "ADMIN" || r === "ROLE_ADMIN");
+    const hasEditor = user.roles?.some((r: string) => {
+      const ur = r.toUpperCase();
+      return ur === "EDITOR" || ur === "ROLE_EDITOR" || ur === "ADMIN" || ur === "ROLE_ADMIN";
+    });
     if (!hasEditor) { router.push("/"); return; }
     loadOpen();
     loadAssigned();
@@ -550,7 +553,7 @@ export default function EditorDashboardPage() {
   const sortedOpen = [...openRequests]
     .sort((a, b) => sortOpen === "reward" ? b.coinReward - a.coinReward
       : sortOpen === "newest" ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      : new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+        : new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
     .filter((r) => !openSearch.trim() || r.chapterTitle.toLowerCase().includes(openSearch.trim().toLowerCase()) || r.storyTitle.toLowerCase().includes(openSearch.trim().toLowerCase()) || r.authorName.toLowerCase().includes(openSearch.trim().toLowerCase()));
   const filteredMine = mineRequests
     .filter((r) => mineFilter === "ALL" || r.status === mineFilter)
@@ -695,7 +698,8 @@ export default function EditorDashboardPage() {
                           <div style={{ flex: 1 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
                               <span style={{ fontFamily: T.fontSerif, fontSize: 15, fontWeight: 700, color: T.text }}>{req.chapterTitle}</span>
-                              <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 20, padding: "3px 10px",
+                              <span style={{
+                                fontSize: 11, fontWeight: 700, borderRadius: 20, padding: "3px 10px",
                                 ...(isSubmitted ? { background: T.infoBg, color: T.info, border: `1px solid ${T.infoBorder}` }
                                   : isRejected ? { background: T.dangerBg, color: T.danger, border: `1px solid ${T.dangerBorder}` }
                                     : { background: T.accentLight, color: T.accent, border: `1px solid ${T.accentBorder}` })

@@ -72,7 +72,7 @@ export function CoinShopPage() {
   const [wdSubmitting, setWdSubmitting] = useState(false);
   const [wdForm, setWdForm] = useState({ amount: "", bankName: "", bankAccount: "", bankOwner: "", note: "" });
 
-  const { user } = useAuthStore();
+  const { user, setWalletBalance: syncBalance } = useAuthStore();
   const { getWallet, getTransactions } = useWalletService();
   const { getPackages, createPaymentLink, getPaymentHistory, recoverPayments } = usePaymentService();
   const httpClient = useHttpClient();
@@ -96,7 +96,10 @@ export function CoinShopPage() {
     if (!user) return;
     getWallet().then((res: any) => {
       const d = res?.data ?? res;
-      if (d?.balance != null) setWalletBalance(d.balance);
+      if (d?.balance != null) {
+        setWalletBalance(d.balance);
+        syncBalance(d.balance);
+      }
       if (d?.lockedBalance != null) setLockedBalance(d.lockedBalance);
     }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps

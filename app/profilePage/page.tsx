@@ -5,6 +5,7 @@ import { useAuthStore } from "@/stores";
 import useAuthService from "@/api/useAuth.service";
 import useStoryService from "@/api/useStory.service";
 import useWalletService from "@/api/useWallet.service";
+import useWithdrawService, { WithdrawRequest, WithdrawResponse } from "@/api/useWithdraw.service";
 import { PayloadUpdateProfile } from "@/types/auth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -206,9 +207,97 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
+
+// ── Withdraw Modal ──────────────────────────────────────────────
+function WithdrawModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const { user } = useAuthStore();
+  const { createWithdrawRequest } = useWithdrawService();
+  const toast = useToast();
+  const [saving, setSaving] = useState(false);
+
+  const { control, handleSubmit, formState: { errors } } = useForm<WithdrawRequest>({
+    defaultValues: { amount: 1000, bankName: "", accountNumber: "", accountHolder: "", note: "" },
+  });
+
+  const onSubmit = async (data: WithdrawRequest) => {
+    if ((user?.walletBalance ?? 0) < data.amount) {
+      toast.error("Số dư không đủ để rút!");
+      return;
+    }
+    setSaving(true);
+    try {
+      await createWithdrawRequest(data);
+      toast.success("Gửi yêu cầu rút tiền thành công! Vui lòng chờ Admin duyệt.");
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Gửi yêu cầu thất bại.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", padding: "10px 14px", borderRadius: 10,
+    border: "1.5px solid #ddd5c8", fontSize: 14, outline: "none",
+    fontFamily: "inherit", background: "#fdfaf7", boxSizing: "border-box",
+  };
+  const labelStyle: React.CSSProperties = {
+    display: "block", fontSize: 12, fontWeight: 600, color: "#6b5a4e",
+    marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.4px",
+  };
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 900,
+      background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+    }} onClick={onClose}>
+      <div style={{
+        background: "#fff", borderRadius: 20, width: "100%", maxWidth: 480,
+        boxShadow: "0 24px 64px rgba(0,0,0,0.25)", animation: "popIn 0.2s ease",
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding: "20px 24px", borderBottom: "1.5px solid #f5ede4", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 18, fontWeight: 700 }}>💸 Rút tiền về ngân hàng</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18 }}>✕</button>
+        </div>
+        <form onSubmit={handleSubmit(onSubmit)} style={{ padding: 24 }}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>Số coin muốn rút (1 coin = 1 VND)</label>
+            <Controller name="amount" control={control} rules={{ required: true, min: 1000 }}
+              render={({ field }) => <input {...field} type="number" style={inputStyle} />} />
+            {errors.amount && <div style={{ color: "#c23d3f", fontSize: 11, marginTop: 4 }}>Rút tối thiểu 1,000 coin</div>}
+            <div style={{ fontSize: 12, color: "#9e8e82", marginTop: 4 }}>Số dư hiện tại: 🪙 {user?.walletBalance}</div>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>Tên ngân hàng</label>
+            <Controller name="bankName" control={control} rules={{ required: "Bắt buộc" }}
+              render={({ field }) => <input {...field} placeholder="Ví dụ: Vietcombank, MB, Momo..." style={inputStyle} />} />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>Số tài khoản</label>
+            <Controller name="accountNumber" control={control} rules={{ required: "Bắt buộc" }}
+              render={({ field }) => <input {...field} style={inputStyle} />} />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>Tên chủ tài khoản</label>
+            <Controller name="accountHolder" control={control} rules={{ required: "Bắt buộc" }}
+              render={({ field }) => <input {...field} placeholder="VIET HOA KHONG DAU" style={inputStyle} />} />
+          </div>
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+            <button type="button" onClick={onClose} style={{ padding: "10px 20px", borderRadius: 10, border: "1.5px solid #ddd5c8", background: "#fff" }}>Hủy</button>
+            <button type="submit" disabled={saving} style={{ padding: "10px 24px", borderRadius: 10, border: "none", background: "#c23d3f", color: "#fff", fontWeight: 700 }}>
+              {saving ? "⏳ Đang gửi..." : "Gửi yêu cầu"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 // ───────────────────────────────────────────────────────────────
 
-type TabKey = "info" | "stories" | "reviews" | "coins";
+type TabKey = "info" | "stories" | "reviews" | "coins" | "withdraw";
 
 // ── Edit Profile Modal ──────────────────────────────────────────
 function EditProfileModal({ onClose }: { onClose: () => void }) {
@@ -521,10 +610,12 @@ export function ProfilePage() {
   const { uploadAvatar, updateProfile } = useAuthService();
   const { getMyStories } = useStoryService();
   const { getTransactions } = useWalletService();
+  const { getMyWithdrawRequests } = useWithdrawService();
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<TabKey>("info");
   const [showEdit, setShowEdit] = useState(false);
   const [showChangePw, setShowChangePw] = useState(false);
+  const [showWithdraw, setShowWithdraw] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const quickAvatarRef = useRef<HTMLInputElement>(null);
 
@@ -534,6 +625,8 @@ export function ProfilePage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [coinTxs, setCoinTxs] = useState<any[]>([]);
   const [coinLoading, setCoinLoading] = useState(false);
+  const [withdrawReqs, setWithdrawReqs] = useState<WithdrawResponse[]>([]);
+  const [withdrawLoading, setWithdrawLoading] = useState(false);
 
   const TX_TYPE_MAP: Record<string, { label: string; type: "earn" | "spend" }> = {
     TOPUP:        { label: "Nạp coin",         type: "earn"  },
@@ -542,7 +635,16 @@ export function ProfilePage() {
     GIFT_RECEIVED:{ label: "Nhận quà",         type: "earn"  },
     REWARD:       { label: "Thưởng duyệt bài", type: "earn"  },
     EDIT_REWARD:  { label: "Thưởng biên tập",  type: "earn"  },
+    WITHDRAW:     { label: "Rút tiền",         type: "spend" },
   };
+
+  const fetchWithdraws = useCallback(() => {
+    setWithdrawLoading(true);
+    getMyWithdrawRequests()
+      .then((res: any) => setWithdrawReqs(res?.data ?? res ?? []))
+      .catch(() => {})
+      .finally(() => setWithdrawLoading(false));
+  }, [getMyWithdrawRequests]);
 
   useEffect(() => {
     if (!user || activeTab !== "stories") return;
@@ -559,6 +661,11 @@ export function ProfilePage() {
       .finally(() => setStoriesLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, user]);
+
+  useEffect(() => {
+    if (!user || activeTab !== "withdraw") return;
+    fetchWithdraws();
+  }, [activeTab, user, fetchWithdraws]);
 
   useEffect(() => {
     if (!user || activeTab !== "coins") return;
@@ -588,6 +695,7 @@ export function ProfilePage() {
     { key: "stories", label: "Tác phẩm" },
     { key: "reviews", label: "Đánh giá" },
     { key: "coins",   label: "Lịch sử coin" },
+    { key: "withdraw", label: "Rút tiền" },
   ];
 
   const handleQuickAvatar = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -660,8 +768,28 @@ export function ProfilePage() {
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <span className={`role-chip ${roleChipClass}`}>{roleIcon} {roleLabel}</span>
-            <button className="tab-btn" onClick={() => setShowEdit(true)}>Sửa hồ sơ</button>
-            <button className="tab-btn" onClick={() => setShowChangePw(true)}>🔑 Đổi mật khẩu</button>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              background: "#fdf7f0",
+              padding: "4px 12px",
+              borderRadius: "10px",
+              border: "1.5px solid #ece6dc",
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 800, color: "#2563eb" }}>LV.{user?.level ?? 1}</span>
+              <div style={{ width: 100, height: 6, background: "#e5e7eb", borderRadius: 3, overflow: "hidden" }}>
+                <div style={{
+                  width: `${Math.min(100, ((user?.experience ?? 0) / ((user?.level ?? 1) * ((user?.level ?? 1) + 1) * 50)) * 100)}%`,
+                  height: "100%",
+                  background: "linear-gradient(90deg, #3b82f6, #2563eb)",
+                  borderRadius: 3
+                }} />
+              </div>
+              <span style={{ fontSize: 11, color: "#9e8e82", fontWeight: 500 }}>
+                {user?.experience ?? 0} / {(user?.level ?? 1) * ((user?.level ?? 1) + 1) * 50} EXP
+              </span>
+            </div>
           </div>
         </div>
 
@@ -852,6 +980,46 @@ export function ProfilePage() {
           )}
         </div>
       )}
+      {activeTab === "withdraw" && (
+        <div className="fade-in">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#1c1512" }}>Yêu cầu rút tiền</div>
+            <button
+              onClick={() => setShowWithdraw(true)}
+              style={{ padding: "8px 16px", borderRadius: 10, border: "none", background: "#c23d3f", color: "#fff", fontWeight: 700, cursor: "pointer" }}
+            >
+              + Tạo yêu cầu mới
+            </button>
+          </div>
+
+          {withdrawLoading ? (
+            <div className="empty-state">⏳ Đang tải...</div>
+          ) : withdrawReqs.length === 0 ? (
+            <div className="empty-state">Chưa có yêu cầu rút tiền nào</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {withdrawReqs.map((req) => (
+                <div key={req.id} style={{ background: "#fff", borderRadius: 14, border: "1.5px solid #ece6dc", padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: "#1c1512" }}>-{req.amount} coin</div>
+                    <div style={{ fontSize: 12, color: "#9e8e82" }}>{req.bankName} · STK: {req.accountNumber}</div>
+                    <div style={{ fontSize: 11, color: "#bfad9e", marginTop: 2 }}>{new Date(req.createdAt).toLocaleString("vi-VN")}</div>
+                  </div>
+                  <div style={{
+                    padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700,
+                    background: req.status === "APPROVED" ? "#dcfce7" : req.status === "REJECTED" ? "#fde8e8" : "#fef3c7",
+                    color: req.status === "APPROVED" ? "#166534" : req.status === "REJECTED" ? "#c23d3f" : "#92400e"
+                  }}>
+                    {req.status === "PENDING" ? "Đang chờ" : req.status === "APPROVED" ? "Đã duyệt" : "Bị từ chối"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {showWithdraw && <WithdrawModal onClose={() => setShowWithdraw(false)} onSuccess={fetchWithdraws} />}
     </div>
   );
 }

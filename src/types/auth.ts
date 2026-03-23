@@ -87,6 +87,8 @@ export interface DataGetMe {
   walletBalance: number;
   totalFollowedStories: number;
   totalPurchasedChapters: number;
+  level: number;
+  experience: number;
   createdAt: string;
   updatedAt: string;
 }

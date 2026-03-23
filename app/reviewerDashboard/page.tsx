@@ -349,7 +349,10 @@ export default function ReviewerDashboardPage() {
 
   useEffect(() => {
     if (!user) { router.push("/?login"); return; }
-    const hasReviewer = user.roles?.some((r: string) => r === "REVIEWER" || r === "ROLE_REVIEWER" || r === "ADMIN" || r === "ROLE_ADMIN");
+    const hasReviewer = user.roles?.some((r: string) => {
+      const ur = r.toUpperCase();
+      return ur === "REVIEWER" || ur === "ROLE_REVIEWER" || ur === "ADMIN" || ur === "ROLE_ADMIN";
+    });
     if (!hasReviewer) { router.push("/"); return; }
     loadPendingStories();
     loadPendingChapters();
