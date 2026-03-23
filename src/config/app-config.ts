@@ -37,6 +37,10 @@ export default class APP_CONFIG {
     DELETE:      (id: string | number) => `/stories/${id}`,
     DETAIL:      (id: string | number) => `/stories/${id}/detail`,
     SUBMIT:      (id: string | number) => `/stories/${id}/submit`,
+    RANKINGS:    "/stories/rankings",
+    TOP_RATED:   "/stories/top-rated",
+    COMPLETED:   "/stories/completed",
+    BY_CATEGORY: (categoryId: string | number) => `/stories/category/${categoryId}`,
   };
 
   // ── Chapter ───────────────────────────────────────────────────────────────
@@ -79,16 +83,38 @@ export default class APP_CONFIG {
     MY:     "/reports/my",
   };
 
+  // ── Notification ──────────────────────────────────────────────────────────
+  static NOTIFICATION = {
+    LIST:         "/notifications",
+    UNREAD_COUNT: "/notifications/unread-count",
+    MARK_ALL:     "/notifications/mark-all-read",
+    MARK_ONE:     (id: number | string) => `/notifications/${id}/read`,
+    DELETE:       (id: number | string) => `/notifications/${id}`,
+  };
+
   // ── Mission ───────────────────────────────────────────────────────────────
   static MISSION = {
     LIST:     "/missions",
+    MY:       "/missions/my",
     COMPLETE: (missionId: string | number) => `/missions/${missionId}/complete`,
+  };
+
+  // ── Streak ────────────────────────────────────────────────────────────────
+  static STREAK = {
+    STATUS:   "/streak/status",
+    CHECK_IN: "/streak/check-in",
   };
 
   // ── Role Change Request ───────────────────────────────────────────────────
   static ROLE_CHANGE = {
     CREATE: "/role-change-requests",
     MY:     "/role-change-requests/my",
+  };
+
+  // ── Report ────────────────────────────────────────────────────────────────
+  static REPORT = {
+    CREATE: "/reports",
+    MY:     "/reports/my",
   };
 
   // ── Withdraw Request ──────────────────────────────────────────────────────
@@ -123,13 +149,17 @@ export default class APP_CONFIG {
 
   // ── Reviewer ──────────────────────────────────────────────────────────────
   static REVIEWER = {
-    PENDING_STORIES:  "/reviewer/stories/pending",
-    PENDING_CHAPTERS: "/reviewer/chapters/pending",
-    STORY_DETAIL:     (id: string | number) => `/reviewer/stories/${id}/detail`,
-    CHAPTER_DETAIL:   (id: string | number) => `/reviewer/chapters/${id}`,
-    REVIEW_STORY:     (id: string | number) => `/reviewer/stories/${id}/review`,
-    REVIEW_CHAPTER:   (id: string | number) => `/reviewer/chapters/${id}/review`,
-    REVIEW_HISTORY:   "/reviewer/history",
+    PENDING_STORIES:    "/reviewer/stories/pending",
+    PENDING_CHAPTERS:   "/reviewer/chapters/pending",
+    STORY_DETAIL:       (id: string | number) => `/reviewer/stories/${id}/detail`,
+    CHAPTER_DETAIL:     (id: string | number) => `/reviewer/chapters/${id}`,
+    REVIEW_STORY:       (id: string | number) => `/reviewer/stories/${id}/review`,
+    REVIEW_CHAPTER:     (id: string | number) => `/reviewer/chapters/${id}/review`,
+    REVIEW_HISTORY:     "/reviewer/history",
+    HISTORY_STORIES:    "/reviewer/history/stories",
+    HISTORY_CHAPTERS:   "/reviewer/history/chapters",
+    HISTORY_BY_STORY:   (storyId: string | number) => `/reviewer/history/story/${storyId}`,
+    HISTORY_BY_CHAPTER: (chapterId: string | number) => `/reviewer/history/chapter/${chapterId}`,
   };
 
   // ── Editor ─────────────────────────────────────────────────────────────────

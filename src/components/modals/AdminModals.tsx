@@ -1,9 +1,21 @@
+/* eslint-disable @next/next/no-img-element */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
 import useHttpClient from "@/api/useHttpClient";
 import { ModalHeader, StatusBadge } from "@/components/adminDashboard/ui";
-import { STATUS_MAP, MISSION_TYPES, TYPE_COLOR, TYPE_LABEL, RESOLVE_ACTIONS, BAN_OPTIONS } from "@/utils/adminConstants";
-import { inputStyle, labelStyle, overlayStyle, modalStyle } from "@/components/adminDashboard/adminStyles";
+import {
+  MISSION_TYPES,
+  TYPE_COLOR,
+  TYPE_LABEL,
+  ALL_RESOLVE_ACTIONS,
+  BAN_OPTIONS,
+} from "@/utils/adminConstants";
+import {
+  inputStyle,
+  labelStyle,
+  overlayStyle,
+  modalStyle,
+} from "@/components/adminDashboard/adminStyles";
 
 export function ConfirmDialog({
   message,
@@ -687,7 +699,8 @@ export function ReportDetailModal({
               }}
             >
               🎯 Nội dung bị báo cáo —{" "}
-              {TYPE_LABEL[report.targetType] ?? report.targetType} #{report.targetId}
+              {TYPE_LABEL[report.targetType] ?? report.targetType} #
+              {report.targetId}
             </div>
             <div
               style={{
@@ -752,10 +765,18 @@ export function ReportResolveModal({
   onSubmit: (payload: any) => void;
   onClose: () => void;
 }) {
-  const [action, setAction] = useState("WARNING");
+  const targetType: string = report?.targetType ?? "COMMENT";
+  const availableActions = ALL_RESOLVE_ACTIONS.filter((a) =>
+    a.targets.includes(targetType),
+  );
+  const [action, setAction] = useState(
+    availableActions[0]?.value ?? "WARN_ONLY",
+  );
   const [banDays, setBanDays] = useState(7);
   const [adminNote, setAdminNote] = useState("");
-  const requiresBan = action === "BAN_USER";
+  const requiresBan = ["BAN_USER", "HIDE_AND_BAN", "DELETE_AND_BAN"].includes(
+    action,
+  );
 
   return (
     <div style={overlayStyle}>
@@ -763,12 +784,14 @@ export function ReportResolveModal({
         <ModalHeader
           title={
             <>
-              Xử lý báo cáo <span style={{ color: "#ff500a" }}>#{report.id}</span>
+              Xử lý báo cáo{" "}
+              <span style={{ color: "#ff500a" }}>#{report.id}</span>
             </>
           }
           onClose={onClose}
         />
         <div style={{ padding: "20px 24px" }}>
+          {/* Action selection */}
           <div style={{ marginBottom: 16 }}>
             <span
               style={{
@@ -782,7 +805,7 @@ export function ReportResolveModal({
               Chọn hành động xử lý:
             </span>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {RESOLVE_ACTIONS.map((a) => (
+              {availableActions.map((a) => (
                 <label
                   key={a.value}
                   style={{
@@ -806,14 +829,19 @@ export function ReportResolveModal({
                     style={{ marginTop: 3, cursor: "pointer" }}
                   />
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>{a.label}</div>
-                    <div style={{ fontSize: 11, color: "#6b7280" }}>{a.desc}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>
+                      {a.label}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#6b7280" }}>
+                      {a.desc}
+                    </div>
                   </div>
                 </label>
               ))}
             </div>
           </div>
 
+          {/* Ban duration */}
           {requiresBan && (
             <div style={{ marginBottom: 16 }}>
               <span
@@ -851,6 +879,7 @@ export function ReportResolveModal({
             </div>
           )}
 
+          {/* Admin note */}
           <div style={{ marginBottom: 20 }}>
             <span style={labelStyle}>Ghi chú (tuỳ chọn)</span>
             <textarea

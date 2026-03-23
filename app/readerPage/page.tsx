@@ -12,7 +12,10 @@ import { useStoryStore } from "@/stores/storyStore";
 import { Ico } from "@/components/Icons";
 import { useToast } from "@/hooks/use-toast";
 
-import { ReaderCommentItem as CommentItem, ReaderChapterData as ChapterData } from "@/types/story";
+import {
+  ReaderCommentItem as CommentItem,
+  ReaderChapterData as ChapterData,
+} from "@/types/story";
 import { FONT_OPTIONS } from "@/utils/constants";
 import { CommentNode } from "@/components/readerPage/CommentNode";
 import { ReadingSettingsPanel } from "@/components/popup/ReadingSettingsPanel";
@@ -26,7 +29,8 @@ export default function ReaderPage() {
     useNavStore();
   const { chapters, setChapters } = useStoryStore();
   const { user } = useAuthStore();
-  const { getChapter, getChaptersByStory } = useChapterService();
+  const { getChapter, getChaptersByStory, purchaseChapter } =
+    useChapterService();
   const { getStoryDetail } = useStoryService();
   const commentService = useCommentService();
   const commentServiceRef = useRef(commentService);
@@ -36,6 +40,8 @@ export default function ReaderPage() {
 
   const [chapterData, setChapterData] = useState<ChapterData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState(false);
+  const [confirmPurchase, setConfirmPurchase] = useState(false);
   const [chapterError, setChapterError] = useState<string | null>(null);
   const [fontSize, setFontSize] = useState(16);
   const [fontFamily, setFontFamily] = useState(FONT_OPTIONS[0].value);
@@ -60,14 +66,12 @@ export default function ReaderPage() {
     try {
       const res: any = await commentServiceRef.current.getCommentsByChapter(
         chapterId,
-        { page: 0, size: 100 }
+        { page: 0, size: 100 },
       );
-      const data: CommentItem[] = (
-        res?.data?.content ??
+      const data: CommentItem[] = (res?.data?.content ??
         res?.data ??
         res?.content ??
-        res
-      ) as CommentItem[];
+        res) as CommentItem[];
       if (Array.isArray(data)) setComments(data);
     } catch {
       // keep existing comments on error
@@ -113,8 +117,8 @@ export default function ReaderPage() {
         const list: any[] = Array.isArray(res?.data)
           ? res.data
           : Array.isArray(res)
-          ? res
-          : [];
+            ? res
+            : [];
         if (!list.length) {
           return loadFromDetail();
         }
@@ -124,14 +128,20 @@ export default function ReaderPage() {
         // getChaptersByStory failed — try story detail for published chapters
         loadFromDetail();
       });
-  }, [chapterData?.storyId, chapters.length, getChaptersByStory, getStoryDetail, setChapters]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [
+    chapterData?.storyId,
+    chapters.length,
+    getChaptersByStory,
+    getStoryDetail,
+    setChapters,
+  ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll progress
   useEffect(() => {
     const handler = () => {
       const el = document.documentElement;
       const pct = Math.round(
-        (el.scrollTop / (el.scrollHeight - el.clientHeight)) * 100
+        (el.scrollTop / (el.scrollHeight - el.clientHeight)) * 100,
       );
       setScrollPct(isNaN(pct) ? 0 : pct);
     };
@@ -144,7 +154,7 @@ export default function ReaderPage() {
     if (!selectedChapterId) {
       setLoading(false);
       setChapterError(
-        "Không có chương nào được chọn. Hãy quay lại trang truyện và chọn một chương."
+        "Không có chương nào được chọn. Hãy quay lại trang truyện và chọn một chương.",
       );
       return;
     }
@@ -170,7 +180,7 @@ export default function ReaderPage() {
           setChapterError("Đây là chương VIP hoặc bạn chưa đăng nhập.");
         } else if (status === 404) {
           setChapterError(
-            "Không tìm thấy chương (chương chưa được đăng tải hoặc đã bị xóa)."
+            "Không tìm thấy chương (chương chưa được đăng tải hoặc đã bị xóa).",
           );
         } else {
           setChapterError(`Không thể tải chương (lỗi ${status ?? "kết nối"})`);
@@ -178,7 +188,7 @@ export default function ReaderPage() {
       })
       .finally(() => setLoading(false));
     loadComments(selectedChapterId);
-  }, [selectedChapterId, getChapter, loadComments]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedChapterId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Post new root comment
   const handlePostComment = async () => {
@@ -230,7 +240,7 @@ export default function ReaderPage() {
   const handleOpenReport = (
     targetType: string,
     targetId: number,
-    label: string
+    label: string,
   ) => {
     if (!user) {
       router.push("?login");
@@ -374,8 +384,7 @@ export default function ReaderPage() {
         .filter(Boolean).length
     : rawContent.trim().split(/\s+/).filter(Boolean).length;
   const readMins = Math.max(1, Math.ceil(wordCount / 200));
-  const isLocked =
-    (chapterData.coinPrice ?? 0) > 0 && !chapterData.isPurchased;
+  const isLocked = (chapterData.coinPrice ?? 0) > 0 && !chapterData.isPurchased;
 
   return (
     <div className="reader-wrap fade-in">
@@ -569,7 +578,7 @@ export default function ReaderPage() {
             >
               ← Quay lại
             </button>
-            {!user && (
+            {!user ? (
               <button
                 onClick={() => router.push("?login")}
                 style={{
@@ -584,6 +593,23 @@ export default function ReaderPage() {
                 }}
               >
                 Đăng nhập để mở khóa
+              </button>
+            ) : (
+              <button
+                onClick={() => setConfirmPurchase(true)}
+                style={{
+                  padding: "10px 24px",
+                  borderRadius: 9,
+                  border: "none",
+                  background: "linear-gradient(135deg,#c69526,#9a7020)",
+                  color: "#fff",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  boxShadow: "0 2px 8px rgba(194,149,38,.3)",
+                }}
+              >
+                🪙 Mua {chapterData.coinPrice} xu
               </button>
             )}
           </div>
@@ -778,7 +804,9 @@ export default function ReaderPage() {
                   fontSize: 13,
                   fontWeight: 700,
                   cursor:
-                    !commentText.trim() || submitting ? "not-allowed" : "pointer",
+                    !commentText.trim() || submitting
+                      ? "not-allowed"
+                      : "pointer",
                 }}
               >
                 {submitting ? "Đang gửi..." : "Gửi"}
@@ -839,6 +867,140 @@ export default function ReaderPage() {
           }}
           onClose={() => setShowChapterList(false)}
         />
+      )}
+
+      {/* Purchase Confirmation Modal */}
+      {confirmPurchase && chapterData && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "rgba(0,0,0,0.5)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+          }}
+          onClick={() => !purchasing && setConfirmPurchase(false)}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 20,
+              padding: "32px 28px",
+              maxWidth: 400,
+              width: "100%",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+              textAlign: "center",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 48, marginBottom: 12 }}>🪙</div>
+            <h3
+              style={{
+                margin: "0 0 6px",
+                fontFamily: "'Playfair Display',serif",
+                fontSize: 20,
+                fontWeight: 800,
+                color: "#1c1512",
+              }}
+            >
+              Xác nhận mua chương
+            </h3>
+            <p
+              style={{
+                margin: "0 0 16px",
+                fontSize: 14,
+                color: "#6b5a4e",
+                lineHeight: 1.6,
+              }}
+            >
+              Bạn sắp mua{" "}
+              <strong style={{ color: "#1c1512" }}>
+                &ldquo;{chapterData.title}&rdquo;
+              </strong>{" "}
+              với giá
+            </p>
+            <div
+              style={{
+                background: "#fffbeb",
+                border: "1.5px solid #fcd34d",
+                borderRadius: 12,
+                padding: "14px 20px",
+                marginBottom: 24,
+                display: "inline-block",
+              }}
+            >
+              <span style={{ fontSize: 28, fontWeight: 800, color: "#c69526" }}>
+                🪙 {chapterData.coinPrice} xu
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+              <button
+                disabled={purchasing}
+                onClick={() => setConfirmPurchase(false)}
+                style={{
+                  flex: 1,
+                  padding: "11px 20px",
+                  borderRadius: 10,
+                  border: "1.5px solid #e8e0d6",
+                  background: "#fff",
+                  color: "#6b5a4e",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Hủy
+              </button>
+              <button
+                disabled={purchasing}
+                onClick={async () => {
+                  setPurchasing(true);
+                  try {
+                    await purchaseChapter(chapterData.id);
+                    const res: any = await getChapter(chapterData.id);
+                    const data = res?.data ?? res;
+                    setChapterData(data);
+                    toast.success(
+                      `Chương "${chapterData.title}" đã được mở khóa.`,
+                      "Mở khóa thành công!",
+                    );
+                    setConfirmPurchase(false);
+                  } catch (err: any) {
+                    toast.error(
+                      err?.response?.data?.message ??
+                        "Không đủ xu hoặc lỗi hệ thống.",
+                      "Mở khóa thất bại",
+                    );
+                  } finally {
+                    setPurchasing(false);
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  padding: "11px 20px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: purchasing
+                    ? "#a0a0a0"
+                    : "linear-gradient(135deg,#c69526,#9a7020)",
+                  color: "#fff",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: purchasing ? "not-allowed" : "pointer",
+                  boxShadow: purchasing
+                    ? "none"
+                    : "0 2px 8px rgba(194,149,38,.3)",
+                }}
+              >
+                {purchasing ? "⏳ Đang mua..." : "✅ Xác nhận mua"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

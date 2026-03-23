@@ -1034,10 +1034,17 @@ function useHotStories() {
   useEffect(() => {
     setLoading(true);
     getStories({ size: HOT_FETCH_SIZE, sort: "viewCount,desc" })
-      .then((res: any) =>
-        setStories((res?.data ?? res ?? []).map(toStoryShape)),
-      )
-      .catch(() => {})
+      .then((res: any) => {
+        // res.data.data = paginated inner list; fallbacks for other shapes
+        const list: any[] =
+          Array.isArray(res?.data?.data)   ? res.data.data
+          : Array.isArray(res?.data)       ? res.data
+          : Array.isArray(res?.content)    ? res.content
+          : Array.isArray(res)             ? res
+          : [];
+        setStories(list.map(toStoryShape));
+      })
+      .catch(() => { })
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1067,7 +1074,13 @@ function useNewStories(page: number, filters: FilterState) {
 
     getStories(params)
       .then((res: any) => {
-        const raw: any[] = res?.data ?? res?.content ?? res ?? [];
+        // res.data.data = paginated list; fallbacks for other shapes
+        const inner = res?.data ?? res;
+        const raw: any[] =
+          Array.isArray(inner?.data)    ? inner.data
+          : Array.isArray(inner?.content) ? inner.content
+          : Array.isArray(inner)        ? inner
+          : [];
         const filtered = raw.map(toStoryShape).filter((s) => {
           if (filters.genres.length > 0 && !filters.genres.includes(s.genre))
             return false;
@@ -1082,17 +1095,8 @@ function useNewStories(page: number, filters: FilterState) {
         });
         setStories(filtered);
         setAllStories(filtered);
-        const total =
-          res?.totalElements ??
-          res?.meta?.totalElements ??
-          res?.pagination?.totalElements ??
-          res?.total ??
-          null;
-        const tp =
-          res?.totalPages ??
-          res?.meta?.totalPages ??
-          res?.pagination?.totalPages ??
-          (total != null ? Math.ceil(total / PAGE_SIZE) : 1);
+        const total = inner?.totalElements ?? inner?.meta?.totalElements ?? inner?.pagination?.totalElements ?? inner?.total ?? null;
+        const tp = inner?.totalPages ?? inner?.meta?.totalPages ?? inner?.pagination?.totalPages ?? (total != null ? Math.ceil(total / PAGE_SIZE) : 1);
         setTotalPages(Math.max(1, tp));
       })
       .catch(() => {})

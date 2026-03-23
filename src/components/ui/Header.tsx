@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import useAuthService from "@/api/useAuth.service";
 import useStoryService from "@/api/useStory.service";
 import useCategoryService, { CategoryItem } from "@/api/useCategory.service";
+import useNotificationService from "@/api/useNotification.service";
 import APP_CONFIG from "@/config/app-config";
 import { useNavStore } from "@/stores/navStore";
 import { useStoryStore } from "@/stores/storyStore";
@@ -101,12 +102,35 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
   const { navTo, page } = useNavStore();
   const gotoStory = useGotoStory();
   const { setActiveGenre, searchQ, setSearchQ } = useStoryStore();
-  const { notifications, unreadCount, markAllRead, markOneRead } = useNotificationStore();
+  const { notifications, unreadCount, markAllRead, markOneRead, setNotifications } = useNotificationStore();
   const router = useRouter();
   const toast = useToast();
   const { logout } = useAuthService();
   const { searchStories } = useStoryService();
   const { getCategories } = useCategoryService();
+  const { getNotifications, markAllRead: apiMarkAll, markOneRead: apiMarkOne } = useNotificationService();
+
+  // ── Load notifications when user logs in ─────────────────────────────────
+  useEffect(() => {
+    if (!user) return;
+    getNotifications()
+      .then((res: any) => {
+        const list = res?.data?.content ?? res?.content ?? res?.data ?? (Array.isArray(res) ? res : null) ?? [];
+        setNotifications(Array.isArray(list) ? list : []);
+      })
+      .catch(() => { });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const handleMarkAll = async () => {
+    markAllRead();
+    try { await apiMarkAll(); } catch { /* best-effort */ }
+  };
+
+  const handleMarkOne = async (id: number) => {
+    markOneRead(id);
+    try { await apiMarkOne(id); } catch { /* best-effort */ }
+  };
 
   // ── Refs ──────────────────────────────────────────────────────────────────
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -416,7 +440,7 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
                   {unreadCount > 0 && <span className="absolute right-1 top-1 h-2 w-2 animate-[pulse_2s_infinite] rounded-full border-2 border-white bg-[#c23d3f]" />}
                 </button>
                 {showNotif && (
-                  <NotificationPanel notifications={notifications} unreadCount={unreadCount} onMarkAll={markAllRead} onMarkOne={markOneRead} onViewAll={() => navTo("notifications")} />
+                  <NotificationPanel notifications={notifications} unreadCount={unreadCount} onMarkAll={handleMarkAll} onMarkOne={handleMarkOne} onViewAll={() => navTo("notifications")} />
                 )}
               </div>
 

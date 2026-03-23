@@ -63,6 +63,12 @@ export type ResultHttpClient = {
     options?: Record<string, string>,
     requestOptions?: AxiosRequestConfig<any>,
   ) => Promise<T>;
+  /** Unauthenticated GET — dành cho các endpoint công khai (story list, categories…) */
+  getPublic: <T>(
+    url: string,
+    options?: Record<string, string>,
+    requestOptions?: AxiosRequestConfig<any>,
+  ) => Promise<T>;
   post: <T>(
     url: string,
     data: any,
@@ -155,12 +161,20 @@ export default function useHttpClient(
             const PUBLIC_PREFIXES = [
               "/", "/homePage", "/storyDetailPage", "/readerPage",
               "/searchResultsPage", "/categoriesPage", "/rankingsPage",
-              "/favoritesPage",
+              "/favoritesPage", "/payment",
             ];
             const isPublicPage = PUBLIC_PREFIXES.some(
-              (p) => pathname === p || pathname.startsWith(p + "?")
+              (p) => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p + "?")
             );
-            if (!isPublicPage && typeof window !== "undefined") {
+            if (isPublicPage) {
+              // Retry the request without any auth header so guests can see public content
+              const retryConfig = { ...originalRequest };
+              if (retryConfig.headers) {
+                delete retryConfig.headers["Authorization"];
+              }
+              return axiosBase.request(retryConfig);
+            }
+            if (typeof window !== "undefined") {
               router.push("/");
             }
           }
@@ -175,6 +189,26 @@ export default function useHttpClient(
       axiosAuth.interceptors.response.eject(responseInterceptor);
     };
   }, []);
+
+  // Public (unauthenticated) GET — uses axiosBase so no Authorization header is sent.
+  // Used for story listings, categories and other publicly accessible endpoints.
+  const getPublic = <T>(
+    url: string,
+    headers: Record<string, string> = {},
+    requestOptions?: AxiosRequestConfig<any>,
+  ) => {
+    return axiosBase
+      .request({
+        url,
+        method: "GET",
+        headers: { "ngrok-skip-browser-warning": "true", ...headers },
+        ...(requestOptions ?? {}),
+      })
+      .then((e) => {
+        if (isConvert) return e as T;
+        return handleSuccess(e) as T;
+      });
+  };
 
   const getAuth = <T>(
     url: string,
@@ -263,6 +297,7 @@ export default function useHttpClient(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(() => ({
     get: getAuth,
+    getPublic,
     post: postAuth,
     put: putAuth,
     patch: patchAuth,

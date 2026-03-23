@@ -11,8 +11,9 @@ export type CategoryItem = {
 const useCategoryService = () => {
   const httpClient = useHttpClient();
 
+  // Categories là dữ liệu công khai — dùng getPublic để guest cũng load được
   const getCategories = (): Promise<CategoryItem[]> => {
-    return httpClient.get(APP_CONFIG.CATEGORY.LIST);
+    return httpClient.getPublic(APP_CONFIG.CATEGORY.LIST);
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps

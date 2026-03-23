@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores";
 import useHttpClient from "@/api/useHttpClient";
 import APP_CONFIG from "@/config/app-config";
 import { useToast } from "@/hooks/use-toast";
+import usePaymentService, { CoinPackage } from "@/api/usePayment.service";
 
 /* ================================================================
    TYPES
@@ -342,21 +343,82 @@ function EditorWorkModal({ request, onClose, onSubmit, onWithdraw }: { request: 
 /* ================================================================
    WALLET SECTION (Editor)
    ================================================================ */
+const EDITOR_FALLBACK_PKGS: CoinPackage[] = [
+  { id: "BASIC",    displayName: "Cơ Bản",      amountVnd: 10000,  coinAmount: 10000,  bonusPercent: 0  },
+  { id: "SAVING",   displayName: "Tiết Kiệm",   amountVnd: 50000,  coinAmount: 56000,  bonusPercent: 12 },
+  { id: "POPULAR",  displayName: "Phổ Biến ⭐", amountVnd: 100000, coinAmount: 118000, bonusPercent: 18 },
+  { id: "ADVANCED", displayName: "Nâng Cao",    amountVnd: 200000, coinAmount: 244000, bonusPercent: 22 },
+  { id: "VIP",      displayName: "VIP",          amountVnd: 500000, coinAmount: 650000, bonusPercent: 30 },
+];
+
 function WalletSection({ wallet, transactions, loadingTx }: { wallet: WalletInfo | null; transactions: WalletTx[]; loadingTx: boolean }) {
+  const [packages, setPackages] = useState<CoinPackage[]>(EDITOR_FALLBACK_PKGS);
+  const [buyingId, setBuyingId] = useState<string | null>(null);
+  const paymentService = usePaymentService();
+  const toastW = useToast();
   const txColor: Record<string, string> = { TOPUP: T.success, BUY: T.info, GIFT: T.purple, REWARD: T.accent, LOCK: T.warn, RELEASE: T.success };
+
+  useEffect(() => {
+    paymentService.getPackages().then((res: any) => {
+      const list: CoinPackage[] = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+      if (list.length > 0) setPackages(list);
+    }).catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleBuy = async (pkgId: string) => {
+    setBuyingId(pkgId);
+    try {
+      const res: any = await paymentService.createPaymentLink(pkgId);
+      const d = res?.data ?? res;
+      const url: string = d?.checkoutUrl ?? d?.checkout_url ?? "";
+      if (url) window.location.href = url;
+      else toastW.error("Không lấy được link thanh toán.");
+    } catch (err: any) {
+      toastW.error(err?.response?.data?.message ?? "Không thể tạo đơn thanh toán.");
+    } finally { setBuyingId(null); }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Balance */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         <div style={{ background: T.successBg, border: `1.5px solid ${T.successBorder}`, borderRadius: T.radius, padding: "20px" }}>
           <div style={{ fontSize: 12, color: T.success, fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Số dư</div>
           <div style={{ fontSize: 28, fontWeight: 800, color: T.success }}>{(wallet?.balance ?? 0).toLocaleString()} <span style={{ fontSize: 14 }}>xu</span></div>
         </div>
         <div style={{ background: T.accentLight, border: `1.5px solid ${T.accentBorder}`, borderRadius: T.radius, padding: "20px" }}>
-          <div style={{ fontSize: 12, color: T.accent, fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Tổng tiền thưởng</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: T.accent }}>🪙</div>
-          <div style={{ fontSize: 12, color: T.textMuted, marginTop: 4 }}>Tiền thưởng nhận được khi Author duyệt bản edit</div>
+          <div style={{ fontSize: 12, color: T.accent, fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>Tiền thưởng</div>
+          <div style={{ fontSize: 12, color: T.textMuted, marginTop: 4 }}>Nhận được khi Author duyệt bản chỉnh sửa của bạn</div>
         </div>
       </div>
+
+      {/* PayOS packages */}
+      <div style={{ background: T.card, border: `1.5px solid ${T.border}`, borderRadius: T.radius, padding: "18px 20px" }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 4 }}>💳 Nạp coin qua PayOS</div>
+        <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 14 }}>Thanh toán an toàn · Coin vào ngay sau khi thanh toán thành công</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
+          {packages.map((pkg) => (
+            <button
+              key={pkg.id}
+              onClick={() => !buyingId && handleBuy(pkg.id)}
+              disabled={!!buyingId}
+              style={{ padding: "12px 8px", borderRadius: T.radiusSm, border: `1.5px solid ${buyingId === pkg.id ? T.accent : T.border}`, background: buyingId === pkg.id ? T.accentLight : T.card, cursor: buyingId ? "wait" : "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, transition: "all 0.15s", opacity: buyingId && buyingId !== pkg.id ? 0.55 : 1, fontFamily: T.font }}
+            >
+              {pkg.bonusPercent > 0 && (
+                <span style={{ fontSize: 9, fontWeight: 700, background: T.warnBg, color: T.warn, border: `1px solid ${T.warnBorder}`, borderRadius: 10, padding: "1px 6px" }}>+{pkg.bonusPercent}%</span>
+              )}
+              <span style={{ fontSize: 11, fontWeight: 700, color: T.text }}>{pkg.displayName}</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: T.accent }}>🪙 {pkg.coinAmount.toLocaleString()}</span>
+              <span style={{ fontSize: 11, color: T.textMuted }}>{pkg.amountVnd.toLocaleString()}đ</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#fff", background: buyingId === pkg.id ? T.textMuted : T.accent, borderRadius: 6, padding: "3px 10px", marginTop: 2 }}>
+                {buyingId === pkg.id ? "⏳" : "Nạp"}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Transaction history */}
       <div style={{ background: T.card, border: `1.5px solid ${T.border}`, borderRadius: T.radius, overflow: "hidden" }}>
         <div style={{ padding: "14px 18px", borderBottom: `1px solid ${T.borderLight}`, fontWeight: 700, fontSize: 14, color: T.text }}>📜 Lịch sử giao dịch</div>
         <div style={{ maxHeight: 320, overflowY: "auto" }}>
@@ -395,8 +457,11 @@ export default function EditorDashboardPage() {
   const [assigning, setAssigning] = useState<number | null>(null);
   const [editModal, setEditModal] = useState<EditRequest | null>(null);
   const [previewChapter, setPreviewChapter] = useState<number | null>(null);
-  const [sortOpen, setSortOpen] = useState<"newest" | "reward">("reward");
+  const [sortOpen, setSortOpen] = useState<"newest" | "oldest" | "reward">("reward");
+  const [openSearch, setOpenSearch] = useState("");
   const [mineFilter, setMineFilter] = useState<string>("ALL");
+  const [mineSearch, setMineSearch] = useState("");
+  const [doneSort, setDoneSort] = useState<"newest" | "oldest">("newest");
   const [wallet, setWallet] = useState<WalletInfo | null>(null);
   const [walletTxs, setWalletTxs] = useState<WalletTx[]>([]);
   const [loadingTx, setLoadingTx] = useState(false);
@@ -482,8 +547,14 @@ export default function EditorDashboardPage() {
   };
 
   /* Sorted & filtered */
-  const sortedOpen = [...openRequests].sort((a, b) => sortOpen === "reward" ? b.coinReward - a.coinReward : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  const filteredMine = mineFilter === "ALL" ? mineRequests : mineRequests.filter((r) => r.status === mineFilter);
+  const sortedOpen = [...openRequests]
+    .sort((a, b) => sortOpen === "reward" ? b.coinReward - a.coinReward
+      : sortOpen === "newest" ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      : new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    .filter((r) => !openSearch.trim() || r.chapterTitle.toLowerCase().includes(openSearch.trim().toLowerCase()) || r.storyTitle.toLowerCase().includes(openSearch.trim().toLowerCase()) || r.authorName.toLowerCase().includes(openSearch.trim().toLowerCase()));
+  const filteredMine = mineRequests
+    .filter((r) => mineFilter === "ALL" || r.status === mineFilter)
+    .filter((r) => !mineSearch.trim() || r.chapterTitle.toLowerCase().includes(mineSearch.trim().toLowerCase()) || r.storyTitle.toLowerCase().includes(mineSearch.trim().toLowerCase()));
 
   const TABS: { id: Tab; label: string; icon: string; count?: number }[] = [
     { id: "open", label: "Thị trường", icon: "🏪", count: openRequests.length },
@@ -542,9 +613,9 @@ export default function EditorDashboardPage() {
                 🏪 Tác giả đăng yêu cầu chỉnh sửa kèm thưởng coin. Nhận việc, hoàn thành và được trả thưởng!
               </div>
               <div style={{ display: "flex", gap: 6 }}>
-                {(["reward", "newest"] as const).map((s) => (
+                {(["reward", "newest", "oldest"] as const).map((s) => (
                   <button key={s} onClick={() => setSortOpen(s)} style={{ padding: "6px 14px", borderRadius: 20, border: `1.5px solid ${sortOpen === s ? T.accent : T.border}`, background: sortOpen === s ? T.accentLight : T.card, color: sortOpen === s ? T.accent : T.textSec, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                    {s === "reward" ? "🪙 Coin cao nhất" : "🕐 Mới nhất"}
+                    {s === "reward" ? "🪙 Coin cao nhất" : s === "newest" ? "🔽 Mới nhất" : "🔼 Cũ nhất"}
                   </button>
                 ))}
               </div>
@@ -590,12 +661,21 @@ export default function EditorDashboardPage() {
         {/* ──── TAB: MINE ──── */}
         {tab === "mine" && (
           <div>
-            <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
-              {["ALL", "IN_PROGRESS", "SUBMITTED"].map((f) => (
-                <button key={f} onClick={() => setMineFilter(f)} style={{ padding: "6px 14px", borderRadius: 20, border: `1.5px solid ${mineFilter === f ? T.accent : T.border}`, background: mineFilter === f ? T.accentLight : T.card, color: mineFilter === f ? T.accent : T.textSec, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                  {f === "ALL" ? "Tất cả" : f === "IN_PROGRESS" ? "⚙️ Đang làm" : "⏳ Đã nộp"}
-                </button>
-              ))}
+            <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+              <input
+                type="text"
+                placeholder="🔍 Tìm theo tên chương / truyện…"
+                value={mineSearch}
+                onChange={(e) => setMineSearch(e.target.value)}
+                style={{ padding: "7px 14px", borderRadius: T.radiusSm, border: `1.5px solid ${T.border}`, fontSize: 13, color: T.text, fontFamily: T.font, outline: "none", width: 260, background: T.card }}
+              />
+              <div style={{ display: "flex", gap: 6 }}>
+                {["ALL", "IN_PROGRESS", "SUBMITTED"].map((f) => (
+                  <button key={f} onClick={() => setMineFilter(f)} style={{ padding: "6px 14px", borderRadius: 20, border: `1.5px solid ${mineFilter === f ? T.accent : T.border}`, background: mineFilter === f ? T.accentLight : T.card, color: mineFilter === f ? T.accent : T.textSec, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                    {f === "ALL" ? "Tất cả" : f === "IN_PROGRESS" ? "⚙️ Đang làm" : "⏳ Đã nộp"}
+                  </button>
+                ))}
+              </div>
             </div>
             {loadingMine ? <div style={{ textAlign: "center", padding: "40px 0", color: T.textMuted }}>⏳ Đang tải…</div> :
               filteredMine.length === 0 ? (
@@ -660,7 +740,14 @@ export default function EditorDashboardPage() {
                   <span style={{ fontSize: 14, fontWeight: 700, color: T.success }}>🎉 Tổng cộng: {doneRequests.length} yêu cầu hoàn thành</span>
                   <span style={{ fontSize: 16, fontWeight: 800, color: T.success }}>🪙 {totalEarnings.toLocaleString()} xu</span>
                 </div>
-                {doneRequests.map((req) => (
+                <div style={{ display: "flex", gap: 6 }}>
+                  {(["newest", "oldest"] as const).map((s) => (
+                    <button key={s} onClick={() => setDoneSort(s)} style={{ padding: "6px 14px", borderRadius: 20, border: `1.5px solid ${doneSort === s ? T.accent : T.border}`, background: doneSort === s ? T.accentLight : T.card, color: doneSort === s ? T.accent : T.textSec, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                      {s === "newest" ? "🔽 Mới nhất" : "🔼 Cũ nhất"}
+                    </button>
+                  ))}
+                </div>
+                {[...doneRequests].sort((a, b) => doneSort === "newest" ? new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime() : new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()).map((req) => (
                   <div key={req.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: T.card, borderRadius: 12, border: `1.5px solid ${T.border}` }}>
                     <span style={{ fontSize: 20 }}>✅</span>
                     <div style={{ flex: 1 }}>

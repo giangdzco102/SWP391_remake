@@ -43,26 +43,42 @@ export const STATUS_MAP: Record<string, { bg: string; color: string; label: stri
   false: { bg: "#fee2e2", color: "#991b1b", label: "Bị khóa" },
 };
 
-export const RESOLVE_ACTIONS = [
+export const ALL_RESOLVE_ACTIONS = [
   {
-    value: "WARNING",
+    value: "WARN_ONLY",
     label: "⚠️ Cảnh báo",
-    desc: "Gửi cảnh báo đến người vi phạm",
+    desc: "Đánh dấu đã xử lý, gửi cảnh báo đến người vi phạm",
+    targets: ["STORY", "CHAPTER", "COMMENT"],
   },
   {
-    value: "REMOVE_CONTENT",
+    value: "HIDE_CONTENT",
+    label: "🙈 Ẩn nội dung",
+    desc: "Ẩn nội dung vi phạm khỏi người dùng",
+    targets: ["STORY", "CHAPTER", "COMMENT"],
+  },
+  {
+    value: "DELETE_CONTENT",
     label: "🗑 Xóa nội dung",
-    desc: "Xóa nội dung bị báo cáo",
+    desc: "Xóa vĩnh viễn nội dung vi phạm",
+    targets: ["STORY", "CHAPTER", "COMMENT"],
   },
   {
     value: "BAN_USER",
     label: "🔒 Khóa tài khoản",
-    desc: "Tạm khóa hoặc khóa vĩnh viễn",
+    desc: "Khóa tài khoản tác giả, không ẩn nội dung",
+    targets: ["STORY", "CHAPTER", "COMMENT"],
   },
   {
-    value: "NO_ACTION",
-    label: "✅ Bỏ qua",
-    desc: "Báo cáo không hợp lệ, không xử lý",
+    value: "HIDE_AND_BAN",
+    label: "🙈🔒 Ẩn + Khóa TK",
+    desc: "Ẩn nội dung vi phạm và khóa tài khoản tác giả",
+    targets: ["STORY", "CHAPTER"],
+  },
+  {
+    value: "DELETE_AND_BAN",
+    label: "🗑🔒 Xóa + Khóa TK",
+    desc: "Xóa nội dung vi phạm và khóa tài khoản tác giả",
+    targets: ["STORY", "CHAPTER", "COMMENT"],
   },
 ];
 
