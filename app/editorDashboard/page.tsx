@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores";
 import useHttpClient from "@/api/useHttpClient";
 import APP_CONFIG from "@/config/app-config";
+import { getAccessToken } from "@/utils/index";
 import { useToast } from "@/hooks/use-toast";
 import usePaymentService, { CoinPackage } from "@/api/usePayment.service";
 
@@ -184,7 +185,8 @@ function ChapterPreviewModal({ chapterId, onClose }: { chapterId: number; onClos
   const [chapter, setChapter] = useState<ChapterDetail | null>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    httpClient.get(APP_CONFIG.CHAPTER.GET(chapterId))
+    const token = getAccessToken();
+    httpClient.getPublic(APP_CONFIG.CHAPTER.GET(chapterId), token ? { Authorization: `Bearer ${token}` } : {})
       .then((res: any) => setChapter(res?.data ?? res ?? null))
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -228,7 +230,8 @@ function EditorWorkModal({ request, onClose, onSubmit, onWithdraw }: { request: 
   const [loadingOriginal, setLoadingOriginal] = useState(true);
 
   useEffect(() => {
-    httpClient.get(APP_CONFIG.CHAPTER.GET(request.chapterId))
+    const token = getAccessToken();
+    httpClient.getPublic(APP_CONFIG.CHAPTER.GET(request.chapterId), token ? { Authorization: `Bearer ${token}` } : {})
       .then((res: any) => setOriginalContent(res?.data?.content ?? res?.content ?? ""))
       .catch(() => {})
       .finally(() => setLoadingOriginal(false));

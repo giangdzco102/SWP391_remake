@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores";
 import useHttpClient from "@/api/useHttpClient";
 import APP_CONFIG from "@/config/app-config";
 import { useToast } from "@/hooks/use-toast";
+import { getAccessToken } from "@/utils/index";
 
 /* ================================================================
    TYPES
@@ -227,14 +228,23 @@ function ChapterReviewModal({ chapter, onClose, onReview }: {
   const httpClient = useHttpClient();
   const [content, setContent] = useState<string>(chapter.content ?? "");
   const [loading, setLoading] = useState(!chapter.content);
+  const [fetchError, setFetchError] = useState(false);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (chapter.content) return;
-    httpClient.get(APP_CONFIG.REVIEWER.CHAPTER_DETAIL(chapter.id))
-      .then((res: any) => setContent(res?.data?.content ?? res?.content ?? ""))
-      .catch(() => {})
+    const token = getAccessToken();
+    httpClient.getPublic(
+      APP_CONFIG.REVIEWER.CHAPTER_DETAIL(chapter.id),
+      token ? { Authorization: `Bearer ${token}` } : {},
+    )
+      .then((res: any) => {
+        const c = res?.data?.content ?? res?.content ?? "";
+        setContent(c);
+        if (!c) setFetchError(true);
+      })
+      .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
   }, [chapter.id]);// eslint-disable-line react-hooks/exhaustive-deps
 
@@ -263,6 +273,7 @@ function ChapterReviewModal({ chapter, onClose, onReview }: {
         {/* Content */}
         <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
           {loading ? <div style={{ textAlign: "center", padding: 20, color: T.textMuted }}>⏳ Đang tải…</div> :
+            fetchError ? <div style={{ color: T.danger, fontStyle: "italic", padding: 8, background: T.dangerBg, borderRadius: 8 }}>⚠️ Không thể tải nội dung chương. Vui lòng thử lại.</div> :
             !content ? <div style={{ color: T.textMuted, fontStyle: "italic" }}>Không có nội dung.</div> :
               isHtml ?
                 <div style={{ fontSize: 15, color: T.text, lineHeight: 1.85, fontFamily: "'Lora',serif" }} dangerouslySetInnerHTML={{ __html: content }} /> :
@@ -391,7 +402,7 @@ export default function ReviewerDashboardPage() {
     .sort((a, b) => historySort === "newest" ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() : new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   const filteredStories = (!storySearch.trim() ? pendingStories : pendingStories.filter((s) => s.title.toLowerCase().includes(storySearch.trim().toLowerCase()) || s.authorName.toLowerCase().includes(storySearch.trim().toLowerCase())))
     .sort((a, b) => storySort === "newest" ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() : new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  const filteredChapters = (!chapterSearch.trim() ? pendingChapters : pendingChapters.filter((c) => c.title.toLowerCase().includes(chapterSearch.trim().toLowerCase()) || c.storyTitle.toLowerCase().includes(chapterSearch.trim().toLowerCase())))
+  const filteredChapters = (!chapterSearch.trim() ? pendingChapters : pendingChapters.filter((c) => c.title.toLowerCase().includes(chapterSearch.trim().toLowerCase()) || (c.storyTitle ?? "").toLowerCase().includes(chapterSearch.trim().toLowerCase())))
     .sort((a, b) => chapterSort === "newest" ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() : new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   const TABS: { id: Tab; label: string; icon: string; count?: number }[] = [
@@ -428,7 +439,11 @@ export default function ReviewerDashboardPage() {
           </div>
           <div style={{ display: "flex", gap: 2 }}>
             {TABS.map((t) => (
-              <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, padding: "12px 16px", borderRadius: "10px 10px 0 0", border: "none", background: tab === t.id ? T.bg : "transparent", color: tab === t.id ? T.accent : "rgba(255,255,255,0.75)", fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all 0.15s" }}>
+              <button key={t.id} onClick={() => {
+                setTab(t.id);
+                if (t.id === "chapters") loadPendingChapters();
+                else if (t.id === "stories") loadPendingStories();
+              }} style={{ flex: 1, padding: "12px 16px", borderRadius: "10px 10px 0 0", border: "none", background: tab === t.id ? T.bg : "transparent", color: tab === t.id ? T.accent : "rgba(255,255,255,0.75)", fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all 0.15s" }}>
                 {t.icon} {t.label}{t.count !== undefined ? ` (${t.count})` : ""}
               </button>
             ))}
@@ -503,6 +518,9 @@ export default function ReviewerDashboardPage() {
               />
               <span style={{ fontSize: 13, color: T.textMuted }}>{filteredChapters.length} / {pendingChapters.length} chương</span>
               <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                <button onClick={loadPendingChapters} disabled={loadingChapters} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${T.border}`, background: T.card, color: T.textSec, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                  {loadingChapters ? "⏳" : "🔄"} Tải lại
+                </button>
                 {(["newest", "oldest"] as const).map((s) => (
                   <button key={s} onClick={() => setChapterSort(s)} style={{ padding: "6px 14px", borderRadius: 20, border: `1.5px solid ${chapterSort === s ? T.accent : T.border}`, background: chapterSort === s ? T.accentLight : T.card, color: chapterSort === s ? T.accent : T.textSec, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                     {s === "newest" ? "🔽 Mới nhất" : "🔼 Cũ nhất"}

@@ -24,23 +24,35 @@ export default class APP_CONFIG {
     UPDATE_PROFILE:  "/users/me",
     UPLOAD_AVATAR:   "/users/me/avatar",
     CHANGE_PASSWORD: "/users/me/change-password",
+    BLOCK:           "/users/blocks",
+    UNBLOCK:         (userId: string | number) => `/users/blocks/${userId}`,
+    BLOCK_LIST:      "/users/blocks",
   };
 
   // ── Story ─────────────────────────────────────────────────────────────────
   static STORY = {
-    LIST:        "/stories",
-    MY:          "/stories/my",
-    SEARCH:      "/stories/search",
-    CREATE:      "/stories",
-    GET:         (id: string | number) => `/stories/${id}`,
-    UPDATE:      (id: string | number) => `/stories/${id}`,
-    DELETE:      (id: string | number) => `/stories/${id}`,
-    DETAIL:      (id: string | number) => `/stories/${id}/detail`,
-    SUBMIT:      (id: string | number) => `/stories/${id}/submit`,
-    RANKINGS:    "/stories/rankings",
-    TOP_RATED:   "/stories/top-rated",
-    COMPLETED:   "/stories/completed",
-    BY_CATEGORY: (categoryId: string | number) => `/stories/category/${categoryId}`,
+    LIST:           "/stories",
+    MY:             "/stories/my",
+    SEARCH:         "/stories/search",
+    CREATE:         "/stories",
+    GET:            (id: string | number) => `/stories/${id}`,
+    UPDATE:         (id: string | number) => `/stories/${id}`,
+    DELETE:         (id: string | number) => `/stories/${id}`,
+    DETAIL:         (id: string | number) => `/stories/${id}/detail`,
+    SUBMIT:         (id: string | number) => `/stories/${id}/submit`,
+    SET_COMPLETION: (id: string | number) => `/stories/${id}/completion-status`,
+    RANKINGS:       "/stories/rankings",
+    TOP_RATED:      "/stories/top-rated",
+    COMPLETED:      "/stories/completed",
+    BY_CATEGORY:    (categoryId: string | number) => `/stories/category/${categoryId}`,
+  };
+
+  // ── Bookmark ──────────────────────────────────────────────────────────────
+  static BOOKMARK = {
+    UPSERT:    (storyId: string | number, chapterId: string | number) => `/bookmarks/story/${storyId}/chapter/${chapterId}`,
+    DELETE:    (storyId: string | number) => `/bookmarks/story/${storyId}`,
+    LIST:      "/bookmarks",
+    GET_STORY: (storyId: string | number) => `/bookmarks/story/${storyId}`,
   };
 
   // ── Chapter ───────────────────────────────────────────────────────────────
@@ -53,6 +65,7 @@ export default class APP_CONFIG {
     PURCHASE:  (id: string | number) => `/chapters/${id}/purchase`,
     SUBMIT:    (id: string | number) => `/chapters/${id}/submit`,   // DRAFT/EDITED → PENDING_REVIEW
     PUBLISH:   (id: string | number) => `/chapters/${id}/publish`,  // APPROVED → PUBLISHED
+    SCHEDULE:  (id: string | number) => `/chapters/${id}/schedule`, // APPROVED → SCHEDULED
   };
 
   // ── Category ──────────────────────────────────────────────────────────────
@@ -96,6 +109,7 @@ export default class APP_CONFIG {
   static MISSION = {
     LIST:     "/missions",
     MY:       "/missions/my",
+    CLAIM:    (missionId: string | number) => `/missions/${missionId}/claim`,
     COMPLETE: (missionId: string | number) => `/missions/${missionId}/complete`,
   };
 

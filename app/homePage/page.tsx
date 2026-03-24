@@ -19,7 +19,7 @@ import { useAuthStore } from "@/stores";
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // CONSTANTS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 16;
 const HOT_FETCH_SIZE = 50;
 const HOT_DISPLAY_LIMIT = 12;
 const TOP5_LIMIT = 5;

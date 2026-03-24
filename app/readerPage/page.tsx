@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -6,8 +6,11 @@ import { useNavStore } from "@/stores/navStore";
 import { useAuthStore } from "@/stores";
 import useChapterService from "@/api/useChapter.service";
 import useCommentService from "@/api/useComment.service";
+import useGiftService, { Gift } from "@/api/useGift.service";
 import useReportService from "@/api/useReport.service";
 import useStoryService from "@/api/useStory.service";
+import useHttpClient from "@/api/useHttpClient";
+import APP_CONFIG from "@/config/app-config";
 import { useStoryStore } from "@/stores/storyStore";
 import { Ico } from "@/components/Icons";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +28,12 @@ interface CommentItem {
   // nested user object fallback (some API versions)
   user?: { id?: number; fullName?: string; name?: string };
 }
+
+type LocalGift = Gift & { _comment?: string };
+
+type FeedItem =
+  | { kind: "comment"; id: string; ts: string; data: CommentItem }
+  | { kind: "gift";    id: string; ts: string; data: LocalGift };
 
 interface ChapterData {
   id: number;
@@ -86,6 +95,8 @@ function CommentNode({
   depth = 0,
   currentUserId,
   isLoggedIn,
+  storyAuthorId,
+  onBlock,
   onSubmitReply,
   onDelete,
   onReport,
@@ -95,6 +106,8 @@ function CommentNode({
   depth?: number;
   currentUserId?: number;
   isLoggedIn: boolean;
+  storyAuthorId?: number | null;
+  onBlock?: (userId: number) => void;
   onSubmitReply: (parentId: number, content: string) => Promise<void>;
   onDelete: (id: number) => void;
   onReport: (id: number) => void;
@@ -176,6 +189,9 @@ function CommentNode({
           {/* Header */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
             <span style={{ fontWeight: 600, fontSize: 13, color: "#1c1512" }}>{name}</span>
+            {storyAuthorId != null && (comment.userId === storyAuthorId || comment.user?.id === storyAuthorId) && (
+              <span style={{ fontSize: 10, fontWeight: 800, color: "#fff", background: "linear-gradient(135deg,#c69526,#9a7020)", borderRadius: 6, padding: "2px 7px", letterSpacing: 0.3 }}>Tác giả</span>
+            )}
             <span style={{ fontSize: 11, color: "#b0a096" }}>{timeAgo(comment.createdAt)}</span>
           </div>
 
@@ -222,6 +238,14 @@ function CommentNode({
                   >
                     🚩 Báo cáo
                   </button>
+                  {storyAuthorId != null && currentUserId === storyAuthorId && !isOwn && (
+                    <button
+                      onClick={() => { setMenuOpen(false); onBlock?.(comment.userId ?? comment.user?.id ?? 0); }}
+                      style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "#dc2626", textAlign: "left", fontFamily: "inherit" }}
+                    >
+                      🚫 Chặn người dùng
+                    </button>
+                  )}
                   {isOwn && (
                     <button
                       onClick={() => { setMenuOpen(false); onDelete(comment.id); }}
@@ -273,7 +297,7 @@ function CommentNode({
       {showReplies && comment.replies && comment.replies.length > 0 && (
         <div style={{ marginLeft: 24, marginTop: 6, borderLeft: "2px solid #f5d0d0", paddingLeft: 8 }}>
           {comment.replies.map((r) => (
-            <CommentNode key={r.id} comment={r} depth={depth + 1} currentUserId={currentUserId} isLoggedIn={isLoggedIn} onSubmitReply={onSubmitReply} onDelete={onDelete} onReport={onReport} onRequireAuth={onRequireAuth} />
+            <CommentNode key={r.id} comment={r} depth={depth + 1} currentUserId={currentUserId} isLoggedIn={isLoggedIn} storyAuthorId={storyAuthorId} onBlock={onBlock} onSubmitReply={onSubmitReply} onDelete={onDelete} onReport={onReport} onRequireAuth={onRequireAuth} />
           ))}
         </div>
       )}
@@ -743,7 +767,11 @@ export default function ReaderPage() {
   const commentService = useCommentService();
   const commentServiceRef = useRef(commentService);
   commentServiceRef.current = commentService;
+  const giftService = useGiftService();
+  const giftServiceRef = useRef(giftService);
+  giftServiceRef.current = giftService;
   const { createReport } = useReportService();
+  const httpClient = useHttpClient();
   const toast = useToast();
 
   const [chapterData, setChapterData] = useState<ChapterData | null>(null);
@@ -764,6 +792,18 @@ export default function ReaderPage() {
   const [submitting, setSubmitting] = useState(false);
   const [reportModal, setReportModal] = useState<{ targetType: string; targetId: number; label: string } | null>(null);
   const [reporting, setReporting] = useState(false);
+
+  // Donate / gift state
+  const [gifts, setGifts] = useState<LocalGift[]>([]);
+  const [attachCoin, setAttachCoin] = useState(false);
+  const [donateAmount, setDonateAmount] = useState(50);
+  const [customAmount, setCustomAmount] = useState("");
+  const [sendingGift, setSendingGift] = useState(false);
+  const [storyAuthorId, setStoryAuthorId] = useState<number | null>(null);
+
+  // Bookmark state
+  const [bookmarked, setBookmarked] = useState(false);
+  const [bookmarkLoading, setBookmarkLoading] = useState(false);
 
   // Load comments — use ref so it's never stale
   const loadComments = useCallback(async (chapterId: number) => {
@@ -807,6 +847,8 @@ export default function ReaderPage() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .then((r: any) => {
           const det = r?.data ?? r;
+          const authorId: number | undefined = det?.authorId ?? det?.author?.id;
+          if (authorId) setStoryAuthorId(authorId);
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const detList: any[] = Array.isArray(det?.chapters) ? det.chapters : [];
           if (detList.length) setChapters(mapChapters(detList));
@@ -827,6 +869,31 @@ export default function ReaderPage() {
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chapterData?.storyId]);
+
+  // Fetch story author ID (for "Tác giả" badge in comments)
+  useEffect(() => {
+    const storyId = chapterData?.storyId;
+    if (!storyId) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getStoryDetail(storyId).then((r: any) => {
+      const det = r?.data ?? r;
+      const authorId: number | undefined = det?.authorId ?? det?.author?.id;
+      if (authorId) setStoryAuthorId(authorId);
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapterData?.storyId]);
+
+  // Load bookmark status when story/user changes
+  useEffect(() => {
+    const storyId = chapterData?.storyId;
+    if (!storyId || !user) { setBookmarked(false); return; }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    httpClient.get<any>(APP_CONFIG.BOOKMARK.GET_STORY(storyId))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((res: any) => { const d = res?.data ?? res; setBookmarked(!!d?.id); })
+      .catch(() => setBookmarked(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapterData?.storyId, user?.id]);
 
   // Scroll progress
   useEffect(() => {
@@ -885,12 +952,33 @@ export default function ReaderPage() {
   const handlePostComment = async () => {
     if (!user) { router.push("?login"); return; }
     if (!commentText.trim() || !chapterData) return;
+    const coinToSend = attachCoin ? (customAmount ? Number(customAmount) : donateAmount) : 0;
+    const textSnapshot = commentText.trim();
     setSubmitting(true);
     try {
-      await commentServiceRef.current.createComment({ chapterId: chapterData.id, content: commentText.trim() });
+      await commentServiceRef.current.createComment({ chapterId: chapterData.id, content: textSnapshot });
       setCommentText("");
       await loadComments(chapterData.id);
-      toast.success("Đã đăng bình luận!");
+      // If coin is attached, send gift alongside and embed comment text in the card
+      if (attachCoin && coinToSend > 0 && chapterData.storyId) {
+        setSendingGift(true);
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const res: any = await giftServiceRef.current.sendGift(chapterData.storyId, coinToSend);
+          const gift: LocalGift = { ...(res?.data ?? res), _comment: textSnapshot };
+          if (gift?.id) setGifts((prev) => [...prev, gift]);
+          toast.success(`💬🪙 Đã gửi bình luận kèm ${coinToSend.toLocaleString()} xu!`);
+        } catch (err: any) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          toast.error((err as any)?.response?.data?.message ?? "Bình luận đã đăng nhưng không thể gửi xu.");
+        } finally {
+          setSendingGift(false);
+        }
+        setAttachCoin(false);
+        setCustomAmount("");
+      } else {
+        toast.success("Đã đăng bình luận!");
+      }
     } catch {
       toast.error("Không thể đăng bình luận. Thử lại sau.");
     } finally {
@@ -923,6 +1011,38 @@ export default function ReaderPage() {
     setReportModal({ targetType, targetId, label });
   };
 
+  // Toggle bookmark
+  const handleToggleBookmark = async () => {
+    if (!user) { router.push("?login"); return; }
+    const storyId = chapterData?.storyId;
+    const chapterId = selectedChapterId;
+    if (!storyId || !chapterId) return;
+    setBookmarkLoading(true);
+    try {
+      if (bookmarked) {
+        await httpClient.delete<any>(APP_CONFIG.BOOKMARK.DELETE(storyId), {});
+        setBookmarked(false);
+        toast.success("Đã xóa dấu trang.");
+      } else {
+        await httpClient.put<any>(APP_CONFIG.BOOKMARK.UPSERT(storyId, chapterId), {});
+        setBookmarked(true);
+        toast.success("Đã lưu dấu trang! 🔖");
+      }
+    } catch { toast.error("Không thể thực hiện."); }
+    finally { setBookmarkLoading(false); }
+  };
+
+  // Block user (only available to story author)
+  const handleBlockUser = async (userId: number) => {
+    if (!userId) return;
+    try {
+      await httpClient.post<any>(APP_CONFIG.USER.BLOCK, { userId });
+      toast.success("Đã chặn người dùng này. Họ sẽ không thể bình luận hay tặng quà trên truyện của bạn.");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? "Không thể chặn người dùng.");
+    }
+  };
+
   // Submit report
   const handleSubmitReport = async (reason: string) => {
     if (!reportModal) return;
@@ -935,6 +1055,44 @@ export default function ReaderPage() {
       toast.error("Không thể gửi báo cáo. Thử lại sau.");
     } finally {
       setReporting(false);
+    }
+  };
+
+  // Load gifts whenever storyId becomes available
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const storyId = chapterData?.storyId;
+    if (!storyId) return;
+    giftServiceRef.current.getGiftsByStory(storyId)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((res: any) => {
+        const list: Gift[] = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+        setGifts(list);
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapterData?.storyId]);
+
+  // Send gift standalone (no comment attached)
+  const handleSendGift = async () => {
+    if (!user) { router.push("?login"); return; }
+    if (!chapterData?.storyId) return;
+    const finalAmount = customAmount ? Number(customAmount) : donateAmount;
+    if (!finalAmount || finalAmount <= 0) { toast.error("Số xu phải lớn hơn 0."); return; }
+    setSendingGift(true);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const res: any = await giftServiceRef.current.sendGift(chapterData.storyId, finalAmount);
+      const gift: LocalGift = res?.data ?? res;
+      if (gift?.id) setGifts((prev) => [...prev, gift]);
+      setAttachCoin(false);
+      setCustomAmount("");
+      toast.success(`🎁 Đã tặng ${finalAmount.toLocaleString()} xu cho tác giả!`);
+    } catch (err: any) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      toast.error((err as any)?.response?.data?.message ?? "Không thể gửi quà. Kiểm tra số dư ví.");
+    } finally {
+      setSendingGift(false);
     }
   };
 
@@ -1006,6 +1164,12 @@ export default function ReaderPage() {
   const readMins = Math.max(1, Math.ceil(wordCount / 200));
   const isLocked = (chapterData.coinPrice ?? 0) > 0 && !chapterData.isPurchased;
 
+  // Unified comment + gift feed sorted oldest → newest (chronological, like a chat)
+  const feedItems: FeedItem[] = [
+    ...comments.map((c) => ({ kind: "comment" as const, id: `c-${c.id}`, ts: c.createdAt, data: c })),
+    ...gifts.map((g) => ({ kind: "gift" as const, id: `g-${g.id}`, ts: g.createdAt, data: g })),
+  ].sort((a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime());
+
   return (
     <div className="reader-wrap fade-in">
       {/* Progress bar */}
@@ -1054,6 +1218,31 @@ export default function ReaderPage() {
         >
           <span style={{ fontSize: 14 }}>☰</span>
           <span>Chương</span>
+        </button>
+
+        {/* Bookmark button */}
+        <button
+          onClick={handleToggleBookmark}
+          disabled={bookmarkLoading}
+          title={bookmarked ? "Xóa dấu trang" : "Lưu dấu trang"}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "6px 14px",
+            borderRadius: 8,
+            border: bookmarked ? "1.5px solid #c23d3f" : "1.5px solid #e8e0d6",
+            background: bookmarked ? "#fde8e8" : "#fdfaf7",
+            cursor: bookmarkLoading ? "not-allowed" : "pointer",
+            fontSize: 13,
+            fontWeight: 600,
+            color: bookmarked ? "#c23d3f" : "#6b5a4e",
+            transition: "all 0.15s",
+            opacity: bookmarkLoading ? 0.6 : 1,
+          }}
+        >
+          <span>{bookmarked ? "🔖" : "📑"}</span>
+          <span>{bookmarked ? "Đã lưu" : "Lưu"}</span>
         </button>
 
         {/* Settings trigger — replaces old A-/A+ buttons */}
@@ -1303,13 +1492,15 @@ export default function ReaderPage() {
         </button>
       </div>
 
-      {/* Comments */}
+      {/* Comments + Donate — unified live feed */}
       <div style={{ maxWidth: 680, margin: "48px auto 80px", padding: "0 16px" }}>
 
-        {/* Section header + report chapter button */}
+        {/* Section header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 8 }}>
-          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 700, color: "#1c1512" }}>
-            💬 Bình luận ({comments.length})
+          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 700, color: "#1c1512", display: "flex", alignItems: "center", gap: 12 }}>
+            <span>💬 {comments.length} bình luận</span>
+            <span style={{ color: "#d4d4d4" }}>|</span>
+            <span style={{ color: "#c69526" }}>🎁 {gifts.length} quà</span>
           </div>
           <button
             onClick={() => handleOpenReport("CHAPTER", chapterData.id, chapterData.title)}
@@ -1319,8 +1510,8 @@ export default function ReaderPage() {
           </button>
         </div>
 
-        {/* Comment input — root comments only */}
-        <div style={{ background: "#fdfaf7", border: "1.5px solid #e8e0d6", borderRadius: 14, padding: "14px 16px", marginBottom: 24 }}>
+        {/* Input box — comment + optional coin attachment */}
+        <div style={{ background: "#fdfaf7", border: `1.5px solid ${attachCoin ? "#fcd34d" : "#e8e0d6"}`, borderRadius: 14, padding: "14px 16px", marginBottom: 24, transition: "border-color 0.15s" }}>
           <textarea
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
@@ -1330,42 +1521,116 @@ export default function ReaderPage() {
             rows={3}
             style={{ width: "100%", border: "none", background: "transparent", resize: "none", fontSize: 14, color: "#3d2f28", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
           />
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8, gap: 8 }}>
-            {!user && (
-              <button onClick={() => router.push("?login")} style={{ fontSize: 13, color: "#c23d3f", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>
-                Đăng nhập để bình luận →
-              </button>
-            )}
-            {user && (
-              <button
-                onClick={handlePostComment}
-                disabled={!commentText.trim() || submitting}
-                style={{ padding: "8px 20px", borderRadius: 9, border: "none", background: !commentText.trim() || submitting ? "#f3f4f6" : "#c23d3f", color: !commentText.trim() || submitting ? "#9ca3af" : "#fff", fontSize: 13, fontWeight: 700, cursor: !commentText.trim() || submitting ? "not-allowed" : "pointer" }}
-              >
-                {submitting ? "Đang gửi..." : "Gửi"}
-              </button>
-            )}
+
+          {/* Coin selector — inline, only shown when attachCoin is toggled */}
+          {attachCoin && (
+            <div style={{ background: "linear-gradient(135deg,#fffbeb,#fef3c7)", borderRadius: 10, padding: "12px", marginBottom: 10, border: "1px solid #fde68a" }}>
+              <div style={{ fontSize: 12, color: "#b45309", fontWeight: 600, marginBottom: 8 }}>🪙 Chọn số xu kèm theo bình luận:</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                {[10, 50, 100, 500, 1000, 5000].map((amt) => (
+                  <button
+                    key={amt}
+                    onClick={() => { setDonateAmount(amt); setCustomAmount(""); }}
+                    style={{ padding: "5px 12px", borderRadius: 18, border: `1.5px solid ${donateAmount === amt && !customAmount ? "#c69526" : "#fcd34d"}`, background: donateAmount === amt && !customAmount ? "#fcd34d" : "#fff", color: "#92400e", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.1s" }}
+                  >
+                    🪙 {amt.toLocaleString()}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="number"
+                min={1}
+                value={customAmount}
+                onChange={(e) => setCustomAmount(e.target.value)}
+                placeholder="Hoặc nhập số xu tuỳ chọn..."
+                style={{ width: "100%", padding: "7px 12px", borderRadius: 8, border: "1.5px solid #fcd34d", background: "#fff", fontSize: 12, color: "#1c1512", outline: "none", boxSizing: "border-box" }}
+              />
+            </div>
+          )}
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4, gap: 8, flexWrap: "wrap" }}>
+            {/* Coin toggle */}
+            <button
+              onClick={() => { if (!user) { router.push("?login"); return; } setAttachCoin((v) => !v); }}
+              title={attachCoin ? "Bỏ kèm xu" : "Kèm xu vào bình luận"}
+              style={{ padding: "6px 14px", borderRadius: 9, border: `1.5px solid ${attachCoin ? "#c69526" : "#e8e0d6"}`, background: attachCoin ? "#fef3c7" : "transparent", color: attachCoin ? "#92400e" : "#9ca3af", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 0.15s" }}
+            >
+              🪙 {attachCoin ? `${(customAmount ? Number(customAmount) : donateAmount).toLocaleString()} xu ✕` : "Kèm xu"}
+            </button>
+
+            {/* Submit */}
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              {!user && (
+                <button onClick={() => router.push("?login")} style={{ fontSize: 13, color: "#c23d3f", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>
+                  Đăng nhập để bình luận →
+                </button>
+              )}
+              {user && (
+                <button
+                  onClick={handlePostComment}
+                  disabled={!commentText.trim() || submitting || sendingGift}
+                  style={{ padding: "8px 20px", borderRadius: 9, border: "none", background: !commentText.trim() || submitting || sendingGift ? "#f3f4f6" : attachCoin ? "linear-gradient(135deg,#c69526,#9a7020)" : "#c23d3f", color: !commentText.trim() || submitting || sendingGift ? "#9ca3af" : "#fff", fontSize: 13, fontWeight: 700, cursor: !commentText.trim() || submitting || sendingGift ? "not-allowed" : "pointer", whiteSpace: "nowrap", transition: "background 0.15s" }}
+                >
+                  {submitting || sendingGift ? "Đang gửi..." : attachCoin ? `Gửi + 🪙 ${(customAmount ? Number(customAmount) : donateAmount).toLocaleString()} xu` : "Gửi"}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Comment list */}
-        {comments.length === 0 ? (
+        {/* Unified feed — comments & gifts interleaved by time */}
+        {feedItems.length === 0 ? (
           <div style={{ textAlign: "center", padding: "32px 0", fontSize: 14, color: "#b0a096" }}>
-            Chưa có bình luận nào. Hãy là người đầu tiên bình luận! 🌸
+            Chưa có bình luận hay quà tặng nào. Hãy là người đầu tiên! 🌸
           </div>
         ) : (
-          comments.map((c) => (
-            <CommentNode
-              key={c.id}
-              comment={c}
-              currentUserId={user?.id}
-              isLoggedIn={!!user}
-              onSubmitReply={handleSubmitReply}
-              onDelete={handleDeleteComment}
-              onReport={(id) => handleOpenReport("COMMENT", id, `Bình luận #${id}`)}
-              onRequireAuth={() => router.push("?login")}
-            />
-          ))
+          feedItems.map((item) => {
+            if (item.kind === "gift") {
+              const g = item.data as LocalGift;
+              return (
+                <div
+                  key={item.id}
+                  style={{ display: "flex", alignItems: "flex-start", gap: 14, background: "linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%)", border: "1.5px solid #fde68a", borderRadius: 14, padding: "14px 18px", marginBottom: 12, boxShadow: "0 2px 8px rgba(199,151,0,0.12)" }}
+                >
+                  <div style={{ fontSize: 32, flexShrink: 0, marginTop: 2 }}>🎁</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <div style={{ width: 26, height: 26, borderRadius: "50%", background: getAvatarColor(g.fromUserName), display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 11, flexShrink: 0 }}>
+                        {g.fromUserName.charAt(0).toUpperCase()}
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#92400e" }}>{g.fromUserName}</span>
+                      <span style={{ fontSize: 12, color: "#b45309" }}>{g._comment ? "vừa bình luận kèm xu:" : "vừa tặng quà!"}</span>
+                    </div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: "#c69526", letterSpacing: -0.5, marginBottom: g._comment ? 6 : 0 }}>
+                      🪙 {g.amount.toLocaleString()} xu
+                    </div>
+                    {g._comment && (
+                      <div style={{ fontSize: 13, color: "#5d4037", background: "rgba(255,255,255,0.65)", borderRadius: 8, padding: "7px 11px", borderLeft: "3px solid #fbbf24", fontStyle: "italic", lineHeight: 1.5 }}>
+                        "{g._comment}"
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#b0a096", flexShrink: 0, alignSelf: "flex-start", paddingTop: 2 }}>{timeAgo(g.createdAt)}</div>
+                </div>
+              );
+            }
+            // regular comment
+            const c = item.data as CommentItem;
+            return (
+              <CommentNode
+                key={item.id}
+                comment={c}
+                currentUserId={user?.id}
+                isLoggedIn={!!user}
+                storyAuthorId={storyAuthorId}
+                onBlock={handleBlockUser}
+                onSubmitReply={handleSubmitReply}
+                onDelete={handleDeleteComment}
+                onReport={(id) => handleOpenReport("COMMENT", id, `Bình luận #${id}`)}
+                onRequireAuth={() => router.push("?login")}
+              />
+            );
+          })
         )}
       </div>
 
