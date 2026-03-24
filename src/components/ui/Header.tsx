@@ -150,6 +150,7 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
   const [searchResults, setSearchResults] = useState<any[]>([]);
 
   const primaryRole = user?.roles?.[0] ?? "READER";
+  const canUpgradeRole = user?.roles ? !user.roles.some((r: string) => ["author", "reviewer", "editor", "admin"].includes(r.replace("ROLE_", "").toLowerCase())) : false;
 
   // ── Load categories ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -321,7 +322,7 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
               </div>
             ) : (
               <>
-                {user.roles.includes("READER") && (
+                {canUpgradeRole && (
                   <>
                     <button className="mobile-nav-link" onClick={mobileAnd(() => openModal(BecomeAuthorModal, { onSuccess: () => closeModal() }))}>✒ Trở thành Tác giả</button>
                     <button className="mobile-nav-link" onClick={mobileAnd(() => openModal(BecomeReviewerModal, { onSuccess: () => closeModal() }))}>🛡 Trở thành Reviewer</button>
@@ -512,7 +513,7 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
                     <div className="dropdown-divider" />
 
                     {/* Upgrade role */}
-                    {user.roles.includes("READER") && (
+                    {canUpgradeRole && (
                       <>
                         <button className="dropdown-item" onClick={() => { setShowUserMenu(false); openModal(BecomeAuthorModal, { onSuccess: () => closeModal() }); }}>✒ Trở thành Tác giả</button>
                         <button className="dropdown-item" onClick={() => { setShowUserMenu(false); openModal(BecomeReviewerModal, { onSuccess: () => closeModal() }); }}>🛡 Trở thành Reviewer</button>

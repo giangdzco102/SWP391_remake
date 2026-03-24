@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Ico } from "../Icons";
 import { useToast } from "@/hooks/use-toast";
 import useRoleChangeService from "@/api/useRoleChange.service";
+import useCategoryService, { CategoryItem } from "@/api/useCategory.service";
 
 // ── BECOME AUTHOR ──
 export function SettingsModal({ onClose }: any) {
@@ -553,13 +554,25 @@ export function SettingsModal({ onClose }: any) {
     </div>
   );
 }
-export function BecomeAuthorModal({ onClose, onSuccess }) {
+export function BecomeAuthorModal({ onClose, onSuccess }: any) {
   const [penName, setPenName] = useState("");
   const [genre, setGenre] = useState("");
   const [bio, setBio] = useState("");
   const [loading, setLoading] = useState(false);
   const toast = useToast();
   const { createRequest } = useRoleChangeService();
+  const { getCategories } = useCategoryService();
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+
+  useEffect(() => {
+    getCategories()
+      .then((res: any) => {
+        const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+        setCategories(list);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async () => {
     if (!penName.trim() || !genre) return;
@@ -617,7 +630,11 @@ export function BecomeAuthorModal({ onClose, onSuccess }) {
                 onChange={(e) => setGenre(e.target.value)}
               >
                 <option value="">-- Chọn --</option>
-                
+                {categories.map((c) => (
+                  <option key={c.id} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="form-group">
