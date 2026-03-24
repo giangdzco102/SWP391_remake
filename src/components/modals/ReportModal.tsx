@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 export interface ReportModalProps {
   targetLabel: string;
@@ -14,13 +15,18 @@ export function ReportModal({
   loading,
 }: ReportModalProps) {
   const [reason, setReason] = useState("");
-  return (
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  const modalContent = (
     <div
       style={{
         position: "fixed",
         inset: 0,
         background: "rgba(0,0,0,0.45)",
-        zIndex: 1000,
+        zIndex: 99999,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -112,4 +118,7 @@ export function ReportModal({
       </div>
     </div>
   );
+
+  if (!mounted) return null;
+  return createPortal(modalContent, document.body);
 }

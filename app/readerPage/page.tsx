@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -68,6 +68,7 @@ export default function ReaderPage() {
   const [reporting, setReporting] = useState(false);
   const [giftAmount, setGiftAmount] = useState<number | null>(null);
   const [showGiftOptions, setShowGiftOptions] = useState(false);
+  const [storyAuthorId, setStoryAuthorId] = useState<number | null>(null);
 
   // Load comments — use ref so it's never stale
   const loadComments = useCallback(async (chapterId: number) => {
@@ -148,6 +149,20 @@ export default function ReaderPage() {
     getStoryDetail,
     setChapters,
   ]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch story author ID (for "Tác giả" badge in comments)
+  useEffect(() => {
+    const storyId = chapterData?.storyId;
+    if (!storyId) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getStoryDetail(storyId)
+      .then((r: any) => {
+        const det = r?.data ?? r;
+        const authorId: number | undefined = det?.authorId ?? det?.author?.id;
+        if (authorId) setStoryAuthorId(authorId);
+      })
+      .catch(() => {});
+  }, [chapterData?.storyId, getStoryDetail]);
 
   // ── Sync from URL ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -1007,6 +1022,7 @@ export default function ReaderPage() {
               comment={c}
               currentUserId={user?.id}
               isLoggedIn={!!user}
+              storyAuthorId={storyAuthorId}
               onSubmitReply={handleSubmitReply}
               onDelete={handleDeleteComment}
               onReport={(id) =>

@@ -8,6 +8,8 @@ export function CommentNode({
   depth = 0,
   currentUserId,
   isLoggedIn,
+    storyAuthorId,
+  onBlock,
   onSubmitReply,
   onDelete,
   onReport,
@@ -17,6 +19,8 @@ export function CommentNode({
   depth?: number;
   currentUserId?: number;
   isLoggedIn: boolean;
+    storyAuthorId?: number | null;
+  onBlock?: (userId: number) => void;
   onSubmitReply: (parentId: number, content: string) => Promise<void>;
   onDelete: (id: number) => void;
   onReport: (id: number) => void;
@@ -119,8 +123,11 @@ export function CommentNode({
               flexWrap: "wrap",
             }}
           >
-            <span style={{ fontWeight: 600, fontSize: 13, color: "#1c1512" }}>
+            <span style={{ fontWeight: 600, fontSize: 13, color: "#1c1512", display: "flex", alignItems: "center", gap: 6 }}>
               {name}
+              {storyAuthorId != null && (comment.userId === storyAuthorId || comment.user?.id === storyAuthorId) && (
+              <span style={{ fontSize: 10, fontWeight: 800, color: "#fff", background: "linear-gradient(135deg,#c69526,#9a7020)", borderRadius: 6, padding: "2px 7px", letterSpacing: 0.3 }}>Tác giả</span>
+            )}
             </span>
             <span style={{ fontSize: 11, color: "#b0a096" }}>
               {timeAgo(comment.createdAt)}
@@ -281,6 +288,14 @@ export function CommentNode({
                   >
                     🚩 Báo cáo
                   </button>
+                  {storyAuthorId != null && currentUserId === storyAuthorId && !isOwn && (
+                    <button
+                      onClick={() => { setMenuOpen(false); onBlock?.(comment.userId ?? comment.user?.id ?? 0); }}
+                      style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "#dc2626", textAlign: "left", fontFamily: "inherit" }}
+                    >
+                      🚫 Chặn người dùng
+                    </button>
+                  )}
                   {isOwn && (
                     <button
                       onClick={() => {
@@ -406,17 +421,8 @@ export function CommentNode({
           }}
         >
           {comment.replies.map((r) => (
-            <CommentNode
-              key={r.id}
-              comment={r}
-              depth={depth + 1}
-              currentUserId={currentUserId}
-              isLoggedIn={isLoggedIn}
-              onSubmitReply={onSubmitReply}
-              onDelete={onDelete}
-              onReport={onReport}
-              onRequireAuth={onRequireAuth}
-            />
+                        <CommentNode key={r.id} comment={r} depth={depth + 1} currentUserId={currentUserId} isLoggedIn={isLoggedIn} storyAuthorId={storyAuthorId} onBlock={onBlock} onSubmitReply={onSubmitReply} onDelete={onDelete} onReport={onReport} onRequireAuth={onRequireAuth} />
+
           ))}
         </div>
       )}

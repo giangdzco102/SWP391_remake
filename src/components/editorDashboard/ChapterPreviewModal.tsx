@@ -4,20 +4,19 @@ import useHttpClient from "@/api/useHttpClient";
 import APP_CONFIG from "@/config/app-config";
 import { ChapterDetail } from "@/types/editorDashboard";
 import { T, btnOutline } from "@/utils/editorDashboard.constants";
+import { getAccessToken } from "@/utils";
 
 export function ChapterPreviewModal({ chapterId, onClose }: { chapterId: number; onClose: () => void }) {
   const httpClient = useHttpClient();
   const [chapter, setChapter] = useState<ChapterDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    httpClient.get(APP_CONFIG.CHAPTER.GET(chapterId))
+    const token = getAccessToken();
+    httpClient.getPublic(APP_CONFIG.CHAPTER.GET(chapterId), token ? { Authorization: `Bearer ${token}` } : {})
       .then((res: any) => setChapter(res?.data ?? res ?? null))
-      .catch(() => { })
+      .catch(() => {})
       .finally(() => setLoading(false));
-  }, [chapterId]);
-  
+  }, [chapterId]);// eslint-disable-line react-hooks/exhaustive-deps
   const content = chapter?.content ?? "";
   const isHtml = /<[a-z][\s\S]*>/i.test(content);
   return (

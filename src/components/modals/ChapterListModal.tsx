@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 export interface ChapterListModalProps {
   chapters: {
@@ -22,8 +23,10 @@ export function ChapterListModal({
   onClose,
 }: ChapterListModalProps) {
   const currentRef = useRef<HTMLButtonElement>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     // Scroll the current chapter into view after modal opens
     setTimeout(
       () =>
@@ -40,14 +43,14 @@ export function ChapterListModal({
     if (e.target === e.currentTarget) onClose();
   };
 
-  return (
+  const modalContent = (
     <div
       onClick={handleBackdrop}
       style={{
         position: "fixed",
         inset: 0,
         background: "rgba(0,0,0,0.45)",
-        zIndex: 1000,
+        zIndex: 99999,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -234,4 +237,7 @@ export function ChapterListModal({
       </div>
     </div>
   );
+
+  if (!mounted) return null;
+  return createPortal(modalContent, document.body);
 }

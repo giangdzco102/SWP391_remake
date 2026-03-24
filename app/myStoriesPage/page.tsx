@@ -146,6 +146,7 @@ function StatusBadge({ status }: { status: string }) {
     PENDING_REVIEW: { label: "Chờ duyệt",   bg: T.warnBg,    color: T.warn,    border: T.warnBorder },
     PENDING:        { label: "Chờ duyệt",   bg: T.warnBg,    color: T.warn,    border: T.warnBorder },
     APPROVED:       { label: "Đã duyệt",    bg: T.successBg, color: T.success, border: T.successBorder },
+    SCHEDULED:      { label: "Đã hẹn lịch",  bg: T.infoBg,    color: T.info,    border: T.infoBorder },
     PUBLISHED:      { label: "Đã xuất bản",  bg: T.infoBg,   color: T.info,    border: T.infoBorder },
     REJECTED:       { label: "Bị từ chối",  bg: T.dangerBg,  color: T.danger,  border: T.dangerBorder },
     HIDDEN:         { label: "Đã ẩn",       bg: T.grayBg,    color: T.gray,    border: T.grayBorder },
@@ -857,6 +858,35 @@ function WalletSection({ wallet, transactions, loadingTx }: { wallet: WalletInfo
 }
 
 /* ================================================================
+   SCHEDULE DATE INPUT (used inside schedule modal)
+   ================================================================ */
+function ScheduleDateInput({ onConfirm, onClose, loading }: { onConfirm: (publishAt: string) => void; onClose: () => void; loading: boolean }) {
+  const [publishAt, setPublishAt] = useState("");
+  const min = new Date(Date.now() + 60000).toISOString().slice(0, 16);
+  return (
+    <>
+      <input
+        type="datetime-local"
+        value={publishAt}
+        min={min}
+        onChange={(e) => setPublishAt(e.target.value)}
+        style={fInput()}
+      />
+      <div style={{ display: "flex", gap: 10, marginTop: 20, justifyContent: "flex-end" }}>
+        <button onClick={onClose} style={btnOutline}>Hủy</button>
+        <button
+          onClick={() => { if (publishAt) onConfirm(publishAt); }}
+          disabled={!publishAt || loading}
+          style={!publishAt || loading ? btnDisabled : btnPrimary}
+        >
+          {loading ? "⏳ Đang lưu…" : "📅 Hẹn lịch"}
+        </button>
+      </div>
+    </>
+  );
+}
+
+/* ================================================================
    MAIN PAGE
    ================================================================ */
 export default function MyStoriesPage() {
@@ -882,6 +912,7 @@ export default function MyStoriesPage() {
   const [chapterModal, setChapterModal] = useState<{ storyId: number; chapter?: ChapterItem | null; nextOrder?: number } | null>(null);
   const [deletingChapter, setDeletingChapter] = useState<number | null>(null);
   const [submittingStory, setSubmittingStory] = useState<number | null>(null);
+  const [togglingComplete, setTogglingComplete] = useState<number | null>(null);
   const [submittingChapter, setSubmittingChapter] = useState<number | null>(null);
   const [publishingChapter, setPublishingChapter] = useState<number | null>(null);
   const [editRequestModal, setEditRequestModal] = useState<ChapterItem | null>(null);
@@ -894,6 +925,8 @@ export default function MyStoriesPage() {
   const [storySort, setStorySort] = useState<"newest" | "oldest">("newest");
   const [deletingStory, setDeletingStory] = useState<number | null>(null);
   const [confirmDeleteStory, setConfirmDeleteStory] = useState<{ id: number; title: string } | null>(null);
+  const [scheduleModal, setScheduleModal] = useState<{ chapterId: number; title: string; storyId: number } | null>(null);
+  const [schedulingChapter, setSchedulingChapter] = useState<number | null>(null);
 
   // Missions & Streak state
   const [missions, setMissions] = useState<any[]>([]);
@@ -986,9 +1019,10 @@ export default function MyStoriesPage() {
   const handleClaimMission = async (missionId: number) => {
     setClaimingMission(missionId);
     try {
-      await httpClient.post(APP_CONFIG.MISSION.COMPLETE(missionId), {});
-      toast.success("🎁 Đã nhận phần thưởng nhiệm vụ!");
-      setMissions((prev) => prev.map((m) => m.id === missionId ? { ...m, completed: true, completedAt: new Date().toISOString() } : m));
+      await httpClient.post(APP_CONFIG.MISSION.CLAIM(missionId), {});
+      toast.success("🎁 Đã nhận thưởng! Xu đã được cộng vào ví.");
+      setMissions((prev) => prev.map((m) => m.id === missionId ? { ...m, status: "COMPLETED", canClaim: false, completed: true } : m));
+      loadWallet();
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? "Không thể nhận phần thưởng.");
     } finally { setClaimingMission(null); }
@@ -1065,7 +1099,7 @@ export default function MyStoriesPage() {
     if (!window.confirm("Nộp chương này lên Reviewer duyệt?")) return;
     setSubmittingChapter(cId);
     try { await httpClient.post(APP_CONFIG.CHAPTER.SUBMIT(cId), {}); toast.success("Đã nộp chương — chờ kiểm duyệt!"); loadChapters(sId); }
-    catch { toast.error("Không thể nộp chương."); }
+    catch (err: any) { toast.error(err?.response?.data?.message ?? err?.message ?? "Không thể nộp chương."); }
     finally { setSubmittingChapter(null); }
   };
 
@@ -1082,6 +1116,27 @@ export default function MyStoriesPage() {
     try { await httpClient.delete(APP_CONFIG.STORY.DELETE(sId), {}); toast.success("Đã xóa truyện."); loadStories(); if (expandedId === sId) setExpandedId(null); }
     catch (err: any) { toast.error(err?.response?.data?.message ?? "Không thể xóa truyện này."); }
     finally { setDeletingStory(null); }
+  };
+
+  const handleToggleComplete = async (sId: number, currentIsCompleted: boolean) => {
+    setTogglingComplete(sId);
+    try {
+      await httpClient.patch(APP_CONFIG.STORY.SET_COMPLETION(sId) + `?completed=${!currentIsCompleted}`, {});
+      setStories((prev) => prev.map((s) => s.id === sId ? { ...s, isCompleted: !currentIsCompleted } : s));
+      toast.success(currentIsCompleted ? "Đã đổi sang Đang viết." : "Đã đánh dấu Hoàn thành! 🎉");
+    } catch { toast.error("Không thể cập nhật trạng thái."); }
+    finally { setTogglingComplete(null); }
+  };
+
+  const handleScheduleChapter = async (chapterId: number, storyId: number, publishAt: string) => {
+    setSchedulingChapter(chapterId);
+    try {
+      await httpClient.post(APP_CONFIG.CHAPTER.SCHEDULE(chapterId), { publishAt });
+      toast.success("Đã hẹn lịch xuất bản chương! ⏰");
+      setScheduleModal(null);
+      loadChapters(storyId);
+    } catch { toast.error("Không thể hẹn lịch xuất bản."); }
+    finally { setSchedulingChapter(null); }
   };
 
   /* ── Stats ── */
@@ -1238,6 +1293,17 @@ export default function MyStoriesPage() {
                             {canEdit && (
                               <button onClick={(e) => { e.stopPropagation(); setShowStoryForm(story); }} style={{ ...btnOutline, fontSize: 11, padding: "5px 10px" }}>✏️ Sửa</button>
                             )}
+                            {story.status === "APPROVED" && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleToggleComplete(story.id, story.isCompleted ?? false); }}
+                                disabled={togglingComplete === story.id}
+                                style={story.isCompleted
+                                  ? { ...btnSuccess, fontSize: 11, padding: "5px 10px" }
+                                  : { ...btnOutline, fontSize: 11, padding: "5px 10px" }}
+                              >
+                                {togglingComplete === story.id ? "…" : story.isCompleted ? "✅ Hoàn thành" : "📝 Đang viết"}
+                              </button>
+                            )}
                             {(story.status === "DRAFT" || story.status === "REJECTED") && (
                               <button onClick={(e) => { e.stopPropagation(); handleSubmitStory(story.id); }} disabled={submittingStory === story.id} style={{ ...btnWarn, fontSize: 11, padding: "5px 10px" }}>
                                 {submittingStory === story.id ? "…" : "📤 Nộp duyệt"}
@@ -1297,9 +1363,18 @@ export default function MyStoriesPage() {
                                         </button>
                                       )}
                                       {ch.status === "APPROVED" && (
-                                        <button onClick={() => handlePublishChapter(ch.id, story.id)} disabled={publishingChapter === ch.id} style={{ ...btnSuccess, fontSize: 11, padding: "4px 8px" }}>
-                                          {publishingChapter === ch.id ? "…" : "🚀 Phát hành"}
-                                        </button>
+                                        <>
+                                          <button onClick={() => handlePublishChapter(ch.id, story.id)} disabled={publishingChapter === ch.id} style={{ ...btnSuccess, fontSize: 11, padding: "4px 8px" }}>
+                                            {publishingChapter === ch.id ? "…" : "🚀 Phát hành"}
+                                          </button>
+                                          <button
+                                            onClick={() => setScheduleModal({ chapterId: ch.id, title: ch.title, storyId: story.id })}
+                                            style={{ ...btnOutline, fontSize: 11, padding: "4px 8px", color: T.info, borderColor: T.infoBorder }}
+                                            title="Hẹn lịch xuất bản"
+                                          >
+                                            📅
+                                          </button>
+                                        </>
                                       )}
                                       <button onClick={() => setChapterModal({ storyId: story.id, chapter: ch })} style={{ ...btnOutline, fontSize: 11, padding: "4px 8px" }}>✏️</button>
                                       {(ch.status === "DRAFT" || ch.status === "REJECTED") && (
@@ -1463,45 +1538,71 @@ export default function MyStoriesPage() {
                     <div style={{ padding: 24, textAlign: "center", color: T.textMuted }}>Chưa có nhiệm vụ nào.</div>
                   ) : (
                     missions.map((m: any) => {
-                      const progress = m.progress ?? 0;
-                      const target = m.targetCount ?? 1;
-                      const pct = Math.min(100, Math.round((progress / target) * 100));
-                      const canClaim = pct >= 100 && !m.completed;
+                      const status: string = m.status ?? (m.completed ? "COMPLETED" : "NOT_STARTED");
+                      const progress: number = m.progress ?? 0;
+                      const target: number = m.targetCount ?? 1;
+                      const pct = target > 0 ? Math.min(100, Math.round((progress / target) * 100)) : 0;
+                      const canClaim: boolean = m.canClaim ?? (status === "CLAIMABLE");
+                      const isCompleted = status === "COMPLETED";
+                      const isClaimable = status === "CLAIMABLE";
+                      const isInProgress = status === "IN_PROGRESS";
                       const reward = m.rewardCoin ?? m.rewardCoins ?? m.coin ?? 0;
                       const isDaily = (m.type ?? "").toString().toUpperCase().includes("DAILY");
-                      const ACTION_LABELS: Record<string, string> = {
-                        LOGIN: "Đăng nhập", READ_CHAPTER: "Đọc chương", COMMENT: "Bình luận",
-                        FOLLOW_STORY: "Theo dõi truyện", BUY_CHAPTER: "Mua chương", SEND_GIFT: "Tặng quà",
-                      };
-                      const actionLabel = m.action ? (ACTION_LABELS[m.action] ?? m.action) : null;
                       return (
-                        <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", borderBottom: `1px solid ${T.borderLight}` }}>
+                        <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", borderBottom: `1px solid ${T.borderLight}`, opacity: isCompleted ? 0.75 : 1 }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
+                            {/* Title row */}
                             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
                               <span style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{m.title ?? m.name ?? `Nhiệm vụ #${m.id}`}</span>
                               <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 10, padding: "1px 7px", background: isDaily ? "#fef3c7" : "#eff6ff", color: isDaily ? "#92400e" : "#1e40af", border: `1px solid ${isDaily ? "#fde68a" : "#bfdbfe"}` }}>
                                 {isDaily ? "🔄 Hàng ngày" : "📚 Tích lũy"}
                               </span>
-                              {actionLabel && (
-                                <span style={{ fontSize: 10, fontWeight: 600, borderRadius: 10, padding: "1px 7px", background: T.grayBg, color: T.textSec, border: `1px solid ${T.borderLight}` }}>{actionLabel}</span>
+                              {status === "NOT_STARTED" && (
+                                <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 10, padding: "1px 7px", background: T.grayBg, color: T.textMuted, border: `1px solid ${T.borderLight}` }}>Chưa bắt đầu</span>
+                              )}
+                              {isCompleted && (
+                                <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 10, padding: "1px 7px", background: T.successBg, color: T.success, border: `1px solid ${T.successBorder}` }}>✅ Đã hoàn thành</span>
+                              )}
+                              {isClaimable && (
+                                <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 10, padding: "1px 7px", background: "#fff7ed", color: "#c2410c", border: "1px solid #fed7aa" }}>🎁 Sẵn sàng nhận!</span>
                               )}
                             </div>
                             {m.description && <div style={{ fontSize: 12, color: T.textSec, marginBottom: 6 }}>{m.description}</div>}
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <div style={{ flex: 1, height: 8, borderRadius: 999, background: T.grayBg, overflow: "hidden" }}>
-                                <div style={{ height: "100%", width: `${pct}%`, background: m.completed ? T.success : T.accent, borderRadius: 999, transition: "width 0.3s" }} />
+                            {/* Progress bar — IN_PROGRESS or CLAIMABLE */}
+                            {(isInProgress || isClaimable) && (
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <div style={{ flex: 1, height: 8, borderRadius: 999, background: T.grayBg, overflow: "hidden" }}>
+                                  <div style={{ height: "100%", width: `${pct}%`, background: isClaimable ? "#22c55e" : T.accent, borderRadius: 999, transition: "width 0.4s" }} />
+                                </div>
+                                <span style={{ fontSize: 11, color: T.textMuted, whiteSpace: "nowrap", fontWeight: 600 }}>{progress}/{target}</span>
                               </div>
-                              <span style={{ fontSize: 11, color: T.textMuted, whiteSpace: "nowrap" }}>{progress}/{target}</span>
-                            </div>
+                            )}
+                            {/* Not started — show empty bar */}
+                            {status === "NOT_STARTED" && (
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <div style={{ flex: 1, height: 6, borderRadius: 999, background: T.grayBg }} />
+                                <span style={{ fontSize: 11, color: T.textMuted, whiteSpace: "nowrap" }}>0/{target}</span>
+                              </div>
+                            )}
                           </div>
                           {reward > 0 && <div style={{ fontSize: 13, fontWeight: 700, color: T.accent, whiteSpace: "nowrap" }}>🪙 {reward.toLocaleString()}</div>}
-                          <button
-                            onClick={() => canClaim && handleClaimMission(m.id)}
-                            disabled={!canClaim || claimingMission === m.id}
-                            style={{ padding: "7px 16px", borderRadius: T.radiusSm, border: "none", background: m.completed ? T.successBg : canClaim ? T.accent : T.grayBg, color: m.completed ? T.success : canClaim ? "#fff" : T.textMuted, fontSize: 12, fontWeight: 700, cursor: canClaim && !claimingMission ? "pointer" : "default", whiteSpace: "nowrap", minWidth: 110 }}
-                          >
-                            {claimingMission === m.id ? "⏳…" : m.completed ? "✓ Đã nhận" : canClaim ? "🎁 Nhận thưởng" : "Chưa đủ tiến độ"}
-                          </button>
+                          <div style={{ minWidth: 130, flexShrink: 0 }}>
+                            {isCompleted ? (
+                              <div style={{ padding: "7px 12px", borderRadius: T.radiusSm, background: T.successBg, color: T.success, fontSize: 12, fontWeight: 700, textAlign: "center", border: `1px solid ${T.successBorder}` }}>✅ Đã hoàn thành</div>
+                            ) : isClaimable ? (
+                              <button
+                                onClick={() => handleClaimMission(m.id)}
+                                disabled={claimingMission === m.id}
+                                style={{ width: "100%", padding: "7px 12px", borderRadius: T.radiusSm, border: "none", background: claimingMission === m.id ? T.grayBg : "#f97316", color: claimingMission === m.id ? T.textMuted : "#fff", fontSize: 12, fontWeight: 700, cursor: claimingMission === m.id ? "default" : "pointer" }}
+                              >
+                                {claimingMission === m.id ? "⏳…" : "🪙 Nhận thưởng"}
+                              </button>
+                            ) : (
+                              <div style={{ padding: "7px 12px", borderRadius: T.radiusSm, background: T.grayBg, color: T.textMuted, fontSize: 12, fontWeight: 600, textAlign: "center" }}>
+                                {isInProgress ? `${pct}%` : "Chưa bắt đầu"}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       );
                     })
@@ -1519,6 +1620,23 @@ export default function MyStoriesPage() {
       )}
       {chapterModal && (
         <ChapterFormModal storyId={chapterModal.storyId} chapter={chapterModal.chapter} nextOrder={chapterModal.nextOrder} onClose={() => setChapterModal(null)} onSaved={() => loadChapters(chapterModal.storyId)} />
+      )}
+      {scheduleModal && (
+        <div
+          onClick={(e) => { if (e.target === e.currentTarget) setScheduleModal(null); }}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(3px)" }}
+        >
+          <div style={{ background: T.card, borderRadius: 20, width: "100%", maxWidth: 400, padding: "28px 28px 24px", boxShadow: T.shadowMd }}>
+            <div style={{ fontFamily: T.fontSerif, fontSize: 18, fontWeight: 800, color: T.text, marginBottom: 6 }}>📅 Hẹn lịch xuất bản</div>
+            <div style={{ fontSize: 13, color: T.textSec, marginBottom: 20 }}>{scheduleModal.title}</div>
+            <label style={fLabel()}>Thời gian xuất bản</label>
+            <ScheduleDateInput
+              onConfirm={(publishAt) => handleScheduleChapter(scheduleModal.chapterId, scheduleModal.storyId, publishAt)}
+              onClose={() => setScheduleModal(null)}
+              loading={schedulingChapter === scheduleModal.chapterId}
+            />
+          </div>
+        </div>
       )}
       {editRequestModal && (
         <CreateEditRequestModal chapter={editRequestModal} walletBalance={wallet?.balance ?? 0} onClose={() => setEditRequestModal(null)} onCreated={() => { loadEditRequests(); loadWallet(); }} />

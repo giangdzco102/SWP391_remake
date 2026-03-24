@@ -6,6 +6,7 @@ import { EditRequest } from "@/types/editorDashboard";
 import { T, btnOutline, btnDisabled, btnPrimary, fLabel, fInput } from "@/utils/editorDashboard.constants";
 import { stripHtml } from "@/utils/editorDashboard.utils";
 import { RichEditor } from "./RichEditor";
+import { getAccessToken } from "@/utils/index";
 
 export function EditorWorkModal({ request, onClose, onSubmit, onWithdraw }: { request: EditRequest; onClose: () => void; onSubmit: (id: number, content: string, note: string) => Promise<void>; onWithdraw: (id: number) => Promise<void> }) {
   const httpClient = useHttpClient();
@@ -17,9 +18,10 @@ export function EditorWorkModal({ request, onClose, onSubmit, onWithdraw }: { re
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    httpClient.get(APP_CONFIG.CHAPTER.GET(request.chapterId))
+    const token = getAccessToken();
+    httpClient.getPublic(APP_CONFIG.CHAPTER.GET(request.chapterId), token ? { Authorization: `Bearer ${token}` } : {})
       .then((res: any) => setOriginalContent(res?.data?.content ?? res?.content ?? ""))
-      .catch(() => { })
+      .catch(() => {})
       .finally(() => setLoadingOriginal(false));
   }, [request.chapterId]);
 
