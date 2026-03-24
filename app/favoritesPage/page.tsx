@@ -81,12 +81,12 @@ export function FavoritesPage() {
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
 
   const showSuccess = (msg: string) => {
-    if (toastObj.toast) toastObj.toast({ title: "Thành công", description: msg });
+    if (typeof toastObj.toast === "function") toastObj.toast({ title: "Thành công", description: msg });
     else if (toastObj.success) toastObj.success(msg);
   };
 
   const showError = (msg: string) => {
-    if (toastObj.toast) toastObj.toast({ variant: "destructive", title: "Lỗi", description: msg });
+    if (typeof toastObj.toast === "function") toastObj.toast({ variant: "destructive", title: "Lỗi", description: msg });
     else if (toastObj.error) toastObj.error(msg);
   };
 

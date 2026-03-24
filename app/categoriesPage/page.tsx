@@ -7,6 +7,10 @@ import useStoryService from "@/api/useStory.service";
 import useCategoryService, { CategoryItem } from "@/api/useCategory.service";
 import { toShape } from "@/utils/categoriesPage.utils";
 import { CategorySection } from "@/components/categoriesPage/CategorySection";
+import useFollowService from "@/api/useFollow.service";
+import { useAuthStore } from "@/stores";
+import { useToast } from "@/hooks/use-toast";
+import Router from "next/router";
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export function CategoriesPage() {
@@ -62,7 +66,7 @@ export function CategoriesPage() {
     setExpanded((prev) => ({ ...prev, [genre]: !prev[genre] }));
   
    const handleLike = async (id: number) => {          
-    if (!user) { router.push("?login"); return; }
+    if (!user) { Router.push("?login"); return; }
     toggleLike(id);
     try {
       await toggleFollow(id);
