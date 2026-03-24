@@ -214,18 +214,17 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
       { label: "Bảng xếp hạng", page: "/rankingsPage" },
       { label: "Thể loại", page: "/categoriesPage", isCat: true },
       { label: "Yêu thích", page: "/favoritesPage" },
-      { label: "Nhiệm vụ", page: "/missionsPage" },
       ...(user?.roles.includes("REVIEWER")
         ? [
-            {
-              label: "Kiểm duyệt",
-              page: "/reviewerDashboard",
-              badge: pending?.length,
-            },
-          ]
+          {
+            label: "Kiểm duyệt",
+            page: "/reviewerDashboard",
+            badge: pending?.length,
+          },
+        ]
         : []),
       ...(user?.roles.includes("EDITOR")
-        ? [{ label: "Nhiệm vụ", page: "/editorDashboard" }]
+        ? [{ label: "Bảng nhiệm vụ", page: "/editorDashboard" }]
         : []),
       ...(user?.roles.includes("AUTHOR")
         ? [{ label: "Tác phẩm của tôi", page: "/myStoriesPage" }]
@@ -306,7 +305,7 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
 
             {/* Nav links */}
             {navLinks.map((l: any) => (
-              <button key={l.label} className={`mobile-nav-link${page === l.page ? " active" : ""}`} onClick={() => l.page && router.push(l.page)}>
+              <button key={l.page} className={`mobile-nav-link${page === l.page ? " active" : ""}`} onClick={() => l.page && router.push(l.page)}>
                 {l.label}
                 {l.badge ? <span style={{ marginLeft: "auto", background: "#c23d3f", color: "#fff", borderRadius: "50%", fontSize: 10, padding: "2px 6px", fontWeight: 700 }}>{l.badge}</span> : null}
               </button>
@@ -361,7 +360,7 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
         <div className="nav-links">
           {navLinks.map((l: any) => {
             if (l.isCat) return (
-              <div key={l.label} className="nav-cat-wrap" ref={catMenuRef} style={{ position: "relative" }}>
+              <div key={l.page} className="nav-cat-wrap" ref={catMenuRef} style={{ position: "relative" }}>
                 <button
                   className={`nav-link${page === "/categoriesPage" ? " active" : ""}`}
                   onClick={() => setShowCatMenu((v) => !v)}
@@ -384,7 +383,7 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
               </div>
             );
             return (
-              <button key={l.label} className={`nav-link${page === l.page ? " active" : ""}`} onClick={() => l.page && router.push(l.page)}>
+              <button key={l.page} className={`nav-link${page === l.page ? " active" : ""}`} onClick={() => l.page && router.push(l.page)}>
                 {l.label}
                 {l.badge ? <span style={{ background: "#c23d3f", color: "#fff", borderRadius: "50%", fontSize: 10, padding: "1px 5px", marginLeft: 4, fontWeight: 700 }}>{l.badge}</span> : null}
               </button>
@@ -475,18 +474,6 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
                         <div>
                           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                             <div className="dropdown-user-name">{user.fullName}</div>
-                            <span style={{
-                              background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
-                              color: "#fff",
-                              fontSize: "10px",
-                              fontWeight: 800,
-                              padding: "1px 6px",
-                              borderRadius: "6px",
-                              textTransform: "uppercase",
-                              boxShadow: "0 2px 4px rgba(37,99,235,0.2)"
-                            }}>
-                              LV.{user.level ?? 1}
-                            </span>
                           </div>
                           <div className="dropdown-email">{user.email}</div>
                           <span className={`dropdown-role-chip ${ROLE_CHIP_CLASS[primaryRole] ?? "chip-role-reader"}`}>
@@ -519,7 +506,6 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
                         {pending?.length > 0 && <span style={{ marginLeft: "auto", background: "#c23d3f", color: "#fff", borderRadius: 10, fontSize: 11, padding: "1px 6px" }}>{pending.length}</span>}
                       </button>
                     )}
-                    <button className="dropdown-item" onClick={() => { setShowUserMenu(false); router.push("/missionsPage"); }}><Ico.Trophy /> Nhiệm vụ</button>
                     {(user.roles.includes("EDITOR") || user.roles.includes("editor")) && <button className="dropdown-item" onClick={() => { setShowUserMenu(false); router.push("/editorDashboard"); }}><Ico.Edit /> Bảng nhiệm vụ</button>}
                     {(user.roles.includes("ADMIN") || user.roles.includes("admin")) && <button className="dropdown-item" style={{ color: "#7c3aed", fontWeight: 700 }} onClick={() => { setShowUserMenu(false); router.push("/adminDashboard"); }}><Ico.Shield /> Quản trị Admin</button>}
 
