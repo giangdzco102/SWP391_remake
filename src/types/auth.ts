@@ -87,8 +87,27 @@ export interface DataGetMe {
   walletBalance: number;
   totalFollowedStories: number;
   totalPurchasedChapters: number;
+  level: number;
+  experience: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface WithdrawRequest {
+  amount: number;
+  bankName: string;
+  bankAccount: string;
+  bankOwner: string;
+  note?: string;
+}
+
+export interface WithdrawResponse {
+  id: number;
+  userId: number;
+  userName: string;
+  amount: number;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  createdAt: string;
 }
 
 export interface Role {
