@@ -128,7 +128,7 @@ export function CommentNode({
           </div>
 
           {/* Content */}
-          <p
+          <div
             style={{
               margin: 0,
               fontSize: 14,
@@ -137,8 +137,36 @@ export function CommentNode({
               wordBreak: "break-word",
             }}
           >
-            {comment.content}
-          </p>
+            {(() => {
+              const donateMatch = comment.content.match(/\[DONATE:(\d+)\]/);
+              if (donateMatch) {
+                const amount = donateMatch[1];
+                const cleanText = comment.content.replace(/\[DONATE:(\d+)\]/g, "").trim();
+                return (
+                  <>
+                    <div style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      background: "#fef9ee",
+                      border: "1px solid #fcd34d",
+                      borderRadius: 8,
+                      padding: "4px 10px",
+                      marginBottom: 10,
+                      marginTop: 2,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "#c69526",
+                    }}>
+                      <span>🎁 Đã tặng {amount} xu</span>
+                    </div>
+                    <div>{cleanText}</div>
+                  </>
+                );
+              }
+              return comment.content;
+            })()}
+          </div>
 
           {/* Actions */}
           <div

@@ -41,28 +41,28 @@ function toBannerShape(s: any, idx: number) {
   const viewCount = s.viewCount ?? s.viewsCount ?? 0;
   const avgRating = s.avgRating ?? s.averageRating ?? s.rating ?? 0;
   return {
-    id:          String(s.id),
-    title:       s.title ?? "",
-    penName:     s.authorName ?? "",
-    author:      s.authorName ?? "",
-    cover:       isRealCover(s.coverUrl)
-                   ? `url("${s.coverUrl}")`
-                   : COVER_GRADIENTS[idx % COVER_GRADIENTS.length],
-    coverUrl:    s.coverUrl ?? "",
-    genre:       s.categories?.[0]?.name ?? s.genre ?? "",
-    categoryId:  s.categories?.[0]?.id ?? null,
-    tags:        s.tags ?? [],
-    rating:      avgRating,
+    id: String(s.id),
+    title: s.title ?? "",
+    penName: s.authorName ?? "",
+    author: s.authorName ?? "",
+    cover: isRealCover(s.coverUrl)
+      ? `url("${s.coverUrl}")`
+      : COVER_GRADIENTS[idx % COVER_GRADIENTS.length],
+    coverUrl: s.coverUrl ?? "",
+    genre: s.categories?.[0]?.name ?? s.genre ?? "",
+    categoryId: s.categories?.[0]?.id ?? null,
+    tags: s.tags ?? [],
+    rating: avgRating,
     reviewCount: s.reviewCount ?? 0,
-    reads:       formatViews(viewCount),
-    views:       viewCount,
-    favorites:   s.favoriteCount ?? s.followCount ?? 0,
-    chapters:    chapterCount,
+    reads: formatViews(viewCount),
+    views: viewCount,
+    favorites: s.favoriteCount ?? s.followCount ?? 0,
+    chapters: chapterCount,
     description: s.summary ?? s.description ?? "",
-    status:      s.status === "COMPLETED" || s.isCompleted ? "done" : ("ongoing" as "done" | "ongoing"),
-    featured:    s.featured ?? false,
-    excerpt:     s.summary ?? "",
-    updatedAt:   s.updatedAt ?? s.createdAt ?? "",
+    status: s.status === "COMPLETED" || s.isCompleted ? "done" : ("ongoing" as "done" | "ongoing"),
+    featured: s.featured ?? false,
+    excerpt: s.summary ?? "",
+    updatedAt: s.updatedAt ?? s.createdAt ?? "",
   };
 }
 
@@ -280,9 +280,9 @@ export function BannerHomepage() {
   const { getStories } = useStoryService();
   const gotoStory = useGotoStory();         // ← setSelectedStory + router.push
 
-  const [stories,  setStories]  = useState<BannerStory[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [current,  setCurrent]  = useState(0);
+  const [stories, setStories] = useState<BannerStory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [current, setCurrent] = useState(0);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -294,10 +294,10 @@ export function BannerHomepage() {
         const raw: any = res?.data ?? res;
         const list: any[] = Array.isArray(raw?.content) ? raw.content
           : Array.isArray(raw) ? raw
-          : [];
+            : [];
         if (list.length > 0) setStories(list.map(toBannerShape));
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -426,12 +426,12 @@ export function BannerHomepage() {
               transition: "background 0.15s",
             }}
             onMouseEnter={(e) =>
-              ((e.currentTarget as HTMLButtonElement).style.background =
-                "rgba(0,0,0,0.6)")
+            ((e.currentTarget as HTMLButtonElement).style.background =
+              "rgba(0,0,0,0.6)")
             }
             onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLButtonElement).style.background =
-                "rgba(0,0,0,0.35)")
+            ((e.currentTarget as HTMLButtonElement).style.background =
+              "rgba(0,0,0,0.35)")
             }
           >
             ‹
@@ -461,12 +461,12 @@ export function BannerHomepage() {
               transition: "background 0.15s",
             }}
             onMouseEnter={(e) =>
-              ((e.currentTarget as HTMLButtonElement).style.background =
-                "rgba(0,0,0,0.6)")
+            ((e.currentTarget as HTMLButtonElement).style.background =
+              "rgba(0,0,0,0.6)")
             }
             onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLButtonElement).style.background =
-                "rgba(0,0,0,0.35)")
+            ((e.currentTarget as HTMLButtonElement).style.background =
+              "rgba(0,0,0,0.35)")
             }
           >
             ›

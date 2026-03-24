@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState, Suspense } from "react";
+import { createPortal } from "react-dom";
 import { Ico } from "@/components/Icons";
 import { StarRating } from "@/components/ui";
 import { useStoryStore } from "@/stores/storyStore";
@@ -22,6 +23,7 @@ function StoryDetailContent() {
     unlockChapter,
     chapters,
     setChapters,
+    toggleLike, // ← sync store khi follow/unfollow
   } = useStoryStore();
 
   const { selectedStory: story, setSelectedStory, setSelectedChapterId } = useNavStore();
@@ -134,9 +136,11 @@ function StoryDetailContent() {
           const detail = r?.data ?? r;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const detailList: any[] = Array.isArray(detail?.chapters) ? detail.chapters : [];
-          // Also update rating stats from fresh detail response
+          // Also update rating stats + follow count from fresh detail response
           if (detail?.avgRating != null) setDisplayRating(detail.avgRating);
           if (detail?.ratingCount != null) setDisplayRatingCount(detail.ratingCount);
+          const detailFollowCount = detail?.followCount ?? detail?.favoriteCount;
+          if (detailFollowCount != null) setFollowCount(detailFollowCount);
           applyChapters(detailList);
         });
 
@@ -153,9 +157,11 @@ function StoryDetailContent() {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .then((r: any) => {
             const detail = r?.data ?? r;
-            // Also update rating stats from fresh detail response
+            // Also update rating stats + follow count from fresh detail response
             if (detail?.avgRating != null) setDisplayRating(detail.avgRating);
             if (detail?.ratingCount != null) setDisplayRatingCount(detail.ratingCount);
+            const detailFollowCount = detail?.followCount ?? detail?.favoriteCount;
+            if (detailFollowCount != null) setFollowCount(detailFollowCount);
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const detailChaps: any[] = Array.isArray(detail?.chapters) ? detail.chapters : [];
             const purchasedIds = new Set<number>(
@@ -234,6 +240,7 @@ function StoryDetailContent() {
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [story?.id]);
+
   // Report
   const { createReport } = useReportService();
   const toast = useToast();
@@ -313,11 +320,13 @@ function StoryDetailContent() {
       const status = data?.status ?? res?.status;
       if (status === "FOLLOWED") {
         setFollowed(true);
+        toggleLike(story.id); // ← sync store
         if (data?.followCount != null) setFollowCount(data.followCount);
         else setFollowCount((c) => (c ?? 0) + 1);
         toast.success("Đã thêm vào yêu thích!");
       } else {
         setFollowed(false);
+        toggleLike(story.id); // ← sync store
         if (data?.followCount != null) setFollowCount(data.followCount);
         else setFollowCount((c) => Math.max(0, (c ?? 1) - 1));
         toast.success("Đã bỏ yêu thích.");
@@ -411,7 +420,7 @@ function StoryDetailContent() {
                 >
                   {story.genre}
                 </span>
-                {story.tags.map((t) => (
+                {story.tags?.map((t) => (
                   <span key={t} className="tag">
                     {t}
                   </span>
@@ -479,7 +488,6 @@ function StoryDetailContent() {
                     if (!first?.id) return;
                     const firstLocked = first.locked && !unlockedChapters?.includes(first.id);
                     if (firstLocked) {
-                      // First chapter is paid — require login
                       requireAuth(() => {});
                     } else {
                       setSelectedChapterId(first.id);
@@ -743,7 +751,6 @@ function StoryDetailContent() {
             </div>
           )}
 
-
           <blockquote className="detail-desc">{story.description}</blockquote>
 
           {/* ── Danh sách chương ─────────────────────────────────────────── */}
@@ -776,7 +783,6 @@ function StoryDetailContent() {
                       setSelectedChapterId(ch.id);
                       router.push("/readerPage");
                     } else if (isLocked) {
-                      // Paid chapter — require login to unlock
                       requireAuth(() => {});
                     }
                   }}
@@ -948,139 +954,10 @@ function StoryDetailContent() {
           </div>
         </div>
 
-        {/* ── RATING MODAL ─────────────────────────────────────────────────── */}
-        {ratingModalOpen && (
-          <div
-            onClick={() => setRatingModalOpen(false)}
-            style={{
-              position: "fixed", inset: 0, zIndex: 9999,
-              background: "rgba(0,0,0,0.45)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              padding: 16,
-            }}
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                background: "#fff", borderRadius: 18, padding: "28px 28px 24px",
-                width: "100%", maxWidth: 420,
-                boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
-              }}
-            >
-              {/* Header */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-                <div style={{ fontSize: 17, fontWeight: 800, color: "#1c1512" }}>
-                  {ratingSubmitted ? "✏️ Cập nhật đánh giá" : "⭐ Đánh giá truyện"}
-                </div>
-                <button
-                  onClick={() => setRatingModalOpen(false)}
-                  style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#9e8e82", lineHeight: 1 }}
-                  aria-label="Đóng"
-                >✕</button>
-              </div>
-
-              {/* Story title */}
-              <div style={{ fontSize: 13, color: "#6b5a4e", marginBottom: 16, fontStyle: "italic" }}>{story?.title}</div>
-
-              {/* Star selector */}
-              <div style={{ display: "flex", gap: 8, marginBottom: 8, justifyContent: "center" }}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onMouseEnter={() => setRatingHover(star)}
-                    onMouseLeave={() => setRatingHover(0)}
-                    onClick={() => setMyScore(star)}
-                    style={{
-                      background: "none", border: "none", cursor: "pointer", padding: 2,
-                      fontSize: 36, lineHeight: 1,
-                      color: (ratingHover || myScore) >= star ? "#f59e0b" : "#d1c9be",
-                      transition: "color 0.1s, transform 0.1s",
-                      transform: (ratingHover || myScore) >= star ? "scale(1.18)" : "scale(1)",
-                    }}
-                  >★</button>
-                ))}
-              </div>
-              <div style={{ textAlign: "center", fontSize: 13, color: "#f59e0b", fontWeight: 700, marginBottom: 16, minHeight: 20 }}>
-                {myScore > 0 ? ["" ,"Tệ","Không hay","Tạm được","Hay","Xuất sắc"][myScore] : ""}
-              </div>
-
-              {/* Review textarea */}
-              <textarea
-                value={myReview}
-                onChange={(e) => setMyReview(e.target.value)}
-                placeholder="Nhận xét của bạn (không bắt buộc)..."
-                rows={3}
-                style={{
-                  width: "100%", padding: "10px 12px", borderRadius: 10,
-                  border: "1.5px solid #e8e0d6", fontSize: 13, color: "#3d2f28",
-                  resize: "none", fontFamily: "inherit", outline: "none",
-                  boxSizing: "border-box", background: "#fdfaf7",
-                }}
-              />
-
-              {/* Actions */}
-              <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-                {ratingSubmitted && (
-                  <button
-                    onClick={() => { setMyScore(0); setMyReview(""); setRatingSubmitted(false); setRatingModalOpen(false); }}
-                    style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "1.5px solid #e8e0d6", background: "#fff", color: "#9e8e82", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
-                  >
-                    Xóa đánh giá
-                  </button>
-                )}
-                <button
-                  disabled={myScore === 0 || ratingSubmitting}
-                  onClick={async () => {
-                    if (!story || myScore === 0) return;
-                    setRatingSubmitting(true);
-                    try {
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      await (rateStory as any)({ storyId: story.id, score: myScore, review: myReview.trim() || undefined });
-                      toast.success(ratingSubmitted ? "Đã cập nhật đánh giá!" : "Cảm ơn bạn đã đánh giá! ⭐");
-                      setRatingSubmitted(true);
-                      setRatingModalOpen(false);
-                      // Refresh reviews list
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      getRatingsByStory(story.id).then((res: any) => {
-                        const list: any[] = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        setReviews(list.map((r: any) => ({ ...r, rating: r.score ?? r.rating ?? 0 })));
-                      }).catch(() => {});
-                      // Refresh avgRating / ratingCount from the story endpoint
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      getStory(story.id).then((res: any) => {
-                        const s = res?.data ?? res;
-                        if (s?.avgRating != null) setDisplayRating(s.avgRating);
-                        if (s?.ratingCount != null) setDisplayRatingCount(s.ratingCount);
-                      }).catch(() => {});
-                    } catch {
-                      toast.error("Không thể gửi đánh giá. Thử lại sau.");
-                    } finally {
-                      setRatingSubmitting(false);
-                    }
-                  }}
-                  style={{
-                    flex: 2, padding: "10px 0", borderRadius: 10, border: "none",
-                    background: myScore === 0 || ratingSubmitting ? "#e5ddd5" : "#c23d3f",
-                    color: myScore === 0 || ratingSubmitting ? "#9e8e82" : "#fff",
-                    fontSize: 14, fontWeight: 700,
-                    cursor: myScore === 0 || ratingSubmitting ? "not-allowed" : "pointer",
-                    transition: "background 0.15s",
-                  }}
-                >
-                  {ratingSubmitting ? "Đang gửi..." : ratingSubmitted ? "Cập nhật" : "Gửi đánh giá"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* ── SIDEBAR ──────────────────────────────────────────────────────── */}
         <div className="detail-sidebar">
           {/* Related stories */}
           <div className="sidebar-card" style={{ padding: "16px 14px" }}>
-            {/* Header */}
             <div className="flex items-center justify-between mb-3">
               <div className="sidebar-title" style={{ marginBottom: 0 }}>
                 Cùng thể loại
@@ -1131,7 +1008,6 @@ function StoryDetailContent() {
                       el.style.boxShadow = "none";
                     }}
                   >
-                    {/* Cover */}
                     <div
                       className="shrink-0 rounded-lg overflow-hidden"
                       style={{
@@ -1165,7 +1041,6 @@ function StoryDetailContent() {
                         {s.status === "done" ? "HOÀN THÀNH" : "ĐANG RA"}
                       </div>
                     </div>
-                    {/* Info */}
                     <div className="flex flex-col justify-between flex-1 min-w-0">
                       <div>
                         <div
@@ -1183,43 +1058,21 @@ function StoryDetailContent() {
                         >
                           {s.title}
                         </div>
-                        <div
-                          style={{
-                            fontSize: 11,
-                            color: "#9e8e82",
-                            fontStyle: "italic",
-                          }}
-                        >
+                        <div style={{ fontSize: 11, color: "#9e8e82", fontStyle: "italic" }}>
                           {s.penName}
                         </div>
                       </div>
-
-                      {/* Stats */}
                       <div
                         className="flex items-center flex-wrap"
                         style={{ gap: "3px 8px", marginTop: 5 }}
                       >
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 700,
-                            color: "#c69526",
-                          }}
-                        >
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "#c69526" }}>
                           ★ {s.rating}
                         </span>
-                        <span style={{ fontSize: 10, color: "#e0d8d0" }}>
-                          ·
-                        </span>
-                        <span style={{ fontSize: 11, color: "#9e8e82" }}>
-                          {s.reads} đọc
-                        </span>
-                        <span style={{ fontSize: 10, color: "#e0d8d0" }}>
-                          ·
-                        </span>
-                        <span style={{ fontSize: 11, color: "#9e8e82" }}>
-                          {chapters.length} ch.
-                        </span>
+                        <span style={{ fontSize: 10, color: "#e0d8d0" }}>·</span>
+                        <span style={{ fontSize: 11, color: "#9e8e82" }}>{s.reads} đọc</span>
+                        <span style={{ fontSize: 10, color: "#e0d8d0" }}>·</span>
+                        <span style={{ fontSize: 11, color: "#9e8e82" }}>{chapters.length} ch.</span>
                       </div>
                     </div>
                   </div>
@@ -1241,14 +1094,8 @@ function StoryDetailContent() {
             {(
               [
                 ["Tác giả", story.author],
-                [
-                  "Trạng thái",
-                  story.status === "done" ? "Hoàn thành" : "Đã xuất bản",
-                ],
-                [
-                  "Số chương",
-                  `${chapters.length || story.chapters || 0} chương`,
-                ],
+                ["Trạng thái", story.status === "done" ? "Hoàn thành" : "Đã xuất bản"],
+                ["Số chương", `${chapters.length || story.chapters || 0} chương`],
                 ["Lượt đọc", story.reads],
                 ["Yêu thích", `${(followCount ?? story.favorites ?? 0).toLocaleString("vi-VN")} người`],
                 ["Đánh giá", `${avgRating}/5 (${displayRatingCount} đánh giá)`],
@@ -1259,19 +1106,11 @@ function StoryDetailContent() {
                 className="flex justify-between text-sm"
                 style={{
                   padding: "9px 0",
-                  borderBottom:
-                    i < arr.length - 1 ? "1px solid #f5ede4" : "none",
+                  borderBottom: i < arr.length - 1 ? "1px solid #f5ede4" : "none",
                 }}
               >
                 <span style={{ color: "#9e8e82" }}>{k}</span>
-                <span
-                  style={{
-                    fontWeight: 600,
-                    color: "#1c1512",
-                    marginLeft: 8,
-                    textAlign: "right",
-                  }}
-                >
+                <span style={{ fontWeight: 600, color: "#1c1512", marginLeft: 8, textAlign: "right" }}>
                   {v}
                 </span>
               </div>
@@ -1281,8 +1120,137 @@ function StoryDetailContent() {
       </div>
     </div>
 
-      {/* ── Purchase Confirmation Modal ─────────────────────────────────── */}
-      {confirmPurchase && (
+      {/* ── RATING MODAL — dùng createPortal để luôn giữa viewport khi scroll ── */}
+      {ratingModalOpen && createPortal(
+        <div
+          onClick={() => setRatingModalOpen(false)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 9999,
+            background: "rgba(0,0,0,0.45)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#fff", borderRadius: 18, padding: "28px 28px 24px",
+              width: "100%", maxWidth: 420,
+              boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <div style={{ fontSize: 17, fontWeight: 800, color: "#1c1512" }}>
+                {ratingSubmitted ? "✏️ Cập nhật đánh giá" : "⭐ Đánh giá truyện"}
+              </div>
+              <button
+                onClick={() => setRatingModalOpen(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#9e8e82", lineHeight: 1 }}
+                aria-label="Đóng"
+              >✕</button>
+            </div>
+
+            {/* Story title */}
+            <div style={{ fontSize: 13, color: "#6b5a4e", marginBottom: 16, fontStyle: "italic" }}>{story?.title}</div>
+
+            {/* Star selector */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 8, justifyContent: "center" }}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onMouseEnter={() => setRatingHover(star)}
+                  onMouseLeave={() => setRatingHover(0)}
+                  onClick={() => setMyScore(star)}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer", padding: 2,
+                    fontSize: 36, lineHeight: 1,
+                    color: (ratingHover || myScore) >= star ? "#f59e0b" : "#d1c9be",
+                    transition: "color 0.1s, transform 0.1s",
+                    transform: (ratingHover || myScore) >= star ? "scale(1.18)" : "scale(1)",
+                  }}
+                >★</button>
+              ))}
+            </div>
+            <div style={{ textAlign: "center", fontSize: 13, color: "#f59e0b", fontWeight: 700, marginBottom: 16, minHeight: 20 }}>
+              {myScore > 0 ? ["","Tệ","Không hay","Tạm được","Hay","Xuất sắc"][myScore] : ""}
+            </div>
+
+            {/* Review textarea */}
+            <textarea
+              value={myReview}
+              onChange={(e) => setMyReview(e.target.value)}
+              placeholder="Nhận xét của bạn (không bắt buộc)..."
+              rows={3}
+              style={{
+                width: "100%", padding: "10px 12px", borderRadius: 10,
+                border: "1.5px solid #e8e0d6", fontSize: 13, color: "#3d2f28",
+                resize: "none", fontFamily: "inherit", outline: "none",
+                boxSizing: "border-box", background: "#fdfaf7",
+              }}
+            />
+
+            {/* Actions */}
+            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+              {ratingSubmitted && (
+                <button
+                  onClick={() => { setMyScore(0); setMyReview(""); setRatingSubmitted(false); setRatingModalOpen(false); }}
+                  style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "1.5px solid #e8e0d6", background: "#fff", color: "#9e8e82", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                >
+                  Xóa đánh giá
+                </button>
+              )}
+              <button
+                disabled={myScore === 0 || ratingSubmitting}
+                onClick={async () => {
+                  if (!story || myScore === 0) return;
+                  setRatingSubmitting(true);
+                  try {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    await (rateStory as any)({ storyId: story.id, score: myScore, review: myReview.trim() || undefined });
+                    toast.success(ratingSubmitted ? "Đã cập nhật đánh giá!" : "Cảm ơn bạn đã đánh giá! ⭐");
+                    setRatingSubmitted(true);
+                    setRatingModalOpen(false);
+                    // Refresh reviews list
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    getRatingsByStory(story.id).then((res: any) => {
+                      const list: any[] = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      setReviews(list.map((r: any) => ({ ...r, rating: r.score ?? r.rating ?? 0 })));
+                    }).catch(() => {});
+                    // Refresh avgRating / ratingCount
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    getStory(story.id).then((res: any) => {
+                      const s = res?.data ?? res;
+                      if (s?.avgRating != null) setDisplayRating(s.avgRating);
+                      if (s?.ratingCount != null) setDisplayRatingCount(s.ratingCount);
+                    }).catch(() => {});
+                  } catch {
+                    toast.error("Không thể gửi đánh giá. Thử lại sau.");
+                  } finally {
+                    setRatingSubmitting(false);
+                  }
+                }}
+                style={{
+                  flex: 2, padding: "10px 0", borderRadius: 10, border: "none",
+                  background: myScore === 0 || ratingSubmitting ? "#e5ddd5" : "#c23d3f",
+                  color: myScore === 0 || ratingSubmitting ? "#9e8e82" : "#fff",
+                  fontSize: 14, fontWeight: 700,
+                  cursor: myScore === 0 || ratingSubmitting ? "not-allowed" : "pointer",
+                  transition: "background 0.15s",
+                }}
+              >
+                {ratingSubmitting ? "Đang gửi..." : ratingSubmitted ? "Cập nhật" : "Gửi đánh giá"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Purchase Confirmation Modal — dùng createPortal ── */}
+      {confirmPurchase && createPortal(
         <div
           style={{
             position: "fixed", inset: 0, zIndex: 9999,
@@ -1363,7 +1331,8 @@ function StoryDetailContent() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

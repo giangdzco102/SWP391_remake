@@ -8,6 +8,8 @@ export const TABS = [
   { id: "roles", label: "Yêu cầu role", icon: AdminIcon.Shield },
   { id: "withdraws", label: "Rút tiền", icon: AdminIcon.Wallet },
   { id: "missions", label: "Nhiệm vụ", icon: AdminIcon.Target },
+  { id: "system-ops", label: "Vận hành", icon: AdminIcon.Settings },
+  { id: "coins", label: "Hệ thống Coin", icon: AdminIcon.Coin },
 ];
 
 export const MISSION_TYPES: Record<string, string> = {

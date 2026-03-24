@@ -9,6 +9,7 @@ interface AuthState {
 interface AuthActions {
   setUser: (user: DataGetMe | null) => void;
   setLoading: (loading: boolean) => void;
+  updateBalance: (amount: number) => void;
 }
 
 export const useAuthStore = create<AuthState & AuthActions>()((set, get) => ({
@@ -22,5 +23,12 @@ export const useAuthStore = create<AuthState & AuthActions>()((set, get) => ({
 
   setLoading: (loading: boolean) => {
     set({ isLoading: loading });
+  },
+
+  updateBalance: (amount: number) => {
+    const { user } = get();
+    if (user) {
+      set({ user: { ...user, walletBalance: user.walletBalance - amount } });
+    }
   },
 }));

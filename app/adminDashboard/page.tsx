@@ -24,6 +24,8 @@ import {
   RoleRequestsTab,
   WithdrawsTab,
   MissionsTab,
+  SystemOpsTab,
+  CoinMonitoringTab,
 } from "@/components/adminDashboard/tabs";
 
 export default function AdminDashboard() {
@@ -42,6 +44,10 @@ export default function AdminDashboard() {
   const [roleReqs, setRoleReqs] = useState<any[]>([]);
   const [withdraws, setWithdraws] = useState<any[]>([]);
   const [missions, setMissions] = useState<any[]>([]);
+  const [systemStats, setSystemStats] = useState<any>(null);
+  const [systemLogs, setSystemLogs] = useState<any[]>([]);
+  const [systemAlerts, setSystemAlerts] = useState<any[]>([]);
+  const [coinStatsDaily, setCoinStatsDaily] = useState<any>(null);
 
   const [confirmDialog, setConfirmDialog] = useState<{
     message: string;
@@ -123,6 +129,24 @@ export default function AdminDashboard() {
         if (t === "missions") {
           const r = await admin.getMissions();
           setMissions(unwrap(r));
+        }
+        if (t === "system-ops") {
+          const [s, l, a] = await Promise.all([
+            admin.getSystemStats(),
+            admin.getSystemLogs(),
+            admin.getSystemAlerts(),
+          ]);
+          setSystemStats(unwrap(s));
+          setSystemLogs(unwrap(l));
+          setSystemAlerts(unwrap(a));
+        }
+        if (t === "coins") {
+          const [cs, w] = await Promise.all([
+            admin.getCoinStatsDaily(),
+            admin.getAllWithdrawRequests(),
+          ]);
+          setCoinStatsDaily(unwrap(cs));
+          setWithdraws(unwrap(w));
         }
       } catch (e: any) {
         toast.error(e?.message ?? "Lỗi tải dữ liệu");
@@ -252,6 +276,26 @@ export default function AdminDashboard() {
         }
       },
     });
+  };
+
+  const handleRunStatsJob = async () => {
+    try {
+      await admin.runStatsJob();
+      toast.success("Đã kích hoạt StatsAggregator!");
+      loadTab("system-ops");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Thất bại");
+    }
+  };
+
+  const handleRunSettlementJob = async () => {
+    try {
+      await admin.runSettlementJob();
+      toast.success("Đã kích hoạt MonthlySettlementCalculator!");
+      loadTab("coins");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Thất bại");
+    }
   };
 
   return (
@@ -480,6 +524,23 @@ export default function AdminDashboard() {
             onAdd={() => handleOpenMissionModal()}
             onEdit={handleOpenMissionModal}
             onDelete={handleDeleteMission}
+          />
+        )}
+        {!loading && tab === "system-ops" && (
+          <SystemOpsTab
+            stats={systemStats}
+            logs={systemLogs}
+            alerts={systemAlerts}
+            onRunJob={handleRunStatsJob}
+          />
+        )}
+        {!loading && tab === "coins" && (
+          <CoinMonitoringTab
+            stats={coinStatsDaily}
+            withdraws={withdraws}
+            onApprove={(w: any) => handleWithdraw(w, true)}
+            onReject={(w: any) => handleWithdraw(w, false)}
+            onRunJob={handleRunSettlementJob}
           />
         )}
       </div>

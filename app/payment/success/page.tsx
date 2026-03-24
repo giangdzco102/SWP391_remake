@@ -15,7 +15,7 @@ type VerifyState = "loading" | "paid" | "pending" | "cancelled";
 function PaymentSuccessContent() {
   const params = useSearchParams();
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, setWalletBalance: syncBalance } = useAuthStore();
   const { getWallet } = useWalletService();
   const { verifyPayment } = usePaymentService();
 
@@ -31,7 +31,10 @@ function PaymentSuccessContent() {
     getWallet()
       .then((res: any) => {
         const d = res?.data ?? res;
-        if (d?.balance != null) setWalletBalance(d.balance);
+        if (d?.balance != null) {
+          setWalletBalance(d.balance);
+          syncBalance(d.balance);
+        }
       })
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps

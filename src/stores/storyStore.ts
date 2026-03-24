@@ -78,6 +78,7 @@ interface StoryStore {
     id: number,
     showFn?: (msg: string, type: string) => void,
   ) => void;
+  setFollowedIds: (ids: number[]) => void;
   setFontSize: (size: number) => void;
   setSelectedChapter: (idx: number) => void;
 }
@@ -123,6 +124,7 @@ export const useStoryStore = create<StoryStore>((set) => ({
           : [...state.likedStories, id],
       };
     }),
+    setFollowedIds: (ids) => set({ likedStories: ids }),
   setFontSize: (size) => set({ fontSize: size }),
   setSelectedChapter: (idx) => set({ selectedChapter: idx }),
 }));

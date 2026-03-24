@@ -14,6 +14,9 @@ export function CategoriesPage() {
   const gotoStory = useGotoStory();
   const { getAllStories } = useStoryService();
   const { getCategories } = useCategoryService();
+  const { toggleFollow } = useFollowService();
+  const { user } = useAuthStore();
+  const toast = useToast();
 
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [allData, setAllData] = useState<ReturnType<typeof toShape>[]>([]);
@@ -57,6 +60,17 @@ export function CategoriesPage() {
 
   const toggleExpand = (genre: string) =>
     setExpanded((prev) => ({ ...prev, [genre]: !prev[genre] }));
+  
+   const handleLike = async (id: number) => {          
+    if (!user) { router.push("?login"); return; }
+    toggleLike(id);
+    try {
+      await toggleFollow(id);
+    } catch {
+      toggleLike(id); // rollback
+      toast.error("Không thể thực hiện. Thử lại sau.");
+    }
+  };
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
