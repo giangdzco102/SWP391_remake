@@ -45,8 +45,8 @@ export default function AdminDashboard() {
   const [withdraws, setWithdraws] = useState<any[]>([]);
   const [missions, setMissions] = useState<any[]>([]);
   const [systemStats, setSystemStats] = useState<any>(null);
-  const [systemLogs, setSystemLogs] = useState<any[]>([]);
   const [systemAlerts, setSystemAlerts] = useState<any[]>([]);
+  const [jobHistory, setJobHistory] = useState<any[]>([]);
   const [coinStatsDaily, setCoinStatsDaily] = useState<any>(null);
 
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -131,22 +131,18 @@ export default function AdminDashboard() {
           setMissions(unwrap(r));
         }
         if (t === "system-ops") {
-          const [s, l, a] = await Promise.all([
+          const [s, a, jh] = await Promise.all([
             admin.getSystemStats(),
-            admin.getSystemLogs(),
             admin.getSystemAlerts(),
+            admin.getJobHistory(),
           ]);
           setSystemStats(unwrap(s));
-          setSystemLogs(unwrap(l));
           setSystemAlerts(unwrap(a));
+          setJobHistory(unwrap(jh));
         }
         if (t === "coins") {
-          const [cs, w] = await Promise.all([
-            admin.getCoinStatsDaily(),
-            admin.getAllWithdrawRequests(),
-          ]);
+          const cs = await admin.getCoinStatsDaily();
           setCoinStatsDaily(unwrap(cs));
-          setWithdraws(unwrap(w));
         }
       } catch (e: any) {
         toast.error(e?.message ?? "Lỗi tải dữ liệu");
@@ -248,6 +244,39 @@ export default function AdminDashboard() {
     );
   };
 
+  const handleBanUser = (u: any, banDays: number) => {
+    const label = banDays === -1 ? "vĩnh viễn" : `${banDays} ngày`;
+    confirm(
+      `Cấm tài khoản "${u.fullName}" trong ${label}?`,
+      async () => {
+        setConfirmDialog(null);
+        try {
+          await admin.banUser(u.id, banDays);
+          toast.success(`Đã cấm tài khoản ${label}!`);
+          loadTab("users");
+        } catch (e: any) {
+          toast.error(e?.message ?? "Thất bại");
+        }
+      },
+    );
+  };
+
+  const handleUnbanUser = (u: any) => {
+    confirm(
+      `Bỏ cấm tài khoản "${u.fullName}"?`,
+      async () => {
+        setConfirmDialog(null);
+        try {
+          await admin.unbanUser(u.id);
+          toast.success("Đã bỏ cấm tài khoản!");
+          loadTab("users");
+        } catch (e: any) {
+          toast.error(e?.message ?? "Thất bại");
+        }
+      },
+    );
+  };
+
   const handleDeleteMission = (m: any) => {
     confirm(`Xóa nhiệm vụ "${m.name ?? m.title}"?`, async () => {
       setConfirmDialog(null);
@@ -278,6 +307,16 @@ export default function AdminDashboard() {
     });
   };
 
+  const handleAcknowledgeAlert = async (alertId: number | string) => {
+    try {
+      await admin.acknowledgeAlert(alertId);
+      toast.success("Đã đánh dấu xử lý cảnh báo!");
+      loadTab("system-ops");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Thất bại");
+    }
+  };
+
   const handleRunStatsJob = async () => {
     try {
       await admin.runStatsJob();
@@ -292,7 +331,7 @@ export default function AdminDashboard() {
     try {
       await admin.runSettlementJob();
       toast.success("Đã kích hoạt MonthlySettlementCalculator!");
-      loadTab("coins");
+      loadTab("system-ops");
     } catch (e: any) {
       toast.error(e?.message ?? "Thất bại");
     }
@@ -492,6 +531,8 @@ export default function AdminDashboard() {
             onSave={handleSaveRoles}
             onCancel={() => setEditRoleRow(null)}
             onToggleStatus={handleToggleUserStatus}
+            onBan={handleBanUser}
+            onUnban={handleUnbanUser}
           />
         )}
         {!loading && tab === "stories" && (
@@ -529,18 +570,17 @@ export default function AdminDashboard() {
         {!loading && tab === "system-ops" && (
           <SystemOpsTab
             stats={systemStats}
-            logs={systemLogs}
             alerts={systemAlerts}
-            onRunJob={handleRunStatsJob}
+            jobHistory={jobHistory}
+            onRunStatsJob={handleRunStatsJob}
+            onRunSettlementJob={handleRunSettlementJob}
+            onAcknowledgeAlert={handleAcknowledgeAlert}
           />
         )}
         {!loading && tab === "coins" && (
           <CoinMonitoringTab
             stats={coinStatsDaily}
-            withdraws={withdraws}
-            onApprove={(w: any) => handleWithdraw(w, true)}
-            onReject={(w: any) => handleWithdraw(w, false)}
-            onRunJob={handleRunSettlementJob}
+            onSetTab={setTab}
           />
         )}
       </div>

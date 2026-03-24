@@ -1,0 +1,506 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/stores";
+import useHttpClient from "@/api/useHttpClient";
+import APP_CONFIG from "@/config/app-config";
+import { useToast } from "@/hooks/use-toast";
+
+// ── Types ─────────────────────────────────────────────────────────────────
+interface EditRequest {
+  id: number;
+  chapterId: number;
+  chapterTitle: string;
+  storyTitle: string;
+  authorId: number;
+  authorName: string;
+  editorId?: number;
+  editorName?: string;
+  coinReward: number;
+  description?: string;
+  editedContent?: string;
+  editorNote?: string;
+  authorNote?: string;
+  status: "OPEN" | "IN_PROGRESS" | "SUBMITTED" | "APPROVED" | "CANCELLED";
+  attemptCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days > 0) return `${days} ngày trước`;
+  const hrs = Math.floor(diff / 3600000);
+  if (hrs > 0) return `${hrs} giờ trước`;
+  return `${Math.floor(diff / 60000)} phút trước`;
+}
+
+function StatCard({ icon, label, value, color }: { icon: string; label: string; value: string | number; color?: string }) {
+  return (
+    <div style={{ background: "#fff", border: "1.5px solid #e8e0d6", borderRadius: 14, padding: "16px 20px" }}>
+      <div style={{ fontSize: 22 }}>{icon}</div>
+      <div style={{ fontSize: 24, fontWeight: 800, color: color ?? "#1c1512", marginTop: 4 }}>{value}</div>
+      <div style={{ fontSize: 12, color: "#9e8e82", marginTop: 2 }}>{label}</div>
+    </div>
+  );
+}
+
+// ── Edit Modal ────────────────────────────────────────────────────────────
+interface EditModalProps {
+  request: EditRequest;
+  onClose: () => void;
+  onSubmit: (requestId: number, editedContent: string, editorNote: string) => Promise<void>;
+}
+
+function EditModal({ request, onClose, onSubmit }: EditModalProps) {
+  const [content, setContent] = useState(request.editedContent ?? "");
+  const [note, setNote] = useState(request.editorNote ?? "");
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!content.trim()) return;
+    setSaving(true);
+    try {
+      await onSubmit(request.id, content, note);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div style={{ background: "#fff", borderRadius: 18, width: "100%", maxWidth: 760, maxHeight: "94vh", display: "flex", flexDirection: "column", boxShadow: "0 16px 48px rgba(0,0,0,0.22)", overflow: "hidden" }}>
+        {/* Header */}
+        <div style={{ padding: "16px 20px 12px", borderBottom: "1.5px solid #f0e8e0", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+          <div>
+            <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, fontWeight: 800, color: "#1c1512" }}>✏ Soạn thảo chỉnh sửa</div>
+            <div style={{ fontSize: 12, color: "#b0a096", marginTop: 2 }}>
+              {request.chapterTitle} · {request.storyTitle}
+              {" · "}
+              <span style={{ color: "#16a34a", fontWeight: 700 }}>🪙 {request.coinReward} xu thưởng</span>
+              {request.attemptCount > 1 && <span style={{ color: "#92400e", fontWeight: 700, marginLeft: 8 }}>· Lần thử #{request.attemptCount}</span>}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: "50%", border: "1.5px solid #e8e0d6", background: "#fdfaf7", cursor: "pointer", fontSize: 16, color: "#6b5a4e", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+        </div>
+
+        {/* Body */}
+        <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", padding: "16px 20px", gap: 12 }}>
+          {request.description && (
+            <div style={{ flexShrink: 0, background: "#fffbeb", border: "1.5px solid #fcd34d", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#92400e" }}>
+              <strong>📋 Yêu cầu của tác giả:</strong> {request.description}
+            </div>
+          )}
+          {request.authorNote && request.attemptCount > 1 && (
+            <div style={{ flexShrink: 0, background: "#fff0ea", border: "1.5px solid #ffdacc", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#9e2d2f" }}>
+              <strong>❌ Tác giả từ chối lần trước:</strong> {request.authorNote}
+            </div>
+          )}
+
+          {/* Editable content */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#6b5a4e", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>Nội dung chỉnh sửa *</label>
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Nhập nội dung chỉnh sửa của bạn..."
+              style={{ flex: 1, minHeight: 280, padding: "12px 14px", borderRadius: 10, border: "1.5px solid #e8e0d6", fontSize: 14, color: "#1c1512", fontFamily: "inherit", resize: "none", outline: "none", lineHeight: 1.75, boxSizing: "border-box" }}
+            />
+            <div style={{ fontSize: 11, color: "#b0a096", marginTop: 4, textAlign: "right" as const }}>
+              {content.trim().split(/\s+/).filter(Boolean).length.toLocaleString()} chữ
+            </div>
+          </div>
+
+          {/* Note */}
+          <div>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6b5a4e", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>Ghi chú cho tác giả</label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Mô tả những thay đổi bạn đã thực hiện…"
+              rows={2}
+              style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1.5px solid #e8e0d6", fontSize: 13, color: "#1c1512", fontFamily: "inherit", resize: "none", outline: "none", boxSizing: "border-box" }}
+            />
+          </div>
+
+          {/* Actions */}
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+            <button onClick={onClose} style={{ padding: "10px 22px", borderRadius: 9, border: "1.5px solid #e8e0d6", background: "#fff", color: "#6b5a4e", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Hủy</button>
+            <button
+              onClick={handleSubmit}
+              disabled={!content.trim() || saving}
+              style={{ padding: "10px 22px", borderRadius: 9, border: "none", background: !content.trim() || saving ? "#f3f4f6" : "#ff500a", color: !content.trim() || saving ? "#9ca3af" : "#fff", fontSize: 13, fontWeight: 700, cursor: !content.trim() || saving ? "not-allowed" : "pointer" }}
+            >
+              {saving ? "Đang nộp..." : "📤 Nộp bản chỉnh sửa"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────
+export default function EditorDashboardPage() {
+  const router = useRouter();
+  const { user } = useAuthStore();
+  const httpClient = useHttpClient();
+  const toast = useToast();
+
+  const [tab, setTab] = useState<"open" | "mine" | "done" | "guide">("open");
+  const [openRequests, setOpenRequests] = useState<EditRequest[]>([]);
+  const [mineRequests, setMineRequests] = useState<EditRequest[]>([]);
+  const [doneRequests, setDoneRequests] = useState<EditRequest[]>([]);
+  const [loadingOpen, setLoadingOpen] = useState(true);
+  const [loadingMine, setLoadingMine] = useState(true);
+  const [assigning, setAssigning] = useState<number | null>(null);
+  const [withdrawing, setWithdrawing] = useState<number | null>(null);
+  const [editModal, setEditModal] = useState<EditRequest | null>(null);
+
+  const loadOpen = async () => {
+    setLoadingOpen(true);
+    try {
+      const res: any = await httpClient.get(APP_CONFIG.EDIT_REQUEST.OPEN);
+      const list: EditRequest[] = res?.data?.content ?? res?.data ?? res?.content ?? res ?? [];
+      setOpenRequests(Array.isArray(list) ? list : []);
+    } catch {
+      setOpenRequests([]);
+    } finally {
+      setLoadingOpen(false);
+    }
+  };
+
+  const loadAssigned = async () => {
+    setLoadingMine(true);
+    try {
+      const res: any = await httpClient.get(APP_CONFIG.EDIT_REQUEST.ASSIGNED);
+      const list: EditRequest[] = res?.data?.content ?? res?.data ?? res?.content ?? res ?? [];
+      const all = Array.isArray(list) ? list : [];
+      setMineRequests(all.filter((r) => r.status === "IN_PROGRESS" || r.status === "SUBMITTED"));
+      setDoneRequests(all.filter((r) => r.status === "APPROVED"));
+    } catch {
+      setMineRequests([]);
+    } finally {
+      setLoadingMine(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) { router.push("/?login"); return; }
+    const hasEditor = user.roles?.some((r: string) => r === "EDITOR" || r === "ROLE_EDITOR" || r === "ADMIN" || r === "ROLE_ADMIN");
+    if (!hasEditor) { router.push("/"); return; }
+    loadOpen();
+    loadAssigned();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const handleAssign = async (req: EditRequest) => {
+    setAssigning(req.id);
+    try {
+      await httpClient.post(APP_CONFIG.EDIT_REQUEST.ASSIGN(req.id), {});
+      toast.success(`Đã nhận yêu cầu "${req.chapterTitle}"`);
+      setOpenRequests((p) => p.filter((r) => r.id !== req.id));
+      setMineRequests((p) => [...p, { ...req, status: "IN_PROGRESS" as const, editorId: user?.id }]);
+      setTab("mine");
+    } catch {
+      toast.error("Không thể nhận yêu cầu. Thử lại sau.");
+    } finally {
+      setAssigning(null);
+    }
+  };
+
+  const handleWithdraw = async (req: EditRequest) => {
+    if (!window.confirm(`Rút lui khỏi yêu cầu "${req.chapterTitle}"?`)) return;
+    setWithdrawing(req.id);
+    try {
+      await httpClient.post(APP_CONFIG.EDIT_REQUEST.WITHDRAW(req.id), {});
+      toast.success("Đã rút lui thành công.");
+      setMineRequests((p) => p.filter((r) => r.id !== req.id));
+      setOpenRequests((p) => [...p, { ...req, status: "OPEN" as const, editorId: undefined }]);
+    } catch {
+      toast.error("Không thể rút lui. Thử lại sau.");
+    } finally {
+      setWithdrawing(null);
+    }
+  };
+
+  const handleSubmitEdit = async (requestId: number, editedContent: string, editorNote: string) => {
+    try {
+      await httpClient.put(APP_CONFIG.EDIT_REQUEST.SUBMIT(requestId), { editedContent, editorNote: editorNote || undefined });
+      toast.success("Đã nộp bản chỉnh sửa — chờ tác giả duyệt!");
+      setMineRequests((p) => p.map((r) => r.id === requestId ? { ...r, status: "SUBMITTED" as const, editedContent, editorNote } : r));
+    } catch {
+      toast.error("Không thể nộp bản chỉnh sửa. Thử lại sau.");
+      throw new Error("failed");
+    }
+  };
+
+  const TABS = [
+    { id: "open",  label: `🏪 Thị trường (${openRequests.length})` },
+    { id: "mine",  label: `⚙ Đang làm (${mineRequests.length})` },
+    { id: "done",  label: `✅ Hoàn thành (${doneRequests.length})` },
+    { id: "guide", label: "📋 Hướng dẫn" },
+  ] as const;
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#f4faf6" }}>
+      {/* ── Gradient header ── */}
+      <div style={{ background: "linear-gradient(135deg, #ff7043 0%, #ff500a 60%, #e64a19 100%)", padding: "28px 40px 0", color: "#fff" }}>
+        <div style={{ maxWidth: 1320, margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>✏</div>
+            <div>
+              <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, letterSpacing: -0.5 }}>Bảng Editor</h1>
+              <p style={{ margin: 0, fontSize: 13, opacity: 0.75 }}>Xin chào, {user?.fullName} — nhận yêu cầu chỉnh sửa từ tác giả và kiếm coin</p>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
+            {[
+              { icon: "🏪", label: "Yêu cầu mở",        value: openRequests.length },
+              { icon: "⚙",  label: "Đang thực hiện",    value: mineRequests.filter(r => r.status === "IN_PROGRESS").length },
+              { icon: "⏳", label: "Chờ tác giả duyệt", value: mineRequests.filter(r => r.status === "SUBMITTED").length },
+              { icon: "✅", label: "Đã hoàn thành",      value: doneRequests.length },
+            ].map((s) => (
+              <div key={s.label} style={{ background: "rgba(255,255,255,0.12)", borderRadius: 12, padding: "14px 16px", border: "1px solid rgba(255,255,255,0.2)" }}>
+                <div style={{ fontSize: 20 }}>{s.icon}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginTop: 4 }}>{s.value}</div>
+                <div style={{ fontSize: 11, opacity: 0.8 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 4, overflowX: "auto" }}>
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id as any)}
+                style={{ flex: 1, minWidth: 110, padding: "10px 18px", borderRadius: "8px 8px 0 0", border: "none", background: tab === t.id ? "rgba(255,255,255,0.18)" : "transparent", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", borderBottom: `2px solid ${tab === t.id ? "#fff" : "transparent"}`, opacity: tab === t.id ? 1 : 0.72 }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Content ── */}
+      <div style={{ maxWidth: 1320, margin: "0 auto", padding: "28px 40px 80px" }}>
+        {/* ── Open Marketplace ── */}
+        {tab === "open" && (
+          <div>
+            <div style={{ background: "#fff0ea", border: "1.5px solid #ffdacc", borderRadius: 12, padding: "12px 16px", fontSize: 13, color: "#e64a19", marginBottom: 16 }}>
+              <strong>🏪 Thị trường chỉnh sửa:</strong> Tác giả đăng yêu cầu chỉnh sửa chương kèm thưởng coin. Nhận việc, hoàn thành và được trả thưởng khi tác giả chấp thuận.
+            </div>
+            {loadingOpen ? (
+              <div style={{ textAlign: "center", padding: "40px 0", color: "#9e8e82" }}>⏳ Đang tải...</div>
+            ) : openRequests.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "60px 0", color: "#b0a096" }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
+                <div style={{ fontSize: 16, fontWeight: 700 }}>Không có yêu cầu nào đang mở!</div>
+                <div style={{ fontSize: 13, marginTop: 6 }}>Hãy quay lại sau.</div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {openRequests.map((req) => (
+                  <div key={req.id} style={{ background: "#fff", border: "1.5px solid #e8e0d6", borderRadius: 16, padding: "18px 20px" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 15, fontWeight: 700, color: "#1c1512" }}>{req.chapterTitle}</span>
+                          <span style={{ fontSize: 12, background: "#fff0ea", color: "#16a34a", border: "1px solid #ffdacc", borderRadius: 20, padding: "2px 10px", fontWeight: 700 }}>🪙 {req.coinReward} xu</span>
+                        </div>
+                        <div style={{ fontSize: 12, color: "#9e8e82", marginBottom: 8, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                          <span>📖 {req.storyTitle}</span>
+                          <span>✍ {req.authorName}</span>
+                          <span>🕐 {timeAgo(req.createdAt)}</span>
+                        </div>
+                        {req.description && (
+                          <div style={{ fontSize: 13, color: "#6b5a4e", lineHeight: 1.6, background: "#fffbeb", borderRadius: 8, padding: "10px 14px", border: "1.5px solid #fcd34d", marginBottom: 12 }}>
+                            📋 <strong>Yêu cầu:</strong> {req.description}
+                          </div>
+                        )}
+                        <button
+                          onClick={() => handleAssign(req)}
+                          disabled={assigning === req.id}
+                          style={{ padding: "8px 20px", borderRadius: 9, border: "none", background: assigning === req.id ? "#f3f4f6" : "#ff500a", color: assigning === req.id ? "#9ca3af" : "#fff", fontSize: 13, fontWeight: 700, cursor: assigning === req.id ? "not-allowed" : "pointer" }}
+                        >
+                          {assigning === req.id ? "Đang nhận..." : "⚙ Nhận yêu cầu này"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Mine (In Progress + Submitted) ── */}
+        {tab === "mine" && (
+          <div>
+            {loadingMine ? (
+              <div style={{ textAlign: "center", padding: "40px 0", color: "#9e8e82" }}>⏳ Đang tải...</div>
+            ) : mineRequests.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "60px 0", color: "#b0a096" }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+                <div style={{ fontSize: 16, fontWeight: 700 }}>Chưa có yêu cầu đang làm</div>
+                <div style={{ fontSize: 13, marginTop: 6 }}>Nhận yêu cầu từ tab &quot;Thị trường&quot;.</div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {mineRequests.map((req) => {
+                  const isSubmitted = req.status === "SUBMITTED";
+                  const isRejected = req.status === "IN_PROGRESS" && req.attemptCount > 1;
+                  return (
+                    <div key={req.id} style={{ background: "#fff", border: `1.5px solid ${isRejected ? "#ffdacc" : isSubmitted ? "#93c5fd" : "#ffdacc"}`, borderRadius: 16, padding: "16px 20px" }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
+                            <span style={{ fontSize: 15, fontWeight: 700, color: "#1c1512" }}>{req.chapterTitle}</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 20, padding: "2px 8px", ...(isSubmitted ? { background: "#eff6ff", color: "#1d4ed8", border: "1px solid #93c5fd" } : isRejected ? { background: "#fff0ea", color: "#ff500a", border: "1px solid #ffdacc" } : { background: "#fff0ea", color: "#e64a19", border: "1px solid #ffdacc" }) }}>
+                              {isSubmitted ? "⏳ Chờ tác giả duyệt" : isRejected ? "🔄 Cần viết lại" : "⚙ Đang làm"}
+                            </span>
+                            <span style={{ fontSize: 12, background: "#fff0ea", color: "#16a34a", border: "1px solid #ffdacc", borderRadius: 20, padding: "2px 10px", fontWeight: 700 }}>🪙 {req.coinReward} xu</span>
+                            {req.attemptCount > 1 && <span style={{ fontSize: 11, color: "#9e8e82" }}>Lần {req.attemptCount}</span>}
+                          </div>
+                          <div style={{ fontSize: 12, color: "#9e8e82", marginBottom: 8, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                            <span>📖 {req.storyTitle}</span>
+                            <span>✍ {req.authorName}</span>
+                          </div>
+                          {isRejected && req.authorNote && (
+                            <div style={{ background: "#fff0ea", border: "1.5px solid #ffdacc", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#9e2d2f", marginBottom: 10 }}>
+                              ❌ <strong>Tác giả từ chối:</strong> {req.authorNote}
+                            </div>
+                          )}
+                          {req.description && !isRejected && (
+                            <div style={{ fontSize: 13, color: "#6b5a4e", background: "#fffbeb", borderRadius: 8, padding: "8px 12px", border: "1.5px solid #fcd34d", marginBottom: 10 }}>
+                              📋 {req.description}
+                            </div>
+                          )}
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            {!isSubmitted && (
+                              <button
+                                onClick={() => setEditModal(req)}
+                                style={{ padding: "8px 20px", borderRadius: 9, border: "none", background: "#ff500a", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+                              >
+                                ✏ Mở trình soạn thảo
+                              </button>
+                            )}
+                            {!isSubmitted && !isRejected && (
+                              <button
+                                onClick={() => handleWithdraw(req)}
+                                disabled={withdrawing === req.id}
+                                style={{ padding: "8px 16px", borderRadius: 9, border: "1.5px solid #e8e0d6", background: "#fff", color: "#6b5a4e", fontSize: 13, fontWeight: 600, cursor: withdrawing === req.id ? "not-allowed" : "pointer" }}
+                              >
+                                {withdrawing === req.id ? "..." : "↩ Rút lui"}
+                              </button>
+                            )}
+                            {isSubmitted && (
+                              <div style={{ fontSize: 13, color: "#1d4ed8", fontStyle: "italic" }}>
+                                Bản chỉnh sửa đã nộp — đang chờ tác giả xem xét...
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Done (Approved) ── */}
+        {tab === "done" && (
+          <div>
+            {doneRequests.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "60px 0", color: "#b0a096" }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>📊</div>
+                <div style={{ fontSize: 16, fontWeight: 700 }}>Chưa hoàn thành yêu cầu nào</div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {doneRequests.map((req) => (
+                  <div key={req.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "#fff0ea", borderRadius: 12, border: "1.5px solid #ffdacc" }}>
+                    <span style={{ fontSize: 20 }}>✅</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#1c1512" }}>{req.chapterTitle}</div>
+                      <div style={{ fontSize: 12, color: "#9e8e82" }}>
+                        {req.storyTitle} · ✍ {req.authorName} · 🪙 {req.coinReward} xu nhận được
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 12, color: "#9e8e82", flexShrink: 0 }}>{timeAgo(req.updatedAt)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Guide ── */}
+        {tab === "guide" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {[
+              {
+                icon: "⚙", color: "#e64a19", bg: "#fff0ea", border: "#ffdacc",
+                title: "Quy trình làm việc",
+                items: [
+                  "1. Vào tab 'Thị trường' xem các yêu cầu chỉnh sửa đang mở",
+                  "2. Nhấn 'Nhận yêu cầu này' — coin của tác giả được tạm lock",
+                  "3. Vào tab 'Đang làm', nhấn 'Mở trình soạn thảo' và chỉnh sửa",
+                  "4. Ghi chú thay đổi, nhấn 'Nộp bản chỉnh sửa' — chờ tác giả duyệt",
+                  "5. Nếu tác giả từ chối, bạn có thể chỉnh sửa lại (không giới hạn lần)",
+                  "6. Khi tác giả chấp thuận, coin thưởng được chuyển vào ví bạn",
+                ],
+              },
+              {
+                icon: "📝", color: "#1d4ed8", bg: "#eff6ff", border: "#93c5fd",
+                title: "Quy tắc chỉnh sửa",
+                items: [
+                  "Giữ nguyên ý nghĩa và phong cách của tác giả",
+                  "Chỉ sửa lỗi chính tả, ngữ pháp, dấu câu theo yêu cầu",
+                  "Không thêm hoặc bớt nội dung quan trọng ngoài yêu cầu",
+                  "Ghi chú rõ những thay đổi lớn để tác giả nắm",
+                  "Đọc kỹ yêu cầu của tác giả trước khi bắt đầu",
+                ],
+              },
+              {
+                icon: "⚠", color: "#92400e", bg: "#fffbeb", border: "#fcd34d",
+                title: "Lưu ý quan trọng",
+                items: [
+                  "Bạn có thể rút lui khi chưa bị tác giả từ chối (status IN_PROGRESS, lần đầu)",
+                  "Sau khi bị từ chối, phải sửa lại — không thể rút lui",
+                  "Coin chỉ được giải phóng về ví khi tác giả chấp thuận",
+                  "Nếu tác giả huỷ yêu cầu (OPEN), coin hoàn về tác giả ngay",
+                  "Liên hệ admin nếu gặp trường hợp tranh chấp",
+                ],
+              },
+            ].map((sec) => (
+              <div key={sec.title} style={{ background: sec.bg, border: `1.5px solid ${sec.border}`, borderRadius: 14, padding: "18px 20px" }}>
+                <div style={{ fontWeight: 800, fontSize: 15, color: sec.color, marginBottom: 10 }}>{sec.icon} {sec.title}</div>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {sec.items.map((item, i) => (
+                    <li key={i} style={{ fontSize: 13, color: "#3d2f28", lineHeight: 1.7 }}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Edit modal */}
+      {editModal && (
+        <EditModal
+          request={editModal}
+          onClose={() => setEditModal(null)}
+          onSubmit={handleSubmitEdit}
+        />
+      )}
+    </div>
+  );
+}

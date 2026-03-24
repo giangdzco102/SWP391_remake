@@ -209,6 +209,8 @@ export default class APP_CONFIG {
     APPROVE_WITHDRAW:        (id: string | number) => `/admin/withdraw-requests/${id}/approve`,
     REJECT_WITHDRAW:         (id: string | number) => `/admin/withdraw-requests/${id}/reject`,
     TOGGLE_USER_STATUS:      (id: string | number) => `/admin/users/${id}/toggle-status`,
+    BAN_USER:                (id: string | number) => `/admin/users/${id}/ban`,
+    UNBAN_USER:              (id: string | number) => `/admin/users/${id}/unban`,
     CREATE_MISSION:          "/admin/missions",
     UPDATE_MISSION:          (id: string | number) => `/admin/missions/${id}`,
     DELETE_MISSION:          (id: string | number) => `/admin/missions/${id}`,
@@ -220,6 +222,10 @@ export default class APP_CONFIG {
     RUN_STATS_JOB:           "/admin/jobs/stats-aggregator",
     COIN_STATS_DAILY:        "/admin/coins/stats-daily",
     RUN_SETTLEMENT_JOB:      "/admin/jobs/monthly-settlement",
+    ACKNOWLEDGE_ALERT:       (id: string | number) => `/admin/system/alerts/${id}/acknowledge`,
+    JOB_HISTORY:             "/admin/jobs/history",
+    ADJUST_COIN:             (id: string | number) => `/admin/users/${id}/adjust-coins`,
+    BROADCAST_NOTIFICATION:  "/admin/notifications/broadcast",
   };
 }
 

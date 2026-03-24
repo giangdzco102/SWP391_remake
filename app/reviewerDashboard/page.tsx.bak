@@ -1,0 +1,502 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/stores";
+import useHttpClient from "@/api/useHttpClient";
+import APP_CONFIG from "@/config/app-config";
+import { useToast } from "@/hooks/use-toast";
+
+// ── Types ─────────────────────────────────────────────────────────────────
+interface PendingStory {
+  id: number;
+  title: string;
+  description?: string;
+  coverUrl?: string;
+  status: string;
+  viewCount?: number;
+  totalChapters?: number;
+  author: { id: number; fullName: string; avatarUrl?: string };
+  categories: { id: number; name: string }[];
+  createdAt: string;
+  submittedAt?: string;
+  reviewNote?: string;
+}
+
+interface PendingChapter {
+  id: number;
+  title: string;
+  chapterOrder: number;
+  content?: string;
+  wordCount?: number;
+  coinPrice?: number;
+  status: string;
+  storyId: number;
+  storyTitle?: string;
+  authorName?: string;
+  createdAt: string;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days > 0) return `${days} ngày trước`;
+  const hrs = Math.floor(diff / 3600000);
+  if (hrs > 0) return `${hrs} giờ trước`;
+  return `${Math.floor(diff / 60000)} phút trước`;
+}
+
+function StatCard({ icon, label, value, color }: { icon: string; label: string; value: string | number; color?: string }) {
+  return (
+    <div style={{ background: "#fff", border: "1.5px solid #e8e0d6", borderRadius: 14, padding: "16px 20px" }}>
+      <div style={{ fontSize: 22 }}>{icon}</div>
+      <div style={{ fontSize: 24, fontWeight: 800, color: color ?? "#1c1512", marginTop: 4 }}>{value}</div>
+      <div style={{ fontSize: 12, color: "#9e8e82", marginTop: 2 }}>{label}</div>
+    </div>
+  );
+}
+
+// ── Story preview ─────────────────────────────────────────────────────────
+function StoryPreview({ story, onClose }: { story: PendingStory; onClose: () => void }) {
+  return (
+    <div onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div style={{ background: "#fff", borderRadius: 18, width: "100%", maxWidth: 620, maxHeight: "88vh", display: "flex", flexDirection: "column", boxShadow: "0 16px 48px rgba(0,0,0,0.22)", overflow: "hidden" }}>
+        <div style={{ padding: "18px 20px 14px", borderBottom: "1.5px solid #f0e8e0", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 18, fontWeight: 800, color: "#1c1512" }}>{story.title}</div>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: "50%", border: "1.5px solid #e8e0d6", background: "#fdfaf7", cursor: "pointer", fontSize: 16, color: "#6b5a4e", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+        </div>
+        <div style={{ overflowY: "auto", padding: "20px 24px" }}>
+          <div style={{ fontSize: 13, color: "#6b5a4e", marginBottom: 12 }}>
+            ✍ {story.author?.fullName} · {story.categories?.map((c) => c.name).join(", ") || "Chưa phân loại"} · {story.totalChapters ?? 0} chương · Nộp {timeAgo(story.submittedAt ?? story.createdAt)}
+          </div>
+          {story.description ? (
+            <div style={{ fontSize: 15, color: "#2a1e18", lineHeight: 1.8, fontFamily: "'Lora',serif" }}>{story.description}</div>
+          ) : (
+            <div style={{ color: "#b0a096", fontStyle: "italic" }}>Không có mô tả.</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Chapter preview ───────────────────────────────────────────────────────
+function ChapterPreview({ chapter, onClose }: { chapter: PendingChapter; onClose: () => void }) {
+  const httpClient = useHttpClient();
+  const [fullContent, setFullContent] = useState<string | null>(chapter.content ?? null);
+  const [fetching, setFetching] = useState(!chapter.content);
+
+  useEffect(() => {
+    if (chapter.content) return;
+    let cancelled = false;
+    setFetching(true);
+    httpClient.get(APP_CONFIG.REVIEWER.CHAPTER_DETAIL(chapter.id))
+      .then((res: any) => {
+        if (!cancelled) setFullContent(res?.data?.content ?? res?.content ?? null);
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setFetching(false); });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapter.id]);
+
+  const content = fullContent ?? chapter.content ?? "";
+  const isHtmlContent = /<[a-z][\s\S]*>/i.test(content);
+  const paragraphs = isHtmlContent ? [] : content.split(/\n+/).filter(Boolean);
+  const words = chapter.wordCount ?? (isHtmlContent
+    ? content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().split(/\s+/).filter(Boolean).length
+    : content.trim().split(/\s+/).filter(Boolean).length);
+  return (
+    <div onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div style={{ background: "#fff", borderRadius: 18, width: "100%", maxWidth: 680, maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 16px 48px rgba(0,0,0,0.22)", overflow: "hidden" }}>
+        <div style={{ padding: "18px 20px 14px", borderBottom: "1.5px solid #f0e8e0", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+          <div>
+            <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, fontWeight: 800, color: "#1c1512" }}>{chapter.title}</div>
+            <div style={{ fontSize: 12, color: "#b0a096", marginTop: 2 }}>{chapter.storyTitle} · Chương {chapter.chapterOrder} · {words.toLocaleString()} chữ · {Math.max(1, Math.ceil(words / 200))} phút đọc</div>
+          </div>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: "50%", border: "1.5px solid #e8e0d6", background: "#fdfaf7", cursor: "pointer", fontSize: 16, color: "#6b5a4e", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+        </div>
+        <div style={{ overflowY: "auto", padding: "20px 24px" }}>
+          {fetching ? (
+            <div style={{ textAlign: "center", padding: "20px 0", color: "#9e8e82" }}>⏳ Đang tải nội dung...</div>
+          ) : !content ? (
+            <div style={{ color: "#b0a096", fontStyle: "italic" }}>Không có nội dung.</div>
+          ) : isHtmlContent ? (
+            <div
+              style={{ fontSize: 15, color: "#2a1e18", lineHeight: 1.85, fontFamily: "'Lora',serif" }}
+              dangerouslySetInnerHTML={{ __html: content }}
+            />
+          ) : paragraphs.length === 0 ? (
+            <div style={{ color: "#b0a096", fontStyle: "italic" }}>Không có nội dung.</div>
+          ) : (
+            paragraphs.map((p, i) => (
+              <p key={i} style={{ fontSize: 15, color: "#2a1e18", lineHeight: 1.85, fontFamily: "'Lora',serif", marginBottom: "1em" }}>{p}</p>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Review action buttons ─────────────────────────────────────────────────
+function ReviewActions({
+  onApprove,
+  onReject,
+  loading,
+}: {
+  onApprove: (note: string) => void;
+  onReject: (note: string) => void;
+  loading: boolean;
+}) {
+  const [note, setNote] = useState("");
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
+      <input
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        placeholder="Ghi chú cho tác giả (tùy chọn)…"
+        style={{ flex: 1, minWidth: 180, padding: "8px 12px", borderRadius: 8, border: "1.5px solid #e8e0d6", fontSize: 13, color: "#3d2f28", fontFamily: "inherit", outline: "none" }}
+      />
+      <button
+        onClick={() => onApprove(note)}
+        disabled={loading}
+        style={{ padding: "8px 18px", borderRadius: 9, border: "none", background: loading ? "#f3f4f6" : "#16a34a", color: loading ? "#9ca3af" : "#fff", fontSize: 13, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6 }}
+      >
+        ✓ Duyệt
+      </button>
+      <button
+        onClick={() => onReject(note)}
+        disabled={loading}
+        style={{ padding: "8px 18px", borderRadius: 9, border: "none", background: loading ? "#f3f4f6" : "#ff500a", color: loading ? "#9ca3af" : "#fff", fontSize: 13, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6 }}
+      >
+        ✕ Từ chối
+      </button>
+    </div>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────
+export default function ReviewerDashboardPage() {
+  const router = useRouter();
+  const { user } = useAuthStore();
+  const httpClient = useHttpClient();
+  const toast = useToast();
+
+  const [tab, setTab] = useState<"stories" | "chapters" | "guide">("stories");
+  const [pendingStories, setPendingStories] = useState<PendingStory[]>([]);
+  const [pendingChapters, setPendingChapters] = useState<PendingChapter[]>([]);
+  const [loadingStories, setLoadingStories] = useState(true);
+  const [loadingChapters, setLoadingChapters] = useState(true);
+  const [reviewing, setReviewing] = useState<number | null>(null);
+  const [previewStory, setPreviewStory] = useState<PendingStory | null>(null);
+  const [previewChapter, setPreviewChapter] = useState<PendingChapter | null>(null);
+  const [doneStories, setDoneStories] = useState<{ story: PendingStory; action: "APPROVED" | "REJECTED"; at: string }[]>([]);
+  const [doneChapters, setDoneChapters] = useState<{ chapter: PendingChapter; action: "APPROVED" | "REJECTED"; at: string }[]>([]);
+  const [historyTab, setHistoryTab] = useState<"stories" | "chapters">("stories");
+
+  const loadPendingStories = async () => {
+    setLoadingStories(true);
+    try {
+      const res: any = await httpClient.get(APP_CONFIG.REVIEWER.PENDING_STORIES);
+      const list: PendingStory[] = res?.data?.content ?? res?.data ?? res?.content ?? res ?? [];
+      setPendingStories(Array.isArray(list) ? list : []);
+    } catch {
+      setPendingStories([]);
+    } finally {
+      setLoadingStories(false);
+    }
+  };
+
+  const loadPendingChapters = async () => {
+    setLoadingChapters(true);
+    try {
+      const res: any = await httpClient.get(APP_CONFIG.REVIEWER.PENDING_CHAPTERS);
+      const list: PendingChapter[] = res?.data?.content ?? res?.data ?? res?.content ?? res ?? [];
+      setPendingChapters(Array.isArray(list) ? list : []);
+    } catch {
+      setPendingChapters([]);
+    } finally {
+      setLoadingChapters(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) { router.push("/?login"); return; }
+    const hasReviewer = user.roles?.some((r: string) => r === "REVIEWER" || r === "ROLE_REVIEWER" || r === "ADMIN" || r === "ROLE_ADMIN");
+    if (!hasReviewer) { router.push("/"); return; }
+    loadPendingStories();
+    loadPendingChapters();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const reviewStory = async (story: PendingStory, action: "APPROVE" | "REJECT", note: string) => {
+    setReviewing(story.id);
+    try {
+      await httpClient.post(APP_CONFIG.REVIEWER.REVIEW_STORY(story.id), { action, note: note || undefined });
+      toast.success(action === "APPROVE" ? `✅ Đã duyệt "${story.title}"` : `❌ Đã từ chối "${story.title}"`);
+      setDoneStories((p) => [{ story, action: action === "APPROVE" ? "APPROVED" : "REJECTED", at: new Date().toLocaleString("vi") }, ...p]);
+      setPendingStories((p) => p.filter((s) => s.id !== story.id));
+    } catch {
+      toast.error("Không thể gửi kết quả duyệt. Thử lại sau.");
+    } finally {
+      setReviewing(null);
+    }
+  };
+
+  const reviewChapter = async (chapter: PendingChapter, action: "APPROVE" | "REJECT", note: string) => {
+    setReviewing(chapter.id * -1);
+    try {
+      await httpClient.post(APP_CONFIG.REVIEWER.REVIEW_CHAPTER(chapter.id), { action, note: note || undefined });
+      toast.success(action === "APPROVE" ? `✅ Đã duyệt — chờ tác giả phát hành "${chapter.title}"` : `❌ Đã từ chối chương "${chapter.title}"`);
+      setDoneChapters((p) => [{ chapter, action: action === "APPROVE" ? "APPROVED" : "REJECTED", at: new Date().toLocaleString("vi") }, ...p]);
+      setPendingChapters((p) => p.filter((c) => c.id !== chapter.id));
+    } catch {
+      toast.error("Không thể gửi kết quả duyệt. Thử lại sau.");
+    } finally {
+      setReviewing(null);
+    }
+  };
+
+  const TABS = [
+    { id: "stories", label: `📖 Truyện (${pendingStories.length})` },
+    { id: "chapters", label: `📄 Chương (${pendingChapters.length})` },
+    { id: "history", label: `📋 Lịch sử (${doneStories.length + doneChapters.length})` },
+    { id: "guide", label: "📏 Tiêu chí" },
+  ] as const;
+
+  const totalReviewed = doneStories.length + doneChapters.length;
+  const approved = [...doneStories.filter((d) => d.action === "APPROVED"), ...doneChapters.filter((d) => d.action === "APPROVED")].length;
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#f4f6fb" }}>
+      {/* ── Gradient header ── */}
+      <div style={{ background: "linear-gradient(135deg, #ff7043 0%, #ff500a 60%, #e64a19 100%)", padding: "28px 40px 0", color: "#fff" }}>
+        <div style={{ maxWidth: 1320, margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🛡</div>
+            <div>
+              <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, letterSpacing: -0.5 }}>Bảng Kiểm Duyệt</h1>
+              <p style={{ margin: 0, fontSize: 13, opacity: 0.75 }}>Xin chào, {user?.fullName} — duyệt truyện & chương để nhận coin thưởng</p>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
+            {[
+              { icon: "⏳", label: "Truyện chờ duyệt", value: pendingStories.length },
+              { icon: "📄", label: "Chương chờ duyệt", value: pendingChapters.length },
+              { icon: "✅", label: "Đã duyệt hôm nay", value: approved },
+              { icon: "📊", label: "Tổng đã xử lý", value: totalReviewed },
+            ].map((s) => (
+              <div key={s.label} style={{ background: "rgba(255,255,255,0.12)", borderRadius: 12, padding: "14px 16px", border: "1px solid rgba(255,255,255,0.2)" }}>
+                <div style={{ fontSize: 20 }}>{s.icon}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", marginTop: 4 }}>{s.value}</div>
+                <div style={{ fontSize: 11, opacity: 0.8 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 4, overflowX: "auto" }}>
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id as any)}
+                style={{ flex: 1, minWidth: 110, padding: "10px 18px", borderRadius: "8px 8px 0 0", border: "none", background: tab === t.id ? "rgba(255,255,255,0.18)" : "transparent", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", borderBottom: `2px solid ${tab === t.id ? "#fff" : "transparent"}`, opacity: tab === t.id ? 1 : 0.72 }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Content ── */}
+      <div style={{ maxWidth: 1320, margin: "0 auto", padding: "28px 40px 80px" }}>
+        {/* ── Stories tab ── */}
+      {tab === "stories" && (
+        <div>
+          {loadingStories ? (
+            <div style={{ textAlign: "center", padding: "40px 0", color: "#9e8e82" }}>⏳ Đang tải...</div>
+          ) : pendingStories.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "60px 0", color: "#b0a096" }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>Không có truyện nào chờ duyệt!</div>
+              <div style={{ fontSize: 13, marginTop: 6 }}>Hãy quay lại sau.</div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {pendingStories.map((story) => (
+                <div key={story.id} style={{ background: "#fff", border: "1.5px solid #e8e0d6", borderRadius: 16, padding: "18px 20px" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+                    <div style={{ width: 52, height: 72, borderRadius: 8, background: story.coverUrl ? `url(${story.coverUrl}) center/cover` : "linear-gradient(135deg, #ff7043 0%, #ff500a 60%, #e64a19 100%)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 20 }}>
+                      {!story.coverUrl && "📖"}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, fontWeight: 700, color: "#1c1512", marginBottom: 4 }}>{story.title}</div>
+                      <div style={{ fontSize: 12, color: "#9e8e82", marginBottom: 8 }}>
+                        ✍ {story.author?.fullName} · {story.categories?.map((c) => c.name).join(", ") || "Chưa phân loại"} · {story.totalChapters ?? 0} chương · Nộp {timeAgo(story.submittedAt ?? story.createdAt)}
+                      </div>
+                      {story.description && (
+                        <div style={{ fontSize: 13, color: "#6b5a4e", lineHeight: 1.6, marginBottom: 8, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
+                          {story.description}
+                        </div>
+                      )}
+                      <button
+                        onClick={() => setPreviewStory(story)}
+                        style={{ fontSize: 12, padding: "5px 12px", borderRadius: 7, border: "1.5px solid #e8e0d6", background: "#fdfaf7", color: "#6b5a4e", cursor: "pointer", fontWeight: 600 }}
+                      >
+                        👁 Xem mô tả đầy đủ
+                      </button>
+                      <ReviewActions
+                        onApprove={(note) => reviewStory(story, "APPROVE", note)}
+                        onReject={(note) => reviewStory(story, "REJECT", note)}
+                        loading={reviewing === story.id}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Chapters tab ── */}
+      {tab === "chapters" && (
+        <div>
+          {loadingChapters ? (
+            <div style={{ textAlign: "center", padding: "40px 0", color: "#9e8e82" }}>⏳ Đang tải...</div>
+          ) : pendingChapters.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "60px 0", color: "#b0a096" }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>Không có chương nào chờ duyệt!</div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {pendingChapters.map((ch) => {
+                const words = ch.wordCount ?? ch.content?.trim().split(/\s+/).filter(Boolean).length ?? 0;
+                const readMins = Math.max(1, Math.ceil(words / 200));
+                return (
+                  <div key={ch.id} style={{ background: "#fff", border: "1.5px solid #e8e0d6", borderRadius: 16, padding: "16px 20px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8, flexWrap: "wrap" }}>
+                      <div style={{ width: 30, height: 30, borderRadius: 8, background: "#fff0ea", color: "#ff500a", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {ch.chapterOrder}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#1c1512" }}>{ch.title}</div>
+                        <div style={{ fontSize: 12, color: "#9e8e82" }}>
+                          {ch.storyTitle && <>{ch.storyTitle} · </>}
+                          {ch.authorName && <>{ch.authorName} · </>}
+                          📝 {words.toLocaleString()} chữ · ⏱ ~{readMins} phút đọc
+                          {(ch.coinPrice ?? 0) > 0 && <> · 🪙 {ch.coinPrice} xu</>}
+                          {" · Nộp "}{timeAgo(ch.createdAt)}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setPreviewChapter(ch)}
+                        style={{ fontSize: 12, padding: "5px 12px", borderRadius: 7, border: "1.5px solid #e8e0d6", background: "#fdfaf7", color: "#6b5a4e", cursor: "pointer", fontWeight: 600, flexShrink: 0 }}
+                      >
+                        👁 Đọc nội dung
+                      </button>
+                    </div>
+                    <ReviewActions
+                      onApprove={(note) => reviewChapter(ch, "APPROVE", note)}
+                      onReject={(note) => reviewChapter(ch, "REJECT", note)}
+                      loading={reviewing === ch.id * -1}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── History tab ── */}
+      {(tab as string) === "history" && (
+        <div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            {(["stories", "chapters"] as const).map((t) => (
+              <button key={t} onClick={() => setHistoryTab(t)} style={{ padding: "7px 18px", borderRadius: 8, border: "1.5px solid #e8e0d6", background: historyTab === t ? "#ff500a" : "#fff", color: historyTab === t ? "#fff" : "#6b5a4e", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                {t === "stories" ? `📖 Truyện (${doneStories.length})` : `📄 Chương (${doneChapters.length})`}
+              </button>
+            ))}
+          </div>
+
+          {historyTab === "stories" && (
+            doneStories.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 0", color: "#b0a096", fontSize: 14 }}>Chưa có lịch sử duyệt truyện trong phiên này.</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {doneStories.map((d, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: d.action === "APPROVED" ? "#fff0ea" : "#fff0ea", borderRadius: 12, border: `1.5px solid ${d.action === "APPROVED" ? "#ffdacc" : "#ffdacc"}` }}>
+                    <span style={{ fontSize: 20 }}>{d.action === "APPROVED" ? "✅" : "❌"}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#1c1512" }}>{d.story.title}</div>
+                      <div style={{ fontSize: 12, color: "#9e8e82" }}>{d.action === "APPROVED" ? "Đã duyệt" : "Đã từ chối"} · {d.at}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+
+          {historyTab === "chapters" && (
+            doneChapters.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 0", color: "#b0a096", fontSize: 14 }}>Chưa có lịch sử duyệt chương trong phiên này.</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {doneChapters.map((d, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: d.action === "APPROVED" ? "#fff0ea" : "#fff0ea", borderRadius: 12, border: `1.5px solid ${d.action === "APPROVED" ? "#ffdacc" : "#ffdacc"}` }}>
+                    <span style={{ fontSize: 20 }}>{d.action === "APPROVED" ? "✅" : "❌"}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#1c1512" }}>{d.chapter.title}</div>
+                      <div style={{ fontSize: 12, color: "#9e8e82" }}>{d.action === "APPROVED" ? "Đã duyệt" : "Đã từ chối"} · {d.at}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+        </div>
+      )}
+
+      {/* ── Guide tab ── */}
+      {(tab as string) === "guide" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {[
+            {
+              icon: "✅", color: "#e64a19", bg: "#fff0ea", border: "#ffdacc",
+              title: "Nội dung được duyệt",
+              items: ["Truyện có cốt truyện rõ ràng, mạch lạc", "Chính tả, văn phong đạt chuẩn tối thiểu", "Không vi phạm bản quyền tác giả khác", "Nội dung tích cực, phù hợp với độc giả", "Mô tả truyện trung thực với nội dung"],
+            },
+            {
+              icon: "❌", color: "#9e2d2f", bg: "#fff0ea", border: "#ffdacc",
+              title: "Nội dung cần từ chối",
+              items: ["Nội dung khiêu dâm, bạo lực quá mức", "Kích động thù hận, phân biệt đối xử", "Vi phạm bản quyền rõ ràng (copy từ tác phẩm khác)", "Spam, nội dung vô nghĩa hoặc quảng cáo", "Chính tả quá kém, không thể đọc được"],
+            },
+            {
+              icon: "📝", color: "#1d4ed8", bg: "#eff6ff", border: "#93c5fd",
+              title: "Tiêu chí độ dài chương",
+              items: ["Tối thiểu: 500 chữ/chương để được duyệt", "Lý tưởng: 1.500 – 3.000 chữ/chương", "Chương VIP (trả phí): nên có ≥ 2.000 chữ", "Chương quá ngắn (< 200 chữ): từ chối và ghi chú", "Chương quá dài (> 10.000 chữ): khuyến nghị chia nhỏ"],
+            },
+          ].map((section) => (
+            <div key={section.title} style={{ background: section.bg, border: `1.5px solid ${section.border}`, borderRadius: 14, padding: "18px 20px" }}>
+              <div style={{ fontWeight: 800, fontSize: 15, color: section.color, marginBottom: 10 }}>{section.icon} {section.title}</div>
+              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                {section.items.map((item, i) => (
+                  <li key={i} style={{ fontSize: 13, color: "#3d2f28", lineHeight: 1.7 }}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+
+      </div>
+
+      {/* Modals */}
+      {previewStory && <StoryPreview story={previewStory} onClose={() => setPreviewStory(null)} />}
+      {previewChapter && <ChapterPreview chapter={previewChapter} onClose={() => setPreviewChapter(null)} />}
+    </div>
+  );
+}

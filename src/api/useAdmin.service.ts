@@ -82,6 +82,8 @@ export type ResultAdminService = {
   getAllUsers: () => Promise<any>;
   updateUserRoles: (userId: number, roles: string[]) => Promise<any>;
   toggleUserStatus: (userId: number) => Promise<any>;
+  banUser: (userId: number, banDays: number) => Promise<any>;
+  unbanUser: (userId: number) => Promise<any>;
 
   // Stories
   getPendingStories: () => Promise<any>;
@@ -123,13 +125,17 @@ export type ResultAdminService = {
  
   // System Ops
   getSystemStats: () => Promise<any>;
-  getSystemLogs: () => Promise<any>;
+  getSystemLogs: (params?: { severity?: string; component?: string; page?: number; size?: number }) => Promise<any>;
   getSystemAlerts: () => Promise<any>;
   runStatsJob: () => Promise<any>;
+  acknowledgeAlert: (alertId: number | string) => Promise<any>;
+  getJobHistory: () => Promise<any>;
  
   // Coins
   getCoinStatsDaily: () => Promise<any>;
   runSettlementJob: () => Promise<any>;
+  adjustUserCoin: (userId: number, payload: { amount: number; reason: string }) => Promise<any>;
+  broadcastNotification: (payload: { title: string; message: string; targetRole: string }) => Promise<any>;
 };
 
 const useAdminService = (): ResultAdminService => {
@@ -146,6 +152,12 @@ const useAdminService = (): ResultAdminService => {
 
   const toggleUserStatus = (userId: number): Promise<any> =>
     httpClient.put(APP_CONFIG.ADMIN.TOGGLE_USER_STATUS(userId), {});
+
+  const banUser = (userId: number, banDays: number): Promise<any> =>
+    httpClient.post(`${APP_CONFIG.ADMIN.BAN_USER(userId)}?banDays=${banDays}`, {});
+
+  const unbanUser = (userId: number): Promise<any> =>
+    httpClient.post(APP_CONFIG.ADMIN.UNBAN_USER(userId), {});
 
   const getPendingStories = (): Promise<any> =>
     httpClient.get(APP_CONFIG.ADMIN.PENDING_STORIES);
@@ -214,6 +226,8 @@ const useAdminService = (): ResultAdminService => {
     getAllUsers,
     updateUserRoles,
     toggleUserStatus,
+    banUser,
+    unbanUser,
     getPendingStories,
     reviewStory,
     getAllReports,
@@ -232,11 +246,25 @@ const useAdminService = (): ResultAdminService => {
     deleteMission,
     // New
     getSystemStats: () => httpClient.get(APP_CONFIG.ADMIN.SYSTEM_STATS),
-    getSystemLogs: () => httpClient.get(APP_CONFIG.ADMIN.SYSTEM_LOGS),
+    getSystemLogs: (params?: { severity?: string; component?: string; page?: number; size?: number }) => {
+      const query = new URLSearchParams();
+      if (params?.severity) query.set("severity", params.severity);
+      if (params?.component) query.set("component", params.component);
+      if (params?.page !== undefined) query.set("page", String(params.page));
+      if (params?.size !== undefined) query.set("size", String(params.size));
+      const qs = query.toString();
+      return httpClient.get(`${APP_CONFIG.ADMIN.SYSTEM_LOGS}${qs ? "?" + qs : ""}`);
+    },
     getSystemAlerts: () => httpClient.get(APP_CONFIG.ADMIN.SYSTEM_ALERTS),
     runStatsJob: () => httpClient.post(APP_CONFIG.ADMIN.RUN_STATS_JOB, {}),
+    acknowledgeAlert: (alertId: number | string) => httpClient.post(APP_CONFIG.ADMIN.ACKNOWLEDGE_ALERT(alertId), {}),
+    getJobHistory: () => httpClient.get(APP_CONFIG.ADMIN.JOB_HISTORY),
     getCoinStatsDaily: () => httpClient.get(APP_CONFIG.ADMIN.COIN_STATS_DAILY),
     runSettlementJob: () => httpClient.post(APP_CONFIG.ADMIN.RUN_SETTLEMENT_JOB, {}),
+    adjustUserCoin: (userId: number, payload: { amount: number; reason: string }) =>
+      httpClient.post(APP_CONFIG.ADMIN.ADJUST_COIN(userId), payload),
+    broadcastNotification: (payload: { title: string; message: string; targetRole: string }) =>
+      httpClient.post(APP_CONFIG.ADMIN.BROADCAST_NOTIFICATION, payload),
   }), [httpClient]);
 };
 
