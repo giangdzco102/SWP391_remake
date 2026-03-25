@@ -1697,6 +1697,13 @@ a {
   text-align: right;
   margin-top: 4px;
 }
+.error {
+  color: #c23d3f;
+  font-size: 13px;
+  margin-top: 4px;
+  display: block;
+  animation: fadeIn 0.15s ease-in-out;
+}
 
 /* ──── MODAL ──── */
 .modal-overlay {

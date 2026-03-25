@@ -167,7 +167,7 @@ const LoginForm = ({ onForgot }: { onForgot?: () => void }) => {
             )}
           />
           {errors.email && (
-            <div style={{ color: "#c23d3f", fontSize: 13, marginTop: 4 }}>
+            <div className="error">
               {errors.email.message}
             </div>
           )}
@@ -195,7 +195,7 @@ const LoginForm = ({ onForgot }: { onForgot?: () => void }) => {
             )}
           />
           {errors.password && (
-            <div style={{ color: "#c23d3f", fontSize: 13, marginTop: 4 }}>
+            <div className="error">
               {errors.password.message}
             </div>
           )}
@@ -249,7 +249,7 @@ const RegisterForm = ({
     formState: { errors },
     watch,
   } = useForm<RegisterFormData>({
-    mode: "onBlur",
+    mode: "onChange",
     defaultValues: {
       email: "",
       password: "",
