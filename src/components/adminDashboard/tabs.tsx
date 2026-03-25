@@ -213,7 +213,7 @@ export function UsersTab({
             }}
           >
             <option value="ALL">Tất cả role</option>
-            {ALL_ROLES.map((r: string) => (
+            {(Array.isArray(ALL_ROLES) ? ALL_ROLES : []).map((r: string) => (
               <option key={r} value={r}>
                 {r}
               </option>
@@ -228,15 +228,7 @@ export function UsersTab({
           <table style={tableStyle}>
             <thead>
               <tr style={{ background: "#f8f7f4" }}>
-                {[
-                  "ID",
-                  "Họ tên",
-                  "Email",
-                  "Roles",
-                  "Số dư",
-                  "Trạng thái",
-                  "Thao tác",
-                ].map((h) => (
+                {(Array.isArray(["ID", "Họ tên", "Email", "Roles", "Số dư", "Trạng thái", "Thao tác"]) ? ["ID", "Họ tên", "Email", "Roles", "Số dư", "Trạng thái", "Thao tác"] : []).map((h) => (
                   <th key={h} style={th}>
                     {h}
                   </th>
@@ -300,7 +292,7 @@ export function UsersTab({
                       <div
                         style={{ display: "flex", flexWrap: "wrap", gap: 4 }}
                       >
-                        {ALL_ROLES.map((r: string) => (
+                        {(Array.isArray(ALL_ROLES) ? ALL_ROLES : []).map((r: string) => (
                           <button
                             key={r}
                             onClick={() => onToggleRole(r)}
@@ -419,7 +411,7 @@ export function StoriesTab({ stories, onReview }: any) {
         <EmptyState icon="📚" message="Không có truyện nào chờ duyệt!" />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {stories.map((s: any) => (
+          {(Array.isArray(stories) ? stories : []).map((s: any) => (
             <div key={s.id} style={cardStyle}>
               <div
                 style={{ display: "flex", gap: 14, alignItems: "flex-start" }}
@@ -860,7 +852,7 @@ export function WithdrawsTab({ withdraws, onApprove, onReject }: any) {
               </tr>
             </thead>
             <tbody>
-              {withdraws.map((w: any) => (
+              {(Array.isArray(withdraws) ? withdraws : []).map((w: any) => (
                 <tr key={w.id}>
                   <td style={{ ...td, color: "#9ca3af", fontSize: 13 }}>
                     {w.id}
@@ -951,7 +943,7 @@ export function MissionsTab({ missions, onAdd, onEdit, onDelete }: any) {
             gap: 14,
           }}
         >
-          {missions.map((m: any) => {
+          {(Array.isArray(missions) ? missions : []).map((m: any) => {
             const typeKey = m.type ?? m.missionType;
             const coinVal = m.rewardCoin ?? m.coinReward;
             return (
@@ -1082,7 +1074,7 @@ export function SystemOpsTab({
         <div style={{ marginBottom: 24 }}>
           <h3 style={{ fontSize: 14, fontWeight: 700, color: "#dc2626", marginBottom: 10 }}>⚠️ Cảnh báo bất thường</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {alerts.map((a: any, i: number) => (
+            {(Array.isArray(alerts) ? alerts : []).map((a: any, i: number) => (
               <div key={i} style={{ background: "#fef2f2", padding: "10px 14px", borderRadius: 8, border: "1px solid #fee2e2", color: "#991b1b", fontSize: 13, fontWeight: 600 }}>
                 • {a.message}
               </div>
@@ -1103,7 +1095,7 @@ export function SystemOpsTab({
             </tr>
           </thead>
           <tbody>
-            {(logs ?? []).map((l: any, i: number) => (
+            {(Array.isArray(logs) ? logs : []).map((l: any, i: number) => (
               <tr key={i}>
                 <td style={{ ...td, fontSize: 12, color: "#6b7280" }}>{l.timestamp ? new Date(l.timestamp).toLocaleString("vi-VN") : "—"}</td>
                 <td style={td}>
