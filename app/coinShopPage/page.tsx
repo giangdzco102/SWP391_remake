@@ -66,7 +66,7 @@ export function CoinShopPage() {
       </div>
 
       {/* ── Tabs ─────────────────────────────────────────────────────────── */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
+      <div className="coin-tabs">
         {(
           [
             { key: "buy", label: "💳 Nạp coin" },
@@ -77,7 +77,7 @@ export function CoinShopPage() {
         ).map(({ key, label }) => (
           <button
             key={key}
-            className={`tab-btn${tab === key ? " active" : ""}`}
+            className={`coin-tab-btn${tab === key ? " active" : ""}`}
             onClick={() => setTab(key)}
           >
             {label}

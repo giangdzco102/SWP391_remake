@@ -2635,6 +2635,39 @@ a {
   margin: 0 auto;
   padding: 40px 32px;
 }
+.coin-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-bottom: 24px;
+  background: #fff;
+  padding: 5px;
+  border-radius: 12px;
+  border: 1.5px solid #ece6dc;
+}
+.coin-tab-btn {
+  text-align: center;
+  padding: 10px 6px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b5a4e;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.coin-tab-btn:hover {
+  background: #fdf7f0;
+  color: #c23d3f;
+}
+.coin-tab-btn.active {
+  background: #c23d3f;
+  color: #fff;
+}
 .coin-hero {
   background: linear-gradient(135deg, #1c1512, #3d2820);
   border-radius: 16px;
@@ -2844,6 +2877,10 @@ a {
   background: #c23d3f;
   color: #fff;
   border-color: #c23d3f;
+}
+.tab-btn:hover {
+  border-color: #c23d3f;
+  color: #c23d3f;
 }
 .genre-filters {
   display: flex;

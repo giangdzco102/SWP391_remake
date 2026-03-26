@@ -1,37 +1,23 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { CancelInfoBox } from "@/components/payment/CancelInfoBox";
+import { CancelActions } from "@/components/payment/CancelActions";
+import {
+  PAYMENT_PAGE_WRAPPER_STYLE,
+  PAYMENT_CARD_BASE_STYLE,
+  PAYMENT_BORDER,
+  PAYMENT_FALLBACK_ORDER_CODE,
+} from "@/utils/payment.constants";
 
 function PaymentCancelContent() {
   const params = useSearchParams();
-  const router = useRouter();
-
-  const orderCode = params.get("orderCode") ?? params.get("order_code") ?? "—";
+  const orderCode =
+    params.get("orderCode") ?? params.get("order_code") ?? PAYMENT_FALLBACK_ORDER_CODE;
 
   return (
-    <div
-      className="fade-in"
-      style={{
-        minHeight: "80vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "32px 16px",
-      }}
-    >
-      <div
-        style={{
-          background: "#fdfaf7",
-          border: "2px solid #fca5a5",
-          borderRadius: 20,
-          padding: "40px 36px",
-          maxWidth: 480,
-          width: "100%",
-          textAlign: "center",
-          boxShadow: "0 4px 24px rgba(0,0,0,0.07)",
-        }}
-      >
+    <div className="fade-in" style={PAYMENT_PAGE_WRAPPER_STYLE}>
+      <div style={{ ...PAYMENT_CARD_BASE_STYLE, border: PAYMENT_BORDER.cancel }}>
         {/* Icon */}
         <div style={{ fontSize: 64, marginBottom: 16, lineHeight: 1 }}>❌</div>
 
@@ -54,67 +40,12 @@ function PaymentCancelContent() {
         </p>
 
         {/* Order info */}
-        {orderCode !== "—" && (
-          <div
-            style={{
-              background: "#fef2f2",
-              border: "1.5px solid #fca5a5",
-              borderRadius: 12,
-              padding: "14px 20px",
-              marginBottom: 24,
-              textAlign: "left",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ fontSize: 13, color: "#9e8e82" }}>Mã đơn hàng</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#1c1512" }}>#{orderCode}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
-              <span style={{ fontSize: 13, color: "#9e8e82" }}>Trạng thái</span>
-              <span
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: "#991b1b",
-                  background: "#fef2f2",
-                  border: "1px solid #fca5a5",
-                  borderRadius: 20,
-                  padding: "2px 10px",
-                }}
-              >
-                Đã hủy
-              </span>
-            </div>
-          </div>
+        {orderCode !== PAYMENT_FALLBACK_ORDER_CODE && (
+          <CancelInfoBox orderCode={orderCode} />
         )}
 
         {/* Actions */}
-        <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-          <button
-            className="btn-full btn-red-full"
-            style={{ flex: 1, padding: "11px 0", fontSize: 14, maxWidth: 200 }}
-            onClick={() => router.push("/coinShopPage")}
-          >
-            💳 Thử lại
-          </button>
-          <button
-            style={{
-              flex: 1,
-              maxWidth: 160,
-              padding: "11px 0",
-              fontSize: 14,
-              background: "transparent",
-              border: "1.5px solid #e8e0d6",
-              borderRadius: 10,
-              color: "#6b7280",
-              cursor: "pointer",
-              fontWeight: 600,
-            }}
-            onClick={() => router.push("/")}
-          >
-            Trang chủ
-          </button>
-        </div>
+        <CancelActions />
       </div>
     </div>
   );
@@ -122,11 +53,13 @@ function PaymentCancelContent() {
 
 export default function PaymentCancelPage() {
   return (
-    <Suspense fallback={
-      <div style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div className="empty-state">⏳ Đang xử lý...</div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div style={PAYMENT_PAGE_WRAPPER_STYLE}>
+          <div className="empty-state">⏳ Đang xử lý...</div>
+        </div>
+      }
+    >
       <PaymentCancelContent />
     </Suspense>
   );

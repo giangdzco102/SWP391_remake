@@ -7,108 +7,17 @@ import {
 } from "@ant-design/icons";
 import useStoryService from "@/api/useStory.service";
 import { useGotoStory } from "@/hooks/useGotoStory";
-
-const COVER_GRADIENTS = [
-  "linear-gradient(135deg,#f093fb,#f5576c)",
-  "linear-gradient(135deg,#4facfe,#00f2fe)",
-  "linear-gradient(135deg,#43e97b,#38f9d7)",
-  "linear-gradient(135deg,#fa709a,#fee140)",
-  "linear-gradient(135deg,#a18cd1,#fbc2eb)",
-  "linear-gradient(135deg,#667eea,#764ba2)",
-];
-
-const isRealCover = (url?: string) =>
-  !!url && !url.includes("placeholder.com") && !url.includes("placeholder");
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function toStoryShape(s: any, idx: number) {
-  return {
-    id: s.id,
-    title: s.title ?? "",
-    author: s.authorName ?? "",
-    penName: s.authorName ?? "",
-    cover: isRealCover(s.coverUrl)
-      ? `url("${s.coverUrl}")`
-      : COVER_GRADIENTS[idx % COVER_GRADIENTS.length],
-    genre: s.categories?.[0]?.name ?? "",
-    rating: s.avgRating ?? 0,
-    reads: s.viewCount != null ? String(s.viewCount) : "0",
-    views: s.viewCount ?? 0,
-    favorites: s.followCount ?? s.favoriteCount ?? 0,
-    chapters: s.publishedChapterCount ?? s.totalChapterCount ?? 0,
-    status: s.isCompleted ? "done" : "ongoing",
-  };
-}
-
-const PAGE_SIZE = 10;
-
-function Pagination({
-  current,
-  total,
-  onChange,
-}: {
-  current: number;
-  total: number;
-  onChange: (p: number) => void;
-}) {
-  const pages: (number | "…")[] = [];
-  if (total <= 7) {
-    for (let i = 1; i <= total; i++) pages.push(i);
-  } else {
-    pages.push(1);
-    if (current > 3) pages.push("…");
-    const start = Math.max(2, current - 1);
-    const end = Math.min(total - 1, current + 1);
-    for (let i = start; i <= end; i++) pages.push(i);
-    if (current < total - 2) pages.push("…");
-    pages.push(total);
-  }
-
-  return (
-    <div className="flex items-center justify-center gap-1.5 pt-6 border-t border-slate-100">
-      <span className="text-xs text-slate-400 mr-2">Trang {current}/{total}</span>
-      <button
-        onClick={() => onChange(current - 1)}
-        disabled={current === 1}
-        className="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 text-base flex items-center justify-center hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-      >
-        ‹
-      </button>
-      {pages.map((p, i) =>
-        p === "…" ? (
-          <span key={`e${i}`} className="text-slate-400 text-sm px-0.5">…</span>
-        ) : (
-          <button
-            key={p}
-            onClick={() => onChange(p as number)}
-            className={`w-9 h-9 rounded-lg border text-sm flex items-center justify-center transition-all ${
-              p === current
-                ? "bg-[#1e293b] border-[#1e293b] text-white font-bold shadow-sm"
-                : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-            }`}
-          >
-            {p}
-          </button>
-        )
-      )}
-      <button
-        onClick={() => onChange(current + 1)}
-        disabled={current === total}
-        className="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 text-base flex items-center justify-center hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-      >
-        ›
-      </button>
-    </div>
-  );
-}
+import { RankedStory } from "@/types/rankingsPage";
+import { PAGE_SIZE } from "@/utils/rankingsPage.constants";
+import { toStoryShape, getRankStyle } from "@/utils/rankingsPage.utils";
+import { Pagination } from "@/components/rankingsPage/Pagination";
 
 export function RankingsPage() {
   const { getAllStories } = useStoryService();
   const gotoStory = useGotoStory();
   const [tab, setTab] = useState("reads");
   const [page, setPage] = useState(1);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [allStories, setAllStories] = useState<any[]>([]);
+  const [allStories, setAllStories] = useState<RankedStory[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -146,13 +55,6 @@ export function RankingsPage() {
       </div>
     </div>
   );
-
-  const getRankStyle = (rank) => {
-    if (rank === 1) return "text-yellow-500 font-black text-4xl drop-shadow-sm";
-    if (rank === 2) return "text-slate-400 font-bold text-3xl drop-shadow-sm";
-    if (rank === 3) return "text-amber-700 font-bold text-3xl drop-shadow-sm";
-    return "text-slate-300 font-semibold text-2xl";
-  };
 
   return (
     <div className="w-screen flex justify-center !mt-[20px]">

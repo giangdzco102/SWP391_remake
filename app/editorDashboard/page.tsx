@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores";
 import useHttpClient from "@/api/useHttpClient";
 import APP_CONFIG from "@/config/app-config";
-import { getAccessToken } from "@/utils/index";
 import { useToast } from "@/hooks/use-toast";
 
 // Types
@@ -299,7 +298,7 @@ export default function EditorDashboardPage() {
                             )}
                             <div style={{ display: "flex", gap: 8 }}>
                               <button onClick={() => setEditModal(req)} style={btnPrimary}>
-                                {isSubmitted ? "👁 Xem bản đã nộp" : "✏️ M mở soạn thảo"}
+                                {isSubmitted ? "👁 Xem bản đã nộp" : "✏️ Mở soạn thảo"}
                               </button>
                             </div>
                           </div>
