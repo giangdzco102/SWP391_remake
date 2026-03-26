@@ -1,0 +1,20 @@
+export type FavStory = {
+  id: number;
+  title: string;
+  author: string;
+  penName: string;
+  cover: string;
+  genre: string;
+  tags: string[];
+  rating: number;
+  chapters: number;
+  status: "ongoing" | "done";
+  reads: string;
+  favorites: number;
+  description: string;
+  categoryId: number | null;
+  excerpt: string;
+  featured: boolean;
+  views: number;
+  updatedAt: string;
+};
