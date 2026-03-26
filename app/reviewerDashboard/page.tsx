@@ -7,6 +7,7 @@ import useHttpClient from "@/api/useHttpClient";
 import APP_CONFIG from "@/config/app-config";
 import { useToast } from "@/hooks/use-toast";
 import { getAccessToken } from "@/utils/index";
+import { formatVNDate } from "@/utils/time";
 
 /* ================================================================
    TYPES
@@ -593,7 +594,7 @@ export default function ReviewerDashboardPage() {
                           {h.targetType === "STORY" ? "📖 " : "📄 "}{h.targetTitle}
                         </div>
                         <div style={{ fontSize: 12, color: T.textMuted }}>
-                          {h.storyTitle ? `${h.storyTitle} · ` : ""}{new Date(h.createdAt).toLocaleDateString("vi-VN")}
+                          {h.storyTitle ? `${h.storyTitle} · ` : ""}{formatVNDate(h.createdAt)}
                         </div>
                       </div>
                       <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, ...(h.action === "APPROVE" ? { background: T.successBg, color: T.success } : { background: T.dangerBg, color: T.danger }) }}>

@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
 import useHttpClient from "@/api/useHttpClient";
+import { formatVNDateTime } from "@/utils/time";
 import { ModalHeader, StatusBadge } from "@/components/adminDashboard/ui";
 import {
   MISSION_TYPES,
@@ -576,7 +577,7 @@ export function ReportDetailModal({
               {
                 label: "Ngày báo cáo",
                 value: report.createdAt
-                  ? new Date(report.createdAt).toLocaleString("vi-VN")
+                  ? formatVNDateTime(report.createdAt)
                   : "—",
               },
             ].map(({ label, value }) => (

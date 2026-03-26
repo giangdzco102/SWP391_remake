@@ -14,7 +14,10 @@ import useReportService from "@/api/useReport.service";
 import useRatingService from "@/api/useRating.service";
 import useFollowService from "@/api/useFollow.service";
 import useGiftService from "@/api/useGift.service";
+import useBlockService from "@/api/useBlock.service";
 import { useToast } from "@/hooks/use-toast";
+import { formatVNDate } from "@/utils/time";
+import { useTheme } from "@/contexts/ThemeContext";
 
 function StoryDetailContent() {
   const {
@@ -36,6 +39,7 @@ function StoryDetailContent() {
   const { getRatingsByStory, rateStory, getMyRating } = useRatingService();
   const { toggleFollow, getFollowStatus } = useFollowService();
   const { sendGift } = useGiftService();
+  const { blockUser } = useBlockService();
 
   const [followed, setFollowed] = useState(false);
   const [followCount, setFollowCount] = useState<number | null>(null);
@@ -78,6 +82,7 @@ function StoryDetailContent() {
         id: s.id,
         title: s.title ?? "",
         author: s.authorName ?? s.author?.fullName ?? "",
+        authorId: s.author?.id ?? s.authorId ?? null,
         penName: s.authorName ?? s.author?.fullName ?? "",
         cover: isRealCover(s.coverUrl)
           ? `url("${s.coverUrl}")`
@@ -118,7 +123,7 @@ function StoryDetailContent() {
           words: 0,
           readTime: "\u2014",
           publishedAt: ch.publishAt
-            ? new Date(ch.publishAt).toLocaleDateString("vi-VN")
+            ? formatVNDate(ch.publishAt)
             : undefined,
           locked: (ch.coinPrice ?? ch.price ?? 0) > 0 && !purchased,
           price: ch.coinPrice ?? ch.price ?? 0,
@@ -244,6 +249,43 @@ function StoryDetailContent() {
   // Report
   const { createReport } = useReportService();
   const toast = useToast();
+
+  // ── Dark mode ───────────────────────────────────────────────────────────
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+  const dk = {
+    surface:     isDark ? "#1c1814"  : "#fff",
+    surfaceMid:  isDark ? "#1a1614"  : "#fdfaf7",
+    border:      isDark ? "#2e2820"  : "#e8e0d6",
+    borderMid:   isDark ? "#2a2420"  : "#ece6dc",
+    borderLight: isDark ? "#26201a"  : "#f0ebe3",
+    borderTable: isDark ? "#26201a"  : "#f5ede4",
+    text:        isDark ? "#e8ddd5"  : "#1c1512",
+    textSub:     isDark ? "#c8bcb0"  : "#3d2f28",
+    textSub2:    isDark ? "#a09080"  : "#6b5a4e",
+    textMuted:   isDark ? "#6b5a4e"  : "#b0a096",
+    textFaint:   isDark ? "#5a4f48"  : "#9e8e82",
+    sep:         isDark ? "#3a3028"  : "#ddd",
+    sep2:        isDark ? "#3a3028"  : "#e0d8d0",
+    starOff:     isDark ? "#3a3028"  : "#e5ddd5",
+    starOff2:    isDark ? "#3a3028"  : "#d1c9be",
+    disabledBg:  isDark ? "#2a2420"  : "#f3f4f6",
+    disabledBg2: isDark ? "#2a2420"  : "#e5ddd5",
+    disabledTxt: isDark ? "#4a3f38"  : "#9ca3af",
+    chNum:       isDark ? "#5a4b38"  : "#c9b89a",
+    lockedItem:  isDark ? "#1e1a14"  : "#fdf7f0",
+    lockedBdr:   isDark ? "#3a3020"  : "#f0dfc8",
+    giftBg:      isDark ? "#211d10"  : "#fef9ee",
+    giftBdr:     isDark ? "#4a3a10"  : "#f0daa8",
+    coinBg:      isDark ? "#241e0f"  : "#fffbeb",
+    coinBdr:     isDark ? "#4a3a10"  : "#fcd34d",
+    ratingCard:  isDark ? "#1a1614"  : "#fdfaf7",
+    ratingBdr:   isDark ? "#5c2a2a"  : "#f0b4b5",
+    blockBtn:    isDark ? "#1c1814"  : "#fff8f8",
+    blockBdr:    isDark ? "#3a2a2a"  : "#e5ddd5",
+  };
+  // ────────────────────────────────────────────────────────────────────────
+
   const [storyReportOpen, setStoryReportOpen] = useState(false);
   const [giftOpen, setGiftOpen] = useState(false);
   const [giftAmount, setGiftAmount] = useState(100);
@@ -269,7 +311,7 @@ function StoryDetailContent() {
   if (!story) {
     if (storyLoading) {
       return (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh", fontSize: 14, color: "#9e8e82" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh", fontSize: 14, color: dk.textFaint }}>
           <div>⏳ Đang tải thông tin truyện...</div>
         </div>
       );
@@ -277,8 +319,8 @@ function StoryDetailContent() {
     return (
       <div style={{ textAlign: "center", padding: "80px 24px" }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>😕</div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: "#1c1512", marginBottom: 8 }}>Không tìm thấy truyện</div>
-        <div style={{ fontSize: 14, color: "#9e8e82", marginBottom: 24 }}>Truyện không tồn tại hoặc đã bị xóa.</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: dk.text, marginBottom: 8 }}>Không tìm thấy truyện</div>
+        <div style={{ fontSize: 14, color: dk.textFaint, marginBottom: 24 }}>Truyện không tồn tại hoặc đã bị xóa.</div>
         <button
           onClick={() => router.push("/homePage")}
           style={{ padding: "10px 24px", borderRadius: 10, border: "none", background: "#c23d3f", color: "#fff", fontWeight: 600, cursor: "pointer" }}
@@ -390,7 +432,7 @@ function StoryDetailContent() {
               {/* Tác giả */}
               <div
                 className="flex items-center flex-wrap"
-                style={{ gap: "4px 6px", fontSize: 13, color: "#9e8e82" }}
+                style={{ gap: "4px 6px", fontSize: 13, color: dk.textFaint }}
               >
                 <span>Tác giả:</span>
                 <span
@@ -398,8 +440,8 @@ function StoryDetailContent() {
                 >
                   {story.author}
                 </span>
-                <span style={{ color: "#ddd" }}>·</span>
-                <span style={{ color: "#b0a096", fontStyle: "italic" }}>
+                <span style={{ color: dk.sep }}>·</span>
+                <span style={{ color: dk.textMuted, fontStyle: "italic" }}>
                   {story.penName}
                 </span>
               </div>
@@ -431,8 +473,8 @@ function StoryDetailContent() {
               <div
                 className="flex items-stretch rounded-xl overflow-hidden"
                 style={{
-                  border: "1.5px solid #ece6dc",
-                  background: "#fff",
+                  border: `1.5px solid ${dk.borderMid}`,
+                  background: dk.surface,
                   alignSelf: "flex-start",
                 }}
               >
@@ -452,7 +494,7 @@ function StoryDetailContent() {
                     className="stat"
                     style={{
                       padding: "10px 18px",
-                      borderRight: i < 3 ? "1.5px solid #ece6dc" : "none",
+                      borderRight: i < 3 ? `1.5px solid ${dk.borderMid}` : "none",
                       minWidth: 72,
                     }}
                   >
@@ -475,7 +517,7 @@ function StoryDetailContent() {
                 >
                   {avgRating}
                 </span>
-                <span style={{ fontSize: 13, color: "#9e8e82" }}>/ 5</span>
+                <span style={{ fontSize: 13, color: dk.textFaint }}>/ 5</span>
               </div>
 
               {/* CTA */}
@@ -528,7 +570,7 @@ function StoryDetailContent() {
                 </button>
                 <button
                   className="btn-hero btn-hero-outline"
-                  style={{ fontSize: 12, padding: "8px 14px", color: ratingSubmitted ? "#c23d3f" : "#6b5a4e", borderColor: ratingSubmitted ? "#c23d3f" : "#e8e0d6" }}
+                  style={{ fontSize: 12, padding: "8px 14px", color: ratingSubmitted ? "#c23d3f" : dk.textSub2, borderColor: ratingSubmitted ? "#c23d3f" : dk.border }}
                   onClick={() => {
                     if (!user) { router.push("?login"); return; }
                     setRatingModalOpen(true);
@@ -541,8 +583,8 @@ function StoryDetailContent() {
                   style={{
                     fontSize: 12,
                     padding: "8px 14px",
-                    color: "#9ca3af",
-                    borderColor: "#e8e0d6",
+                    color: dk.textFaint,
+                    borderColor: dk.border,
                   }}
                   onClick={() => requireAuth(() => setStoryReportOpen(true))}
                 >
@@ -555,7 +597,7 @@ function StoryDetailContent() {
                     padding: "8px 14px",
                     color: "#b08430",
                     borderColor: "#f0daa8",
-                    background: giftOpen ? "#fef9ee" : undefined,
+                    background: giftOpen ? dk.giftBg : undefined,
                   }}
                   onClick={() => requireAuth(() => setGiftOpen((o) => !o))}
                 >
@@ -569,17 +611,17 @@ function StoryDetailContent() {
           {giftOpen && (
             <div
               style={{
-                background: "#fef9ee",
-                border: "1.5px solid #f0daa8",
+                background: dk.giftBg,
+                border: `1.5px solid ${dk.giftBdr}`,
                 borderRadius: 14,
                 padding: "16px 18px",
                 marginBottom: 16,
               }}
             >
-              <div style={{ fontWeight: 700, fontSize: 14, color: "#1c1512", marginBottom: 4 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, color: dk.text, marginBottom: 4 }}>
                 🎁 Tặng xu cho tác giả: <em>{story.author}</em>
               </div>
-              <div style={{ fontSize: 12, color: "#9ca3af", marginBottom: 12 }}>
+              <div style={{ fontSize: 12, color: dk.textFaint, marginBottom: 12 }}>
                 Xu sẽ được chuyển thẳng vào ví tác giả ngay sau khi bạn xác nhận.
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
@@ -590,9 +632,9 @@ function StoryDetailContent() {
                     style={{
                       padding: "6px 14px",
                       borderRadius: 20,
-                      border: `1.5px solid ${giftAmount === preset ? "#b08430" : "#e8e0d6"}`,
-                      background: giftAmount === preset ? "#fef9ee" : "#fff",
-                      color: giftAmount === preset ? "#b08430" : "#6b5a4e",
+                      border: `1.5px solid ${giftAmount === preset ? "#b08430" : dk.border}`,
+                      background: giftAmount === preset ? dk.giftBg : dk.surface,
+                      color: giftAmount === preset ? "#b08430" : dk.textSub2,
                       fontSize: 12,
                       fontWeight: 600,
                       cursor: "pointer",
@@ -611,15 +653,16 @@ function StoryDetailContent() {
                   style={{
                     padding: "8px 12px",
                     borderRadius: 10,
-                    border: "1.5px solid #e8e0d6",
+                    border: `1.5px solid ${dk.border}`,
+                    background: dk.surface,
                     fontSize: 13,
-                    color: "#3d2f28",
+                    color: dk.textSub,
                     fontFamily: "inherit",
                     outline: "none",
                     width: 120,
                   }}
                 />
-                <span style={{ fontSize: 12, color: "#9ca3af" }}>xu (tùy chỉnh)</span>
+                <span style={{ fontSize: 12, color: dk.textFaint }}>xu (tùy chỉnh)</span>
               </div>
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                 <button
@@ -627,9 +670,9 @@ function StoryDetailContent() {
                   style={{
                     padding: "8px 18px",
                     borderRadius: 9,
-                    border: "1.5px solid #e8e0d6",
-                    background: "#fff",
-                    color: "#6b5a4e",
+                    border: `1.5px solid ${dk.border}`,
+                    background: dk.surface,
+                    color: dk.textSub2,
                     fontSize: 13,
                     fontWeight: 600,
                     cursor: "pointer",
@@ -644,8 +687,8 @@ function StoryDetailContent() {
                     padding: "8px 18px",
                     borderRadius: 9,
                     border: "none",
-                    background: giftAmount < 1 || giftSending ? "#f3f4f6" : "#b08430",
-                    color: giftAmount < 1 || giftSending ? "#9ca3af" : "#fff",
+                    background: giftAmount < 1 || giftSending ? dk.disabledBg : "#b08430",
+                    color: giftAmount < 1 || giftSending ? dk.disabledTxt : "#fff",
                     fontSize: 13,
                     fontWeight: 600,
                     cursor: giftAmount < 1 || giftSending ? "not-allowed" : "pointer",
@@ -661,8 +704,8 @@ function StoryDetailContent() {
           {storyReportOpen && (
             <div
               style={{
-                background: "#fdfaf7",
-                border: "1.5px solid #e8e0d6",
+                background: dk.surfaceMid,
+                border: `1.5px solid ${dk.border}`,
                 borderRadius: 14,
                 padding: "16px 18px",
                 marginBottom: 16,
@@ -672,7 +715,7 @@ function StoryDetailContent() {
                 style={{
                   fontWeight: 700,
                   fontSize: 14,
-                  color: "#1c1512",
+                  color: dk.text,
                   marginBottom: 8,
                 }}
               >
@@ -687,9 +730,10 @@ function StoryDetailContent() {
                   width: "100%",
                   padding: "9px 12px",
                   borderRadius: 10,
-                  border: "1.5px solid #e8e0d6",
+                  border: `1.5px solid ${dk.border}`,
+                  background: dk.surface,
                   fontSize: 13,
-                  color: "#3d2f28",
+                  color: dk.textSub,
                   resize: "none",
                   fontFamily: "inherit",
                   outline: "none",
@@ -712,9 +756,9 @@ function StoryDetailContent() {
                   style={{
                     padding: "8px 18px",
                     borderRadius: 9,
-                    border: "1.5px solid #e8e0d6",
-                    background: "#fff",
-                    color: "#6b5a4e",
+                    border: `1.5px solid ${dk.border}`,
+                    background: dk.surface,
+                    color: dk.textSub2,
                     fontSize: 13,
                     fontWeight: 600,
                     cursor: "pointer",
@@ -731,11 +775,11 @@ function StoryDetailContent() {
                     border: "none",
                     background:
                       !storyReportReason.trim() || storyReporting
-                        ? "#f3f4f6"
+                        ? dk.disabledBg
                         : "#c23d3f",
                     color:
                       !storyReportReason.trim() || storyReporting
-                        ? "#9ca3af"
+                        ? dk.disabledTxt
                         : "#fff",
                     fontSize: 13,
                     fontWeight: 700,
@@ -762,7 +806,7 @@ function StoryDetailContent() {
                   fontFamily: "DM Sans, sans-serif",
                   fontSize: 14,
                   fontWeight: 400,
-                  color: "#9e8e82",
+                  color: dk.textFaint,
                   marginLeft: 6,
                 }}
               >
@@ -770,7 +814,6 @@ function StoryDetailContent() {
               </span>
             </div>
           </div>
-
           <div className="chapters-list">
             {chapters.map((ch, i) => {
               const isLocked = ch.locked && !unlockedChapters?.includes(ch.id);
@@ -790,8 +833,8 @@ function StoryDetailContent() {
                     isLocked
                       ? {
                           cursor: "pointer",
-                          background: "#fdf7f0",
-                          borderColor: "#f0dfc8",
+                          background: dk.lockedItem,
+                          borderColor: dk.lockedBdr,
                         }
                       : {}
                   }
@@ -801,7 +844,7 @@ function StoryDetailContent() {
                     style={{
                       width: 28,
                       fontSize: 12,
-                      color: "#c9b89a",
+                      color: dk.chNum,
                       fontFamily: "DM Sans, sans-serif",
                     }}
                   >
@@ -876,7 +919,7 @@ function StoryDetailContent() {
           <div className="sec-head" style={{ marginBottom: 16 }}>
             <div className="sec-title" style={{ fontSize: 18 }}>
               ⭐ Đánh giá
-              <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: 14, fontWeight: 400, color: "#9e8e82", marginLeft: 6 }}>
+              <span style={{ fontFamily: "DM Sans, sans-serif", fontSize: 14, fontWeight: 400, color: dk.textFaint, marginLeft: 6 }}>
                 ({reviews.length})
               </span>
             </div>
@@ -884,7 +927,7 @@ function StoryDetailContent() {
 
           {/* Đánh giá của tôi (nếu đã có) */}
           {ratingSubmitted && (
-            <div style={{ background: "#fdfaf7", border: "1.5px solid #f0b4b5", borderRadius: 14, padding: "14px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ background: dk.ratingCard, border: `1.5px solid ${dk.ratingBdr}`, borderRadius: 14, padding: "14px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 14 }}>
               <div style={{
                 width: 38, height: 38, borderRadius: "50%",
                 background: "linear-gradient(135deg,#c23d3f,#9e2d2f)",
@@ -895,19 +938,19 @@ function StoryDetailContent() {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "#1c1512" }}>Đánh giá của bạn</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: dk.text }}>Đánh giá của bạn</span>
                   <div style={{ display: "flex", gap: 2 }}>
                     {[1,2,3,4,5].map((s) => (
-                      <span key={s} style={{ fontSize: 14, color: myScore >= s ? "#f59e0b" : "#e5ddd5" }}>★</span>
+                      <span key={s} style={{ fontSize: 14, color: myScore >= s ? "#f59e0b" : dk.starOff }}>★</span>
                     ))}
                   </div>
                   <span style={{ fontSize: 12, color: "#c23d3f", fontWeight: 600 }}>{myScore}/5</span>
                 </div>
-                {myReview && <div style={{ fontSize: 13, color: "#6b5a4e", lineHeight: 1.5 }}>{myReview}</div>}
+                {myReview && <div style={{ fontSize: 13, color: dk.textSub2, lineHeight: 1.5 }}>{myReview}</div>}
               </div>
               <button
                 onClick={() => setRatingModalOpen(true)}
-                style={{ flexShrink: 0, padding: "6px 14px", borderRadius: 8, border: "1.5px solid #e8e0d6", background: "#fff", color: "#6b5a4e", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                style={{ flexShrink: 0, padding: "6px 14px", borderRadius: 8, border: `1.5px solid ${dk.border}`, background: dk.surface, color: dk.textSub2, fontSize: 12, fontWeight: 600, cursor: "pointer" }}
               >
                 Sửa
               </button>
@@ -918,7 +961,7 @@ function StoryDetailContent() {
           {reviews.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {reviews.map((r, i) => (
-                <div key={r.id ?? i} style={{ background: "#fff", border: "1.5px solid #ece6dc", borderRadius: 12, padding: "14px 16px" }}>
+                <div key={r.id ?? i} style={{ background: dk.surface, border: `1.5px solid ${dk.borderMid}`, borderRadius: 12, padding: "14px 16px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                     <div style={{
                       width: 36, height: 36, borderRadius: "50%",
@@ -929,25 +972,44 @@ function StoryDetailContent() {
                       {(r.userName ?? "?")[0].toUpperCase()}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "#1c1512" }}>{r.userName ?? "Người dùng"}</div>
-                      <div style={{ fontSize: 11, color: "#b0a096" }}>
-                        {r.createdAt ? new Date(r.createdAt).toLocaleDateString("vi-VN") : ""}
+                      <div style={{ fontSize: 13, fontWeight: 700, color: dk.text }}>{r.userName ?? "Người dùng"}</div>
+                      <div style={{ fontSize: 11, color: dk.textMuted }}>
+                        {r.createdAt ? formatVNDate(r.createdAt) : ""}
                       </div>
                     </div>
+                    {user?.id === story?.authorId && r.userId !== story?.authorId && (
+                      <button
+                        title="Chặn người dùng này"
+                        onClick={async () => {
+                          try {
+                            await blockUser(r.userId, "Chặn từ trang truyện");
+                            toast.success(`Đã chặn ${r.userName ?? "người dùng"}`);
+                          } catch {
+                            toast.error("Chặn người dùng thất bại");
+                          }
+                        }}
+                        style={{
+                          border: `1.5px solid ${dk.blockBdr}`, background: dk.blockBtn,
+                          color: "#c23d3f", borderRadius: 8, padding: "4px 10px",
+                          fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0,
+                          transition: "background 0.15s",
+                        }}
+                      >🚫 Chặn</button>
+                    )}
                     <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
                       {[1,2,3,4,5].map((s) => (
-                        <span key={s} style={{ fontSize: 14, color: (r.rating ?? 0) >= s ? "#f59e0b" : "#e5ddd5" }}>★</span>
+                        <span key={s} style={{ fontSize: 14, color: (r.rating ?? 0) >= s ? "#f59e0b" : dk.starOff }}>★</span>
                       ))}
                     </div>
                   </div>
                   {r.review && (
-                    <div style={{ fontSize: 13, color: "#3d2f28", lineHeight: 1.6, marginLeft: 46 }}>{r.review}</div>
+                    <div style={{ fontSize: 13, color: dk.textSub, lineHeight: 1.6, marginLeft: 46 }}>{r.review}</div>
                   )}
                 </div>
               ))}
             </div>
           ) : (
-            <div style={{ textAlign: "center", padding: "24px 0", color: "#b0a096", fontSize: 13 }}>
+            <div style={{ textAlign: "center", padding: "24px 0", color: dk.textMuted, fontSize: 13 }}>
               Chưa có đánh giá nào. Hãy là người đầu tiên! ⭐
             </div>
           )}
@@ -989,8 +1051,8 @@ function StoryDetailContent() {
                       padding: 10,
                       borderRadius: 12,
                       cursor: "pointer",
-                      border: "1.5px solid #f0ebe3",
-                      background: "#fdfaf7",
+                      border: `1.5px solid ${dk.borderLight}`,
+                      background: dk.surfaceMid,
                       transition: "all .15s",
                       position: "relative",
                       overflow: "hidden",
@@ -998,13 +1060,13 @@ function StoryDetailContent() {
                     onMouseEnter={(e) => {
                       const el = e.currentTarget as HTMLDivElement;
                       el.style.borderColor = "#c23d3f";
-                      el.style.background = "#fff";
+                      el.style.background = dk.surface;
                       el.style.boxShadow = "0 4px 16px rgba(194,61,63,.1)";
                     }}
                     onMouseLeave={(e) => {
                       const el = e.currentTarget as HTMLDivElement;
-                      el.style.borderColor = "#f0ebe3";
-                      el.style.background = "#fdfaf7";
+                      el.style.borderColor = dk.borderLight;
+                      el.style.background = dk.surfaceMid;
                       el.style.boxShadow = "none";
                     }}
                   >
@@ -1047,7 +1109,7 @@ function StoryDetailContent() {
                           style={{
                             fontWeight: 700,
                             fontSize: 13,
-                            color: "#1c1512",
+                            color: dk.text,
                             lineHeight: 1.35,
                             marginBottom: 3,
                             display: "-webkit-box",
@@ -1058,7 +1120,7 @@ function StoryDetailContent() {
                         >
                           {s.title}
                         </div>
-                        <div style={{ fontSize: 11, color: "#9e8e82", fontStyle: "italic" }}>
+                        <div style={{ fontSize: 11, color: dk.textFaint, fontStyle: "italic" }}>
                           {s.penName}
                         </div>
                       </div>
@@ -1069,10 +1131,10 @@ function StoryDetailContent() {
                         <span style={{ fontSize: 11, fontWeight: 700, color: "#c69526" }}>
                           ★ {s.rating}
                         </span>
-                        <span style={{ fontSize: 10, color: "#e0d8d0" }}>·</span>
-                        <span style={{ fontSize: 11, color: "#9e8e82" }}>{s.reads} đọc</span>
-                        <span style={{ fontSize: 10, color: "#e0d8d0" }}>·</span>
-                        <span style={{ fontSize: 11, color: "#9e8e82" }}>{chapters.length} ch.</span>
+                        <span style={{ fontSize: 10, color: dk.sep2 }}>·</span>
+                        <span style={{ fontSize: 11, color: dk.textFaint }}>{s.reads} đọc</span>
+                        <span style={{ fontSize: 10, color: dk.sep2 }}>·</span>
+                        <span style={{ fontSize: 11, color: dk.textFaint }}>{chapters.length} ch.</span>
                       </div>
                     </div>
                   </div>
@@ -1081,7 +1143,7 @@ function StoryDetailContent() {
             ) : (
               <div
                 className="flex flex-col items-center justify-center py-6"
-                style={{ color: "#b0a096", fontSize: 13, textAlign: "center" }}
+                style={{ color: dk.textMuted, fontSize: 13, textAlign: "center" }}
               >
                 <div style={{ fontSize: 28, marginBottom: 6 }}>📚</div>
                 Chưa có truyện cùng thể loại
@@ -1106,11 +1168,11 @@ function StoryDetailContent() {
                 className="flex justify-between text-sm"
                 style={{
                   padding: "9px 0",
-                  borderBottom: i < arr.length - 1 ? "1px solid #f5ede4" : "none",
+                  borderBottom: i < arr.length - 1 ? `1px solid ${dk.borderTable}` : "none",
                 }}
               >
-                <span style={{ color: "#9e8e82" }}>{k}</span>
-                <span style={{ fontWeight: 600, color: "#1c1512", marginLeft: 8, textAlign: "right" }}>
+                <span style={{ color: dk.textFaint }}>{k}</span>
+                <span style={{ fontWeight: 600, color: dk.text, marginLeft: 8, textAlign: "right" }}>
                   {v}
                 </span>
               </div>
@@ -1134,25 +1196,26 @@ function StoryDetailContent() {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: "#fff", borderRadius: 18, padding: "28px 28px 24px",
+              background: dk.surface, borderRadius: 18, padding: "28px 28px 24px",
               width: "100%", maxWidth: 420,
-              boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+              boxShadow: isDark ? "0 8px 40px rgba(0,0,0,0.4)" : "0 8px 40px rgba(0,0,0,0.18)",
+              border: `1px solid ${dk.border}`,
             }}
           >
             {/* Header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-              <div style={{ fontSize: 17, fontWeight: 800, color: "#1c1512" }}>
+              <div style={{ fontSize: 17, fontWeight: 800, color: dk.text }}>
                 {ratingSubmitted ? "✏️ Cập nhật đánh giá" : "⭐ Đánh giá truyện"}
               </div>
               <button
                 onClick={() => setRatingModalOpen(false)}
-                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#9e8e82", lineHeight: 1 }}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: dk.textFaint, lineHeight: 1 }}
                 aria-label="Đóng"
               >✕</button>
             </div>
 
             {/* Story title */}
-            <div style={{ fontSize: 13, color: "#6b5a4e", marginBottom: 16, fontStyle: "italic" }}>{story?.title}</div>
+            <div style={{ fontSize: 13, color: dk.textSub2, marginBottom: 16, fontStyle: "italic" }}>{story?.title}</div>
 
             {/* Star selector */}
             <div style={{ display: "flex", gap: 8, marginBottom: 8, justifyContent: "center" }}>
@@ -1166,7 +1229,7 @@ function StoryDetailContent() {
                   style={{
                     background: "none", border: "none", cursor: "pointer", padding: 2,
                     fontSize: 36, lineHeight: 1,
-                    color: (ratingHover || myScore) >= star ? "#f59e0b" : "#d1c9be",
+                    color: (ratingHover || myScore) >= star ? "#f59e0b" : dk.starOff2,
                     transition: "color 0.1s, transform 0.1s",
                     transform: (ratingHover || myScore) >= star ? "scale(1.18)" : "scale(1)",
                   }}
@@ -1185,9 +1248,9 @@ function StoryDetailContent() {
               rows={3}
               style={{
                 width: "100%", padding: "10px 12px", borderRadius: 10,
-                border: "1.5px solid #e8e0d6", fontSize: 13, color: "#3d2f28",
+                border: `1.5px solid ${dk.border}`, fontSize: 13, color: dk.textSub,
                 resize: "none", fontFamily: "inherit", outline: "none",
-                boxSizing: "border-box", background: "#fdfaf7",
+                boxSizing: "border-box", background: dk.surfaceMid,
               }}
             />
 
@@ -1196,7 +1259,7 @@ function StoryDetailContent() {
               {ratingSubmitted && (
                 <button
                   onClick={() => { setMyScore(0); setMyReview(""); setRatingSubmitted(false); setRatingModalOpen(false); }}
-                  style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "1.5px solid #e8e0d6", background: "#fff", color: "#9e8e82", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                  style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: `1.5px solid ${dk.border}`, background: dk.surface, color: dk.textFaint, fontSize: 13, fontWeight: 600, cursor: "pointer" }}
                 >
                   Xóa đánh giá
                 </button>
@@ -1234,8 +1297,8 @@ function StoryDetailContent() {
                 }}
                 style={{
                   flex: 2, padding: "10px 0", borderRadius: 10, border: "none",
-                  background: myScore === 0 || ratingSubmitting ? "#e5ddd5" : "#c23d3f",
-                  color: myScore === 0 || ratingSubmitting ? "#9e8e82" : "#fff",
+                  background: myScore === 0 || ratingSubmitting ? dk.disabledBg2 : "#c23d3f",
+                  color: myScore === 0 || ratingSubmitting ? dk.textFaint : "#fff",
                   fontSize: 14, fontWeight: 700,
                   cursor: myScore === 0 || ratingSubmitting ? "not-allowed" : "pointer",
                   transition: "background 0.15s",
@@ -1262,23 +1325,24 @@ function StoryDetailContent() {
         >
           <div
             style={{
-              background: "#fff", borderRadius: 20, padding: "32px 28px",
-              maxWidth: 400, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+              background: dk.surface, borderRadius: 20, padding: "32px 28px",
+              maxWidth: 400, width: "100%", boxShadow: isDark ? "0 20px 60px rgba(0,0,0,0.4)" : "0 20px 60px rgba(0,0,0,0.2)",
               textAlign: "center",
+              border: `1px solid ${dk.border}`,
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ fontSize: 48, marginBottom: 12 }}>🪙</div>
-            <h3 style={{ margin: "0 0 6px", fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 800, color: "#1c1512" }}>
+            <h3 style={{ margin: "0 0 6px", fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 800, color: dk.text }}>
               Xác nhận mua chương
             </h3>
-            <p style={{ margin: "0 0 20px", fontSize: 14, color: "#6b5a4e", lineHeight: 1.6 }}>
+            <p style={{ margin: "0 0 20px", fontSize: 14, color: dk.textSub2, lineHeight: 1.6 }}>
               Bạn sắp mua{" "}
-              <strong style={{ color: "#1c1512" }}>&ldquo;{confirmPurchase.title}&rdquo;</strong>
+              <strong style={{ color: dk.text }}>&ldquo;{confirmPurchase.title}&rdquo;</strong>
               {" "}với giá
             </p>
             <div style={{
-              background: "#fffbeb", border: "1.5px solid #fcd34d",
+              background: dk.coinBg, border: `1.5px solid ${dk.coinBdr}`,
               borderRadius: 12, padding: "14px 20px", marginBottom: 24, display: "inline-block",
             }}>
               <span style={{ fontSize: 28, fontWeight: 800, color: "#c69526" }}>
@@ -1291,8 +1355,8 @@ function StoryDetailContent() {
                 onClick={() => setConfirmPurchase(null)}
                 style={{
                   flex: 1, padding: "11px 20px", borderRadius: 10,
-                  border: "1.5px solid #e8e0d6", background: "#fff",
-                  color: "#6b5a4e", fontSize: 14, fontWeight: 600, cursor: "pointer",
+                  border: `1.5px solid ${dk.border}`, background: dk.surface,
+                  color: dk.textSub2, fontSize: 14, fontWeight: 600, cursor: "pointer",
                 }}
               >
                 Hủy

@@ -570,6 +570,7 @@ export default function AdminDashboard() {
         {!loading && tab === "system-ops" && (
           <SystemOpsTab
             stats={systemStats}
+            dashboardStats={stats}
             alerts={systemAlerts}
             jobHistory={jobHistory}
             onRunStatsJob={handleRunStatsJob}

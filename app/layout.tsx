@@ -16,8 +16,8 @@ import { Footer } from "@/components/ui/Footer";
 
 // Extract metadata configuration for better maintainability
 const SITE_METADATA = {
-  title: "Giang Đẫm",
-  description: "Giang Đẫm - Frontend Developer Portfolio",
+  title: "Digital Publishing",
+  description: "Digital Publishing - Nền tảng số",
   url: "",
   thumbnail: "/thumbnail_logo.png",
   googleVerification: "",

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { FONT_OPTIONS, LINE_HEIGHT_OPTIONS } from "@/utils/constants";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface ReadingSettingsProps {
   fontSize: number;
@@ -11,22 +12,6 @@ interface ReadingSettingsProps {
   onClose: () => void;
 }
 
-const btnStyle: React.CSSProperties = {
-  width: 36,
-  height: 36,
-  borderRadius: 8,
-  border: "1.5px solid #e8e0d6",
-  background: "#fdfaf7",
-  cursor: "pointer",
-  fontSize: 14,
-  fontWeight: 700,
-  color: "#3d2f28",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flexShrink: 0,
-};
-
 export function ReadingSettingsPanel({
   fontSize,
   setFontSize,
@@ -37,6 +22,34 @@ export function ReadingSettingsPanel({
   onClose,
 }: ReadingSettingsProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
+  const C = {
+    bg:        isDark ? "#1c1814" : "#fff",
+    border:    isDark ? "#2e2820" : "#e8e0d6",
+    text:      isDark ? "#c8bcb0" : "#3d2f28",
+    muted:     isDark ? "#6b5a4e" : "#b0a096",
+    faint:     isDark ? "#4a3f38" : "#9e8e82",
+    btnBg:     isDark ? "#1c1814" : "#fdfaf7",
+    activeBg:  isDark ? "#3a1a1a" : "#fde8e8",
+  };
+
+  const btnStyle: React.CSSProperties = {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    border: `1.5px solid ${C.border}`,
+    background: C.btnBg,
+    cursor: "pointer",
+    fontSize: 14,
+    fontWeight: 700,
+    color: C.text,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  };
 
   // Close on outside click
   useEffect(() => {
@@ -54,7 +67,7 @@ export function ReadingSettingsPanel({
       style={{
         fontSize: 11,
         fontWeight: 700,
-        color: "#b0a096",
+        color: C.muted,
         textTransform: "uppercase",
         letterSpacing: "0.08em",
         marginBottom: 10,
@@ -72,10 +85,10 @@ export function ReadingSettingsPanel({
         top: "calc(100% + 8px)",
         right: 0,
         zIndex: 200,
-        background: "#fff",
-        border: "1.5px solid #e8e0d6",
+        background: C.bg,
+        border: `1.5px solid ${C.border}`,
         borderRadius: 16,
-        boxShadow: "0 8px 32px rgba(60,30,20,0.13)",
+        boxShadow: isDark ? "0 8px 32px rgba(0,0,0,0.4)" : "0 8px 32px rgba(60,30,20,0.13)",
         padding: "20px 20px 16px",
         minWidth: 280,
         fontFamily: "inherit",
@@ -89,8 +102,8 @@ export function ReadingSettingsPanel({
           right: 20,
           width: 14,
           height: 14,
-          background: "#fff",
-          border: "1.5px solid #e8e0d6",
+          background: C.bg,
+          border: `1.5px solid ${C.border}`,
           borderBottom: "none",
           borderRight: "none",
           transform: "rotate(45deg)",
@@ -125,7 +138,7 @@ export function ReadingSettingsPanel({
             onChange={(e) => setFontSize(Number(e.target.value))}
             style={{ width: "100%", accentColor: "#c23d3f", cursor: "pointer" }}
           />
-          <div style={{ textAlign: "center", fontSize: 12, color: "#9e8e82" }}>
+          <div style={{ textAlign: "center", fontSize: 12, color: C.faint }}>
             {fontSize}px
           </div>
         </div>
@@ -158,12 +171,12 @@ export function ReadingSettingsPanel({
               border:
                 fontFamily === f.value
                   ? "2px solid #c23d3f"
-                  : "1.5px solid #e8e0d6",
-              background: fontFamily === f.value ? "#fde8e8" : "#fdfaf7",
+                  : `1.5px solid ${C.border}`,
+              background: fontFamily === f.value ? C.activeBg : C.btnBg,
               cursor: "pointer",
               fontSize: 13,
               fontFamily: f.value,
-              color: fontFamily === f.value ? "#c23d3f" : "#3d2f28",
+              color: fontFamily === f.value ? "#c23d3f" : C.text,
               fontWeight: fontFamily === f.value ? 700 : 400,
               transition: "all 0.15s",
               textAlign: "center",
@@ -193,11 +206,11 @@ export function ReadingSettingsPanel({
               border:
                 lineHeight === lh.value
                   ? "2px solid #c23d3f"
-                  : "1.5px solid #e8e0d6",
-              background: lineHeight === lh.value ? "#fde8e8" : "#fdfaf7",
+                  : `1.5px solid ${C.border}`,
+              background: lineHeight === lh.value ? C.activeBg : C.btnBg,
               cursor: "pointer",
               fontSize: 12,
-              color: lineHeight === lh.value ? "#c23d3f" : "#3d2f28",
+              color: lineHeight === lh.value ? "#c23d3f" : C.text,
               fontWeight: lineHeight === lh.value ? 700 : 400,
               textAlign: "center",
               transition: "all 0.15s",

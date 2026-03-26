@@ -8,6 +8,7 @@ import useWalletService from "@/api/useWallet.service";
 import useWithdrawService from "@/api/useWithdraw.service";
 import { PayloadUpdateProfile, WithdrawRequest, WithdrawResponse } from "@/types/auth";
 import { useToast } from "@/hooks/use-toast";
+import { formatVNDate, formatVNDateTime } from "@/utils/time";
 
 const ROLE_LABEL: Record<string, string> = {
   REVIEWER: "Reviewer",
@@ -298,7 +299,7 @@ function WithdrawModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
 }
 // ───────────────────────────────────────────────────────────────
 
-type TabKey = "info" | "stories" | "reviews" | "coins" | "withdraw";
+type TabKey = "info" | "reviews" | "coins" | "withdraw";
 
 // ── Edit Profile Modal ──────────────────────────────────────────
 function EditProfileModal({ onClose }: { onClose: () => void }) {
@@ -676,10 +677,9 @@ export function ProfilePage() {
     : "AV";
 
   const tabs: { key: TabKey; label: string }[] = [
-    { key: "info",    label: "Thông tin" },
-    { key: "stories", label: "Tác phẩm" },
-    { key: "reviews", label: "Đánh giá" },
-    { key: "coins",   label: "Lịch sử coin" },
+    { key: "info",     label: "Thông tin" },
+    { key: "reviews",  label: "Đánh giá" },
+    { key: "coins",    label: "Lịch sử coin" },
     { key: "withdraw", label: "Rút tiền" },
   ];
 
@@ -751,30 +751,30 @@ export function ProfilePage() {
           <div style={{ fontSize: 14, opacity: 0.75, maxWidth: 500, lineHeight: 1.6, marginBottom: 14 }}>
             {user?.bio || "Giới thiệu bản thân..."}
           </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 4 }}>
             <span className={`role-chip ${roleChipClass}`}>{roleIcon} {roleLabel}</span>
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              background: "#fdf7f0",
-              padding: "4px 12px",
-              borderRadius: "10px",
-              border: "1.5px solid #ece6dc",
-            }}>
-              <span style={{ fontSize: 13, fontWeight: 800, color: "#2563eb" }}>LV.{user?.level ?? 1}</span>
-              <div style={{ width: 100, height: 6, background: "#e5e7eb", borderRadius: 3, overflow: "hidden" }}>
-                <div style={{
-                  width: `${Math.min(100, ((user?.experience ?? 0) / ((user?.level ?? 1) * ((user?.level ?? 1) + 1) * 50)) * 100)}%`,
-                  height: "100%",
-                  background: "linear-gradient(90deg, #3b82f6, #2563eb)",
-                  borderRadius: 3
-                }} />
-              </div>
-              <span style={{ fontSize: 11, color: "#9e8e82", fontWeight: 500 }}>
-                {user?.experience ?? 0} / {(user?.level ?? 1) * ((user?.level ?? 1) + 1) * 50} EXP
-              </span>
-            </div>
+            <button
+              onClick={() => setShowEdit(true)}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "8px 16px", borderRadius: 10,
+                border: "1.5px solid #c23d3f", background: "#c23d3f",
+                color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer",
+              }}
+            >
+              ✏️ Sửa hồ sơ
+            </button>
+            <button
+              onClick={() => setShowChangePw(true)}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "8px 16px", borderRadius: 10,
+                border: "1.5px solid #ddd5c8", background: "#fff",
+                color: "#6b5a4e", fontWeight: 700, fontSize: 13, cursor: "pointer",
+              }}
+            >
+              🔐 Đổi mật khẩu
+            </button>
           </div>
         </div>
 
@@ -882,47 +882,6 @@ export function ProfilePage() {
         </div>
       )}
 
-      {activeTab === "stories" && (
-        <div className="fade-in">
-          {storiesLoading ? (
-            <div className="empty-state">⏳ Đang tải tác phẩm...</div>
-          ) : myStories.length === 0 ? (
-            <div className="empty-state">Chưa có tác phẩm nào</div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              {myStories.map((s: any) => (
-                <div key={s.id} style={{
-                  background: "#fff", borderRadius: 14, border: "1.5px solid #ece6dc",
-                  padding: "14px 18px", display: "flex", alignItems: "center", gap: 14,
-                }}>
-                  {s.coverUrl && !s.coverUrl.includes("placeholder") ? (
-                    <img src={s.coverUrl} alt={s.title} style={{ width: 48, height: 68, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
-                  ) : (
-                    <div style={{ width: 48, height: 68, borderRadius: 8, background: "linear-gradient(135deg,#f093fb,#f5576c)", flexShrink: 0 }} />
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: "#1c1512", marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
-                    <div style={{ fontSize: 12, color: "#9e8e82" }}>
-                      {s.categories?.[0]?.name ?? ""} · {s.publishedChapterCount ?? s.totalChapterCount ?? 0} chương
-                    </div>
-                    <div style={{ fontSize: 11, marginTop: 4 }}>
-                      <span style={{
-                        padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 700,
-                        background: s.status === "PUBLISHED" ? "#dcfce7" : s.status === "PENDING_REVIEW" ? "#fef3c7" : "#f5f5f5",
-                        color: s.status === "PUBLISHED" ? "#166534" : s.status === "PENDING_REVIEW" ? "#92400e" : "#6b5a4e",
-                      }}>
-                        {s.status === "PUBLISHED" ? "Đã xuất bản" : s.status === "PENDING_REVIEW" ? "Chờ duyệt" : s.status === "DRAFT" ? "Nháp" : s.status}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
       {activeTab === "reviews" && (
         <div className="fade-in">
           <div className="empty-state">Chưa có đánh giá nào</div>
@@ -951,7 +910,7 @@ export function ProfilePage() {
                           {tx.description ?? mapped.label}
                         </div>
                         <div style={{ fontSize: 12, color: "#9e8e82" }}>
-                          {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString("vi-VN") : ""}
+                          {tx.createdAt ? formatVNDate(tx.createdAt) : ""}
                         </div>
                       </div>
                     </div>
@@ -988,7 +947,7 @@ export function ProfilePage() {
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 15, color: "#1c1512" }}>-{req.amount} coin</div>
                     <div style={{ fontSize: 12, color: "#9e8e82" }}>Yêu cầu rút tiền</div>
-                    <div style={{ fontSize: 11, color: "#bfad9e", marginTop: 2 }}>{new Date(req.createdAt).toLocaleString("vi-VN")}</div>
+                    <div style={{ fontSize: 11, color: "#bfad9e", marginTop: 2 }}>{formatVNDateTime(req.createdAt)}</div>
                   </div>
                   <div style={{
                     padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700,

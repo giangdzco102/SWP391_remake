@@ -1,3 +1,9 @@
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezonePlugin from "dayjs/plugin/timezone";
+dayjs.extend(utc);
+dayjs.extend(timezonePlugin);
+
 type DocumentTypeDefine = {
   label: string;
   key: any;
@@ -123,7 +129,7 @@ export const checkImage = (fileName: string): boolean => {
 };
 
 export const timeAgo = (iso: string) => {
-  const diff = Date.now() - new Date(iso).getTime();
+  const diff = Date.now() - dayjs.utc(iso).valueOf();
   const mins = Math.floor(diff / 60000);
   if (mins < 60) return `${mins} phút trước`;
   const hrs = Math.floor(mins / 60);

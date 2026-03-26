@@ -8,6 +8,7 @@ import useChapterService from "@/api/useChapter.service";
 import useHttpClient from "@/api/useHttpClient";
 import APP_CONFIG from "@/config/app-config";
 import { useToast } from "@/hooks/use-toast";
+import { formatVNDate } from "@/utils/time";
 import usePaymentService, { CoinPackage } from "@/api/usePayment.service";
 
 /* ================================================================
@@ -400,6 +401,8 @@ function StoryFormModal({ story, onClose, onSaved }: { story?: StoryItem | null;
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [loadingCats, setLoadingCats] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const coverFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     httpClient.get(APP_CONFIG.CATEGORY.LIST)
@@ -409,6 +412,28 @@ function StoryFormModal({ story, onClose, onSaved }: { story?: StoryItem | null;
   }, []);// eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleCat = (id: number) => setSelectedCategories((p) => p.includes(id) ? p.filter((c) => c !== id) : [...p, id]);
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Vui lòng chọn file ảnh!"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Ảnh quá lớn! Tối đa 5MB."); return; }
+    setCoverUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const raw: any = await httpClient.post(APP_CONFIG.UPLOAD.IMAGE("cover"), formData);
+      const url: string = raw?.data?.url ?? raw?.url;
+      if (!url) throw new Error("Không nhận được URL ảnh bìa từ server.");
+      setCoverUrl(url);
+      toast.success("Đã tải ảnh bìa lên!");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Upload ảnh bìa thất bại!");
+    } finally {
+      setCoverUploading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!title.trim()) return;
@@ -459,7 +484,16 @@ function StoryFormModal({ story, onClose, onSaved }: { story?: StoryItem | null;
                   ? <img src={coverUrl} alt="cover" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
                   : "📖"}
               </div>
-              <input value={coverUrl} onChange={(e) => setCoverUrl(e.target.value)} placeholder="URL ảnh bìa…" style={{ ...fInput(), fontSize: 11, padding: "7px 10px" }} />
+              <button
+                type="button"
+                onClick={() => coverFileRef.current?.click()}
+                disabled={coverUploading}
+                style={{ width: "100%", padding: "6px 0", background: T.accentLight, color: T.accent, border: `1.5px solid ${T.accent}`, borderRadius: T.radiusSm, fontSize: 12, fontWeight: 700, cursor: coverUploading ? "wait" : "pointer", marginBottom: 6 }}
+              >
+                {coverUploading ? "⏳ Đang tải..." : "📷 Tải ảnh lên"}
+              </button>
+              <input ref={coverFileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleCoverUpload} />
+              <input value={coverUrl} onChange={(e) => setCoverUrl(e.target.value)} placeholder="Hoặc dán URL ảnh bìa…" style={{ ...fInput(), fontSize: 11, padding: "7px 10px" }} />
             </div>
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
@@ -829,7 +863,7 @@ function WalletSection({ wallet, transactions, loadingTx }: { wallet: WalletInfo
                     <div style={{ fontSize: 12, color: T.textSec }}>{wr.bankName} · {wr.bankAccount} · {wr.bankOwner}</div>
                     {wr.rejectedReason && <div style={{ fontSize: 11, color: T.danger, marginTop: 2 }}>Lý do từ chối: {wr.rejectedReason}</div>}
                   </div>
-                  <div style={{ fontSize: 11, color: T.textMuted, whiteSpace: "nowrap" }}>{new Date(wr.createdAt).toLocaleDateString("vi-VN")}</div>
+                  <div style={{ fontSize: 11, color: T.textMuted, whiteSpace: "nowrap" }}>{formatVNDate(wr.createdAt)}</div>
                 </div>
               ))
             )}
@@ -848,7 +882,7 @@ function WalletSection({ wallet, transactions, loadingTx }: { wallet: WalletInfo
                   <span style={{ fontSize: 11, fontWeight: 700, color: txColorMap[tx.type] ?? T.gray, background: T.grayBg, borderRadius: 6, padding: "2px 8px", minWidth: 60, textAlign: "center" }}>{tx.type}</span>
                   <div style={{ flex: 1, fontSize: 13, color: T.text }}>{tx.description || "—"}</div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: tx.amount >= 0 ? T.success : T.danger }}>{tx.amount >= 0 ? "+" : ""}{tx.amount.toLocaleString()}</div>
-                  <div style={{ fontSize: 11, color: T.textMuted }}>{new Date(tx.createdAt).toLocaleDateString("vi-VN")}</div>
+                  <div style={{ fontSize: 11, color: T.textMuted }}>{formatVNDate(tx.createdAt)}</div>
                 </div>
               ))}
         </div>
@@ -1497,7 +1531,7 @@ export default function MyStoriesPage() {
                         )}
                         {r.adminNote && <div style={{ fontSize: 12, color: T.textSec, marginTop: 2 }}>📝 Ghi chú admin: {r.adminNote}</div>}
                       </div>
-                      <div style={{ fontSize: 11, color: T.textMuted, whiteSpace: "nowrap", flexShrink: 0 }}>{new Date(r.createdAt).toLocaleDateString("vi-VN")}</div>
+                      <div style={{ fontSize: 11, color: T.textMuted, whiteSpace: "nowrap", flexShrink: 0 }}>{formatVNDate(r.createdAt)}</div>
                     </div>
                   </div>
                 );

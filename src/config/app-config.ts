@@ -29,6 +29,11 @@ export default class APP_CONFIG {
     BLOCK_LIST:      "/users/blocks",
   };
 
+  // ── Upload ────────────────────────────────────────────────────────────────
+  static UPLOAD = {
+    IMAGE: (type: "cover" | "images") => `/upload/image?type=${type}`,
+  };
+
   // ── Story ─────────────────────────────────────────────────────────────────
   static STORY = {
     LIST:           "/stories",

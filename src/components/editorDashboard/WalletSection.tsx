@@ -4,6 +4,7 @@ import usePaymentService, { CoinPackage } from "@/api/usePayment.service";
 import { useToast } from "@/hooks/use-toast";
 import { WalletInfo, WalletTx } from "@/types/editorDashboard";
 import { T, EDITOR_FALLBACK_PKGS } from "@/utils/editorDashboard.constants";
+import { formatVNDate } from "@/utils/time";
 
 export function WalletSection({ wallet, transactions, loadingTx }: { wallet: WalletInfo | null; transactions: WalletTx[]; loadingTx: boolean }) {
   const [packages, setPackages] = useState<CoinPackage[]>(EDITOR_FALLBACK_PKGS);
@@ -84,7 +85,7 @@ export function WalletSection({ wallet, transactions, loadingTx }: { wallet: Wal
                   <span style={{ fontSize: 11, fontWeight: 700, color: txColor[tx.type] ?? T.gray, background: T.grayBg, borderRadius: 6, padding: "2px 8px", minWidth: 60, textAlign: "center" }}>{tx.type}</span>
                   <div style={{ flex: 1, fontSize: 13, color: T.text }}>{tx.description || "—"}</div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: tx.amount >= 0 ? T.success : T.danger }}>{tx.amount >= 0 ? "+" : ""}{tx.amount.toLocaleString()}</div>
-                  <div style={{ fontSize: 11, color: T.textMuted }}>{new Date(tx.createdAt).toLocaleDateString("vi-VN")}</div>
+                  <div style={{ fontSize: 11, color: T.textMuted }}>{formatVNDate(tx.createdAt)}</div>
                 </div>
               ))}
         </div>

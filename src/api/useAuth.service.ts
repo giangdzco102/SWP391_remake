@@ -178,11 +178,11 @@ const useAuthService = (): ResultAuthService => {
     formData.append("file", file);
     const raw: any = await httpClient.post(APP_CONFIG.USER.UPLOAD_AVATAR, formData);
 
-    // Response: { success, status, data: { data: { avatarUrl: "..." } } }
+    // Backend response: { success, status, data: { avatarUrl: "..." } }
+    // handleSuccess unwraps response.data → raw = { success, status, data: { avatarUrl } }
     const url: string =
-      raw?.data?.data?.avatarUrl ??  // lồng 2 tầng data (backend hiện tại)
-      raw?.data?.avatarUrl       ??  // lồng 1 tầng
-      raw?.avatarUrl;                // trực tiếp
+      raw?.data?.avatarUrl ??  // standard: data.avatarUrl
+      raw?.avatarUrl;          // direct fallback
 
     if (!url || typeof url !== "string") {
       throw new Error(`Không nhận được URL ảnh từ server. Response: ${JSON.stringify(raw)}`);

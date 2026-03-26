@@ -8,7 +8,9 @@ import useChapterService from "@/api/useChapter.service";
 import useCommentService from "@/api/useComment.service";
 import useReportService from "@/api/useReport.service";
 import useStoryService from "@/api/useStory.service";
+import { formatVNDate } from "@/utils/time";
 import useGiftService from "@/api/useGift.service";
+import useBlockService from "@/api/useBlock.service";
 import { useStoryStore } from "@/stores/storyStore";
 import { useGotoReader } from "@/hooks/useGotoReader";
 import Utils from "@/utils/utils";
@@ -24,6 +26,7 @@ import { CommentNode } from "@/components/readerPage/CommentNode";
 import { ReadingSettingsPanel } from "@/components/popup/ReadingSettingsPanel";
 import { ChapterListModal } from "@/components/modals/ChapterListModal";
 import { ReportModal } from "@/components/modals/ReportModal";
+import { useTheme } from "@/contexts/ThemeContext";
 
 // ── Main Page ─────────────────────────────────────────────────────────────
 export default function ReaderPage() {
@@ -42,6 +45,7 @@ export default function ReaderPage() {
   commentServiceRef.current = commentService;
   const { createReport } = useReportService();
   const { sendGift } = useGiftService();
+  const { blockUser } = useBlockService();
   const toast = useToast();
 
   const [chapterData, setChapterData] = useState<ChapterData | null>(null);
@@ -69,6 +73,38 @@ export default function ReaderPage() {
   const [giftAmount, setGiftAmount] = useState<number | null>(null);
   const [showGiftOptions, setShowGiftOptions] = useState(false);
   const [storyAuthorId, setStoryAuthorId] = useState<number | null>(null);
+
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+  // Dark-mode aware color tokens
+  const dk = {
+    bg:          isDark ? "#0f0e0c"  : "transparent",
+    surface:     isDark ? "#1c1814"  : "#fff",
+    surfaceMid:  isDark ? "#1a1614"  : "#fdfaf7",
+    border:      isDark ? "#2e2820"  : "#e8e0d6",
+    borderMid:   isDark ? "#2e2820"  : "#ece6dd",
+    text:        isDark ? "#e8ddd5"  : "#1c1512",
+    textSub:     isDark ? "#c8bcb0"  : "#3d2f28",
+    textMuted:   isDark ? "#6b5a4e"  : "#b0a096",
+    textFaint:   isDark ? "#4a3f38"  : "#9e8e82",
+    navBtn:      isDark ? "#1c1814"  : "#fff",
+    navBtnText:  isDark ? "#b0a096"  : "#6b5a4e",
+    navBtnActive:isDark ? "#2a1515"  : "#fde8e8",
+    navBtnActTxt:isDark ? "#e8726a"  : "#c23d3f",
+    navBtnActBdr:isDark ? "#5c2a2a"  : "#c23d3f",
+    inputBg:     isDark ? "#1c1814"  : "#fdfaf7",
+    locked:      isDark ? "#1c1814"  : "#fff",
+    lockedCoin:  isDark ? "#241e0f"  : "#fffbeb",
+    lockedCoinBdr:isDark? "#4a3a10" : "#fcd34d",
+    modalBg:     isDark ? "#1c1814"  : "#fff",
+    giftDrop:    isDark ? "#1c1814"  : "#fff",
+    giftDropBdr: isDark ? "#3a3028"  : "#e8e0d6",
+    sendBtn:     isDark ? "#2a1a1a"  : "#f3f4f6",
+    sendBtnTxt:  isDark ? "#6b5a4e"  : "#9ca3af",
+    reportBtn:   isDark ? "#1c1814"  : "transparent",
+    reportBdr:   isDark ? "#3a3028"  : "#e8e0d6",
+    reportTxt:   isDark ? "#6b5a4e"  : "#9ca3af",
+  };
 
   // Load comments — use ref so it's never stale
   const loadComments = useCallback(async (chapterId: number) => {
@@ -108,7 +144,7 @@ export default function ReaderPage() {
         words: 0,
         readTime: "—",
         publishedAt: ch.publishAt
-          ? new Date(ch.publishAt).toLocaleDateString("vi-VN")
+          ? formatVNDate(ch.publishAt)
           : undefined,
         locked: (ch.coinPrice ?? 0) > 0 && !(ch.isPurchased ?? false),
         price: ch.coinPrice ?? 0,
@@ -289,6 +325,16 @@ export default function ReaderPage() {
     }
   };
 
+  // Block user — called from CommentNode (only visible to story author)
+  const handleBlockUser = async (userId: number) => {
+    try {
+      await blockUser(userId, "Chặn từ trang đọc truyện");
+      toast.success("Đã chặn người dùng");
+    } catch {
+      toast.error("Chặn người dùng thất bại");
+    }
+  };
+
   // Post reply (passed down to CommentNode) — throws on error so CommentNode can handle
   const handleSubmitReply = async (parentId: number, content: string) => {
     if (!chapterData) throw new Error("no chapter");
@@ -369,7 +415,7 @@ export default function ReaderPage() {
           justifyContent: "center",
           minHeight: "60vh",
           fontSize: 14,
-          color: "#9e8e82",
+          color: dk.textFaint,
         }}
       >
         <div>⏳ Đang tải chương...</div>
@@ -385,7 +431,7 @@ export default function ReaderPage() {
           style={{
             fontSize: 18,
             fontWeight: 700,
-            color: "#1c1512",
+            color: dk.text,
             marginBottom: 8,
           }}
         >
@@ -396,7 +442,7 @@ export default function ReaderPage() {
             style={{
               fontSize: 14,
               color: "#c23d3f",
-              background: "#fde8e8",
+              background: isDark ? "#3a1a1a" : "#fde8e8",
               borderRadius: 10,
               padding: "10px 20px",
               display: "inline-block",
@@ -420,9 +466,9 @@ export default function ReaderPage() {
             style={{
               padding: "10px 24px",
               borderRadius: 10,
-              border: "1.5px solid #e8e0d6",
-              background: "#fff",
-              color: "#6b5a4e",
+              border: `1.5px solid ${dk.border}`,
+              background: dk.surface,
+              color: dk.navBtnText,
               fontWeight: 600,
               cursor: "pointer",
               fontSize: 13,
@@ -469,15 +515,15 @@ export default function ReaderPage() {
   const isLocked = (chapterData.coinPrice ?? 0) > 0 && !chapterData.isPurchased;
 
   return (
-    <div className="reader-wrap fade-in">
+    <div className="reader-wrap fade-in" style={{ background: dk.bg, minHeight: "100vh" }}>
       {/* Progress bar */}
       <div className="progress-bar">
         <div className="progress-fill" style={{ width: `${scrollPct}%` }} />
       </div>
 
       {/* Nav */}
-      <div className="reader-nav">
-        <button className="nav-ch-btn" onClick={() => router.back()}>
+      <div className="reader-nav" style={{ borderBottomColor: dk.border, background: dk.bg }}>
+        <button className="nav-ch-btn" style={{ background: dk.navBtn, borderColor: dk.border, color: dk.navBtnText }} onClick={() => router.back()}>
           <Ico.Back />
           Trang truyện
         </button>
@@ -488,6 +534,7 @@ export default function ReaderPage() {
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
+            color: dk.text,
           }}
         >
           {chapterData.title}
@@ -504,13 +551,13 @@ export default function ReaderPage() {
             padding: "6px 14px",
             borderRadius: 8,
             border: showChapterList
-              ? "1.5px solid #c23d3f"
-              : "1.5px solid #e8e0d6",
-            background: showChapterList ? "#fde8e8" : "#fdfaf7",
+              ? `1.5px solid ${dk.navBtnActBdr}`
+              : `1.5px solid ${dk.border}`,
+            background: showChapterList ? dk.navBtnActive : dk.navBtn,
             cursor: "pointer",
             fontSize: 13,
             fontWeight: 600,
-            color: showChapterList ? "#c23d3f" : "#6b5a4e",
+            color: showChapterList ? dk.navBtnActTxt : dk.navBtnText,
             transition: "all 0.15s",
           }}
         >
@@ -518,7 +565,7 @@ export default function ReaderPage() {
           <span>Chương</span>
         </button>
 
-        {/* Settings trigger — replaces old A-/A+ buttons */}
+        {/* Settings trigger */}
         <div style={{ position: "relative" }}>
           <button
             onClick={() => setShowSettings((v) => !v)}
@@ -530,13 +577,13 @@ export default function ReaderPage() {
               padding: "6px 14px",
               borderRadius: 8,
               border: showSettings
-                ? "1.5px solid #c23d3f"
-                : "1.5px solid #e8e0d6",
-              background: showSettings ? "#fde8e8" : "#fdfaf7",
+                ? `1.5px solid ${dk.navBtnActBdr}`
+                : `1.5px solid ${dk.border}`,
+              background: showSettings ? dk.navBtnActive : dk.navBtn,
               cursor: "pointer",
               fontSize: 13,
               fontWeight: 600,
-              color: showSettings ? "#c23d3f" : "#6b5a4e",
+              color: showSettings ? dk.navBtnActTxt : dk.navBtnText,
               transition: "all 0.15s",
             }}
           >
@@ -567,7 +614,7 @@ export default function ReaderPage() {
             fontFamily: "'Playfair Display',serif",
             fontSize: 22,
             fontWeight: 800,
-            color: "#1c1512",
+            color: dk.text,
             marginBottom: 8,
             textAlign: "center",
           }}
@@ -578,7 +625,7 @@ export default function ReaderPage() {
           style={{
             textAlign: "center",
             fontSize: 12,
-            color: "#b0a096",
+            color: dk.textMuted,
             display: "flex",
             gap: 12,
             justifyContent: "center",
@@ -603,9 +650,9 @@ export default function ReaderPage() {
             margin: "40px auto",
             textAlign: "center",
             padding: "48px 32px",
-            background: "#fff",
+            background: dk.locked,
             borderRadius: 20,
-            border: "1.5px solid #e8e0d6",
+            border: `1.5px solid ${dk.border}`,
           }}
         >
           <div style={{ fontSize: 56, marginBottom: 16 }}>🔒</div>
@@ -614,7 +661,7 @@ export default function ReaderPage() {
               fontFamily: "'Playfair Display',serif",
               fontSize: 22,
               fontWeight: 700,
-              color: "#1c1512",
+              color: dk.text,
               marginBottom: 8,
             }}
           >
@@ -622,15 +669,15 @@ export default function ReaderPage() {
           </div>
           <div
             style={{
-              background: "#fffbeb",
-              border: "1.5px solid #fcd34d",
+              background: dk.lockedCoin,
+              border: `1.5px solid ${dk.lockedCoinBdr}`,
               borderRadius: 12,
               padding: "16px 24px",
               marginBottom: 24,
               display: "inline-block",
             }}
           >
-            <div style={{ fontSize: 13, color: "#92400e", marginBottom: 4 }}>
+            <div style={{ fontSize: 13, color: isDark ? "#c69526" : "#92400e", marginBottom: 4 }}>
               Chi phí mở khóa
             </div>
             <div style={{ fontSize: 28, fontWeight: 800, color: "#c69526" }}>
@@ -650,9 +697,9 @@ export default function ReaderPage() {
               style={{
                 padding: "10px 24px",
                 borderRadius: 9,
-                border: "1.5px solid #e8e0d6",
-                background: "#fff",
-                color: "#6b5a4e",
+                border: `1.5px solid ${dk.border}`,
+                background: dk.surface,
+                color: dk.navBtnText,
                 fontSize: 13,
                 fontWeight: 600,
                 cursor: "pointer",
@@ -729,13 +776,14 @@ export default function ReaderPage() {
           justifyContent: "center",
           marginTop: 48,
           paddingTop: 32,
-          borderTop: "1.5px solid #e8e0d6",
+          borderTop: `1.5px solid ${dk.border}`,
           flexWrap: "wrap",
           padding: "32px 16px 0",
         }}
       >
         <button
           className="nav-ch-btn"
+          style={{ background: dk.navBtn, borderColor: dk.border, color: dk.navBtnText }}
           disabled={!prevChapter}
           onClick={() => prevChapter && goToChapter(prevChapter.id)}
         >
@@ -745,9 +793,9 @@ export default function ReaderPage() {
         <button
           className="nav-ch-btn"
           style={{
-            background: "#fde8e8",
-            color: "#c23d3f",
-            borderColor: "#e8a0a1",
+            background: dk.navBtnActive,
+            color: dk.navBtnActTxt,
+            borderColor: dk.navBtnActBdr,
           }}
           onClick={() => router.back()}
         >
@@ -755,13 +803,14 @@ export default function ReaderPage() {
         </button>
         <button
           className="nav-ch-btn"
+          style={{ background: dk.navBtn, borderColor: dk.border, color: dk.navBtnText, gap: 6 }}
           onClick={() => setShowChapterList(true)}
-          style={{ gap: 6 }}
         >
           ☰ Chương
         </button>
         <button
           className="nav-ch-btn"
+          style={{ background: dk.navBtn, borderColor: dk.border, color: dk.navBtnText }}
           disabled={!nextChapter}
           onClick={() => nextChapter && goToChapter(nextChapter.id)}
         >
@@ -790,7 +839,7 @@ export default function ReaderPage() {
               fontFamily: "'Playfair Display',serif",
               fontSize: 20,
               fontWeight: 700,
-              color: "#1c1512",
+              color: dk.text,
             }}
           >
             💬 Bình luận ({comments.length})
@@ -801,9 +850,9 @@ export default function ReaderPage() {
             }
             style={{
               fontSize: 12,
-              color: "#9ca3af",
-              background: "none",
-              border: "1px solid #e8e0d6",
+              color: dk.reportTxt,
+              background: dk.reportBtn,
+              border: `1px solid ${dk.reportBdr}`,
               borderRadius: 8,
               padding: "5px 12px",
               cursor: "pointer",
@@ -813,11 +862,11 @@ export default function ReaderPage() {
           </button>
         </div>
 
-        {/* Comment input — root comments only */}
+        {/* Comment input */}
         <div
           style={{
-            background: "#fdfaf7",
-            border: "1.5px solid #e8e0d6",
+            background: dk.inputBg,
+            border: `1.5px solid ${dk.borderMid}`,
             borderRadius: 14,
             padding: "14px 16px",
             marginBottom: 24,
@@ -843,7 +892,7 @@ export default function ReaderPage() {
               background: "transparent",
               resize: "none",
               fontSize: 14,
-              color: "#3d2f28",
+              color: dk.textSub,
               fontFamily: "inherit",
               outline: "none",
               boxSizing: "border-box",
@@ -868,9 +917,9 @@ export default function ReaderPage() {
                       alignItems: "center",
                       gap: 6,
                       fontSize: 13,
-                      color: giftAmount ? "#c69526" : "#9e8e82",
-                      background: giftAmount ? "#fef9ee" : "none",
-                      border: giftAmount ? "1px solid #fcd34d" : "1px solid #e8e0d6",
+                      color: giftAmount ? "#c69526" : dk.navBtnText,
+                      background: giftAmount ? (isDark ? "#241e0f" : "#fef9ee") : "none",
+                      border: giftAmount ? "1px solid #fcd34d" : `1px solid ${dk.giftDropBdr}`,
                       borderRadius: 20,
                       padding: "5px 12px",
                       cursor: "pointer",
@@ -889,8 +938,8 @@ export default function ReaderPage() {
                         bottom: "100%",
                         left: 0,
                         marginBottom: 10,
-                        background: "#fff",
-                        border: "1.5px solid #e8e0d6",
+                        background: dk.giftDrop,
+                        border: `1.5px solid ${dk.giftDropBdr}`,
                         borderRadius: 12,
                         padding: "12px",
                         boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
@@ -898,7 +947,7 @@ export default function ReaderPage() {
                         width: 240,
                       }}
                     >
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#1c1512", marginBottom: 8 }}>Chọn mức tặng:</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: dk.text, marginBottom: 8 }}>Chọn mức tặng:</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
                         {[10, 50, 100, 200, 500].map((amt) => (
                           <button
@@ -911,9 +960,9 @@ export default function ReaderPage() {
                               fontSize: 11,
                               padding: "4px 10px",
                               borderRadius: 15,
-                              border: giftAmount === amt ? "1.5px solid #c69526" : "1.5px solid #e8e0d6",
-                              background: giftAmount === amt ? "#fef9ee" : "#fff",
-                              color: giftAmount === amt ? "#c69526" : "#6b5a4e",
+                              border: giftAmount === amt ? "1.5px solid #c69526" : `1.5px solid ${dk.giftDropBdr}`,
+                              background: giftAmount === amt ? (isDark ? "#241e0f" : "#fef9ee") : dk.giftDrop,
+                              color: giftAmount === amt ? "#c69526" : dk.navBtnText,
                               fontWeight: 600,
                               cursor: "pointer",
                             }}
@@ -931,7 +980,7 @@ export default function ReaderPage() {
                           style={{
                             flex: 1,
                             fontSize: 11,
-                            color: "#9ca3af",
+                            color: dk.textFaint,
                             background: "none",
                             border: "none",
                             cursor: "pointer",
@@ -985,8 +1034,8 @@ export default function ReaderPage() {
                     borderRadius: 9,
                     border: "none",
                     background:
-                      !commentText.trim() || submitting ? "#f3f4f6" : "#c23d3f",
-                    color: !commentText.trim() || submitting ? "#9ca3af" : "#fff",
+                      !commentText.trim() || submitting ? dk.sendBtn : "#c23d3f",
+                    color: !commentText.trim() || submitting ? dk.sendBtnTxt : "#fff",
                     fontSize: 13,
                     fontWeight: 700,
                     cursor:
@@ -1010,7 +1059,7 @@ export default function ReaderPage() {
               textAlign: "center",
               padding: "32px 0",
               fontSize: 14,
-              color: "#b0a096",
+              color: dk.textMuted,
             }}
           >
             Chưa có bình luận nào. Hãy là người đầu tiên bình luận! 🌸
@@ -1023,6 +1072,7 @@ export default function ReaderPage() {
               currentUserId={user?.id}
               isLoggedIn={!!user}
               storyAuthorId={storyAuthorId}
+              onBlock={handleBlockUser}
               onSubmitReply={handleSubmitReply}
               onDelete={handleDeleteComment}
               onReport={(id) =>
@@ -1076,13 +1126,14 @@ export default function ReaderPage() {
         >
           <div
             style={{
-              background: "#fff",
+              background: dk.modalBg,
               borderRadius: 20,
               padding: "32px 28px",
               maxWidth: 400,
               width: "100%",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
               textAlign: "center",
+              border: `1px solid ${dk.border}`,
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1093,7 +1144,7 @@ export default function ReaderPage() {
                 fontFamily: "'Playfair Display',serif",
                 fontSize: 20,
                 fontWeight: 800,
-                color: "#1c1512",
+                color: dk.text,
               }}
             >
               Xác nhận mua chương
@@ -1102,20 +1153,20 @@ export default function ReaderPage() {
               style={{
                 margin: "0 0 16px",
                 fontSize: 14,
-                color: "#6b5a4e",
+                color: dk.navBtnText,
                 lineHeight: 1.6,
               }}
             >
               Bạn sắp mua{" "}
-              <strong style={{ color: "#1c1512" }}>
+              <strong style={{ color: dk.text }}>
                 &ldquo;{chapterData.title}&rdquo;
               </strong>{" "}
               với giá
             </p>
             <div
               style={{
-                background: "#fffbeb",
-                border: "1.5px solid #fcd34d",
+                background: dk.lockedCoin,
+                border: `1.5px solid ${dk.lockedCoinBdr}`,
                 borderRadius: 12,
                 padding: "14px 20px",
                 marginBottom: 24,
@@ -1134,9 +1185,9 @@ export default function ReaderPage() {
                   flex: 1,
                   padding: "11px 20px",
                   borderRadius: 10,
-                  border: "1.5px solid #e8e0d6",
-                  background: "#fff",
-                  color: "#6b5a4e",
+                  border: `1.5px solid ${dk.border}`,
+                  background: dk.surface,
+                  color: dk.navBtnText,
                   fontSize: 14,
                   fontWeight: 600,
                   cursor: "pointer",

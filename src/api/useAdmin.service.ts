@@ -12,6 +12,13 @@ export type AdminDashboardStats = {
   pendingReports: number;
   pendingRoleRequests: number;
   pendingWithdrawRequests: number;
+  // Revenue / commission fields
+  totalRevenueVnd: number;
+  totalPaidOrders: number;
+  totalCoinSpend: number;
+  systemEarningCoin: number;
+  totalChapterPurchases: number;
+  commissionRate: number;
 };
 
 export type AdminUser = {
