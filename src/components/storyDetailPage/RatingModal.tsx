@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
+import { useStoryDetailTheme } from "@/hooks/useStoryDetailTheme";
 
 interface RatingModalProps {
   isOpen: boolean;
@@ -12,7 +13,17 @@ interface RatingModalProps {
   onDelete?: () => void;
 }
 
-export function RatingModal({ isOpen, onClose, storyTitle, ratingSubmitted, initialScore, initialReview, onSubmit, onDelete }: RatingModalProps) {
+export function RatingModal({
+  isOpen,
+  onClose,
+  storyTitle,
+  ratingSubmitted,
+  initialScore,
+  initialReview,
+  onSubmit,
+  onDelete,
+}: RatingModalProps) {
+  const { dk, isDark } = useStoryDetailTheme();
   const [ratingHover, setRatingHover] = useState(0);
   const [myScore, setMyScore] = useState(initialScore);
   const [myReview, setMyReview] = useState(initialReview);
@@ -24,34 +35,76 @@ export function RatingModal({ isOpen, onClose, storyTitle, ratingSubmitted, init
     <div
       onClick={onClose}
       style={{
-        position: "fixed", inset: 0, zIndex: 9999,
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
         background: "rgba(0,0,0,0.45)",
-        display: "flex", alignItems: "center", justifyContent: "center",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
         padding: 16,
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: "#fff", borderRadius: 18, padding: "28px 28px 24px",
-          width: "100%", maxWidth: 420,
-          boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+          background: dk.surface,
+          borderRadius: 18,
+          padding: "28px 28px 24px",
+          width: "100%",
+          maxWidth: 420,
+          boxShadow: isDark
+            ? "0 8px 40px rgba(0,0,0,0.4)"
+            : "0 8px 40px rgba(0,0,0,0.18)",
+          border: `1px solid ${dk.border}`,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <div style={{ fontSize: 17, fontWeight: 800, color: "#1c1512" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 20,
+          }}
+        >
+          <div style={{ fontSize: 17, fontWeight: 800, color: dk.text }}>
             {ratingSubmitted ? "✏️ Cập nhật đánh giá" : "⭐ Đánh giá truyện"}
           </div>
           <button
             onClick={onClose}
-            style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#9e8e82", lineHeight: 1 }}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontSize: 20,
+              color: dk.textFaint,
+              lineHeight: 1,
+            }}
             aria-label="Đóng"
-          >✕</button>
+          >
+            ✕
+          </button>
         </div>
 
-        <div style={{ fontSize: 13, color: "#6b5a4e", marginBottom: 16, fontStyle: "italic" }}>{storyTitle}</div>
+        <div
+          style={{
+            fontSize: 13,
+            color: dk.textSub2,
+            marginBottom: 16,
+            fontStyle: "italic",
+          }}
+        >
+          {storyTitle}
+        </div>
 
-        <div style={{ display: "flex", gap: 8, marginBottom: 8, justifyContent: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            marginBottom: 8,
+            justifyContent: "center",
+          }}
+        >
           {[1, 2, 3, 4, 5].map((star) => (
             <button
               key={star}
@@ -60,17 +113,38 @@ export function RatingModal({ isOpen, onClose, storyTitle, ratingSubmitted, init
               onMouseLeave={() => setRatingHover(0)}
               onClick={() => setMyScore(star)}
               style={{
-                background: "none", border: "none", cursor: "pointer", padding: 2,
-                fontSize: 36, lineHeight: 1,
-                color: (ratingHover || myScore) >= star ? "#f59e0b" : "#d1c9be",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 2,
+                fontSize: 36,
+                lineHeight: 1,
+                color:
+                  (ratingHover || myScore) >= star ? "#f59e0b" : dk.starOff2,
                 transition: "color 0.1s, transform 0.1s",
-                transform: (ratingHover || myScore) >= star ? "scale(1.18)" : "scale(1)",
+                transform:
+                  (ratingHover || myScore) >= star
+                    ? "scale(1.18)"
+                    : "scale(1)",
               }}
-            >★</button>
+            >
+              ★
+            </button>
           ))}
         </div>
-        <div style={{ textAlign: "center", fontSize: 13, color: "#f59e0b", fontWeight: 700, marginBottom: 16, minHeight: 20 }}>
-          {myScore > 0 ? ["","Tệ","Không hay","Tạm được","Hay","Xuất sắc"][myScore] : ""}
+        <div
+          style={{
+            textAlign: "center",
+            fontSize: 13,
+            color: "#f59e0b",
+            fontWeight: 700,
+            marginBottom: 16,
+            minHeight: 20,
+          }}
+        >
+          {myScore > 0
+            ? ["", "Tệ", "Không hay", "Tạm được", "Hay", "Xuất sắc"][myScore]
+            : ""}
         </div>
 
         <textarea
@@ -79,10 +153,17 @@ export function RatingModal({ isOpen, onClose, storyTitle, ratingSubmitted, init
           placeholder="Nhận xét của bạn (không bắt buộc)..."
           rows={3}
           style={{
-            width: "100%", padding: "10px 12px", borderRadius: 10,
-            border: "1.5px solid #e8e0d6", fontSize: 13, color: "#3d2f28",
-            resize: "none", fontFamily: "inherit", outline: "none",
-            boxSizing: "border-box", background: "#fdfaf7",
+            width: "100%",
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: `1.5px solid ${dk.border}`,
+            fontSize: 13,
+            color: dk.textSub,
+            resize: "none",
+            fontFamily: "inherit",
+            outline: "none",
+            boxSizing: "border-box",
+            background: dk.surfaceMid,
           }}
         />
 
@@ -93,7 +174,17 @@ export function RatingModal({ isOpen, onClose, storyTitle, ratingSubmitted, init
                 onDelete();
                 onClose();
               }}
-              style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "1.5px solid #e8e0d6", background: "#fff", color: "#9e8e82", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+              style={{
+                flex: 1,
+                padding: "10px 0",
+                borderRadius: 10,
+                border: `1.5px solid ${dk.border}`,
+                background: dk.surface,
+                color: dk.textFaint,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
             >
               Xóa đánh giá
             </button>
@@ -111,19 +202,28 @@ export function RatingModal({ isOpen, onClose, storyTitle, ratingSubmitted, init
               }
             }}
             style={{
-              flex: 2, padding: "10px 0", borderRadius: 10, border: "none",
-              background: myScore === 0 || submitting ? "#e5ddd5" : "#c23d3f",
-              color: myScore === 0 || submitting ? "#9e8e82" : "#fff",
-              fontSize: 14, fontWeight: 700,
+              flex: 2,
+              padding: "10px 0",
+              borderRadius: 10,
+              border: "none",
+              background:
+                myScore === 0 || submitting ? dk.disabledBg2 : "#c23d3f",
+              color: myScore === 0 || submitting ? dk.textFaint : "#fff",
+              fontSize: 14,
+              fontWeight: 700,
               cursor: myScore === 0 || submitting ? "not-allowed" : "pointer",
               transition: "background 0.15s",
             }}
           >
-            {submitting ? "Đang gửi..." : ratingSubmitted ? "Cập nhật" : "Gửi đánh giá"}
+            {submitting
+              ? "Đang gửi..."
+              : ratingSubmitted
+                ? "Cập nhật"
+                : "Gửi đánh giá"}
           </button>
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

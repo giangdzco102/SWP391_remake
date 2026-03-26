@@ -23,6 +23,7 @@ import {
 } from "@/components/popup/BecomeModal";
 import { useModalStore } from "@/stores/modalStore";
 import { useSyncFollowStatus } from "@/hooks/useSyncFollowStatus";
+import { useTheme } from "@/contexts/ThemeContext";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const SEARCH_COVER_FALLBACKS = [
@@ -96,8 +97,10 @@ function CategoryDropdown({
 }
 
 // ── Header ────────────────────────────────────────────────────────────────────
-export function Header({ pending, darkMode, setDarkMode }: any) {
+export function Header({ pending }: any) {
   useSyncFollowStatus();
+  const { theme, toggleTheme } = useTheme();
+  const darkMode = theme === "dark";
   const { openModal, closeModal } = useModalStore();
   const { user, setLoading } = useAuthStore();
   const { navTo, page } = useNavStore();
@@ -425,7 +428,7 @@ export function Header({ pending, darkMode, setDarkMode }: any) {
           </div>
 
           {/* Dark mode */}
-          <button className={`dark-toggle${darkMode ? " on" : ""}`} onClick={() => setDarkMode((d: boolean) => !d)}>
+          <button className={`dark-toggle${darkMode ? " on" : ""}`} onClick={toggleTheme}>
             <div className="dark-toggle-thumb">{darkMode ? <Ico.Moon /> : <Ico.Sun />}</div>
           </button>
 

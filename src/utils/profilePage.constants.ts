@@ -35,7 +35,6 @@ export const TX_TYPE_MAP: Record<string, { label: string; type: "earn" | "spend"
 
 export const PROFILE_TABS: { key: TabKey; label: string }[] = [
   { key: "info",    label: "Thông tin" },
-  { key: "stories", label: "Tác phẩm" },
   { key: "reviews", label: "Đánh giá" },
   { key: "coins",   label: "Lịch sử coin" },
   { key: "withdraw", label: "Rút tiền" },

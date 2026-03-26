@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { useState, useEffect } from "react";
 import {
@@ -23,16 +24,19 @@ export function RankingsPage() {
   useEffect(() => {
     setLoading(true);
     getAllStories({ size: 200 })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .then((res: any) => {
-        const list: any[] = Array.isArray(res?.data?.content) ? res.data.content
-          : Array.isArray(res?.data) ? res.data
-          : Array.isArray(res) ? res : [];
+        const list: any[] = Array.isArray(res?.data?.content)
+          ? res.data.content
+          : Array.isArray(res?.data)
+            ? res.data
+            : Array.isArray(res)
+              ? res
+              : [];
         setAllStories(list.map(toStoryShape));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const sorted = [...allStories].sort((a, b) => {
@@ -45,16 +49,25 @@ export function RankingsPage() {
   const paged = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const rankOffset = (page - 1) * PAGE_SIZE;
 
-  const handleTabChange = (t: string) => { setTab(t); setPage(1); };
-  const handlePageChange = (p: number) => { setPage(p); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const handleTabChange = (t: string) => {
+    setTab(t);
+    setPage(1);
+  };
+  const handlePageChange = (p: number) => {
+    setPage(p);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
-  if (loading) return (
-    <div className="w-screen flex justify-center !mt-[20px]">
-      <div className="flex flex-col py-12 px-4 font-sans w-full gap-7 mx-auto max-w-7xl items-center pt-[120px]">
-        <div style={{ fontSize: 14, color: "#9e8e82" }}>⏳ Đang tải bảng xếp hạng...</div>
+  if (loading)
+    return (
+      <div className="w-screen flex justify-center !mt-[20px]">
+        <div className="flex flex-col py-12 px-4 font-sans w-full gap-7 mx-auto max-w-7xl items-center pt-[120px]">
+          <div style={{ fontSize: 14, color: "#9e8e82" }}>
+            ⏳ Đang tải bảng xếp hạng...
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
 
   return (
     <div className="w-screen flex justify-center !mt-[20px]">
@@ -175,7 +188,11 @@ export function RankingsPage() {
 
           {/* Pagination */}
           <div className="px-4 md:px-6 pb-2">
-            <Pagination current={page} total={totalPages} onChange={handlePageChange} />
+            <Pagination
+              current={page}
+              total={totalPages}
+              onChange={handlePageChange}
+            />
           </div>
         </div>
       </div>

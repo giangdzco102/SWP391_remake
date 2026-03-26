@@ -154,8 +154,6 @@ export default function useHttpClient(
             return axiosAuth(originalRequest);
           } catch (err) {
             clearTokens();
-            // Also clear in-memory auth state so the UI updates to logged-out
-            useAuthStore.getState().setUser(null);
             // Only redirect to home for protected pages (dashboards, profile etc.)
             // Public pages (story detail, reader, home) should stay put & show public content
             const PUBLIC_PREFIXES = [
@@ -167,6 +165,8 @@ export default function useHttpClient(
               (p) => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p + "?")
             );
             if (isPublicPage) {
+              // Clear auth state so UI reflects guest mode, but stay on the page
+              useAuthStore.getState().setUser(null);
               // Retry the request without any auth header so guests can see public content
               const retryConfig = { ...originalRequest };
               if (retryConfig.headers) {
@@ -174,6 +174,8 @@ export default function useHttpClient(
               }
               return axiosBase.request(retryConfig);
             }
+            // Protected page: clear state and redirect home
+            useAuthStore.getState().setUser(null);
             if (typeof window !== "undefined") {
               router.push("/");
             }

@@ -1,8 +1,9 @@
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useAuthStore } from "@/stores";
 import useAuthService from "@/api/useAuth.service";
-import useStoryService from "@/api/useStory.service";
 import useWalletService from "@/api/useWallet.service";
 import useWithdrawService from "@/api/useWithdraw.service";
 import { WithdrawResponse } from "@/types/auth";
@@ -23,11 +24,11 @@ import {
   PROFILE_TABS,
 } from "@/utils/profilePage.constants";
 import { formatDate } from "@/utils/profilePage.utils";
+import { formatVNDate, formatVNDateTime } from "@/utils/time";
 
 export function ProfilePage() {
   const { user } = useAuthStore();
   const { uploadAvatar, updateProfile } = useAuthService();
-  const { getMyStories } = useStoryService();
   const { getTransactions } = useWalletService();
   const { getMyWithdrawRequests } = useWithdrawService();
   const toast = useToast();
@@ -37,19 +38,12 @@ export function ProfilePage() {
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const quickAvatarRef = useRef<HTMLInputElement>(null);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [myStories, setMyStories] = useState<any[]>([]);
-  const [storiesLoading, setStoriesLoading] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [coinTxs, setCoinTxs] = useState<any[]>([]);
   const [coinLoading, setCoinLoading] = useState(false);
   const [coinPage, setCoinPage] = useState(1);
   const [coinFilter, setCoinFilter] = useState<string>("ALL");
   const [withdrawReqs, setWithdrawReqs] = useState<WithdrawResponse[]>([]);
   const [withdrawLoading, setWithdrawLoading] = useState(false);
-
-  const coinTypes = Array.from(new Set(coinTxs.map((tx) => tx.type).filter(Boolean)));
 
   const filteredCoinTxs = coinFilter === "ALL"
     ? coinTxs
@@ -61,7 +55,7 @@ export function ProfilePage() {
   const fetchWithdraws = useCallback(() => {
     setWithdrawLoading(true);
     getMyWithdrawRequests()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      
       .then((res: any) => setWithdrawReqs(res?.data ?? res ?? []))
       .catch(() => {})
       .finally(() => setWithdrawLoading(false));
@@ -76,7 +70,7 @@ export function ProfilePage() {
     if (!user || activeTab !== "coins") return;
     setCoinLoading(true);
     getTransactions()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      
       .then((res: any) => {
         const list: any[] = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
         setCoinTxs(list);
@@ -156,23 +150,30 @@ export function ProfilePage() {
           <div style={{ fontSize: 14, opacity: 0.75, maxWidth: 500, lineHeight: 1.6, marginBottom: 14 }}>
             {user?.bio || "Giới thiệu bản thân..."}
           </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 4 }}>
             <span className={`role-chip ${roleChipClass}`}>{roleIcon} {roleLabel}</span>
-            <div style={{
-              display: "flex", alignItems: "center", gap: 8,
-              background: "#fdf7f0", padding: "4px 12px", borderRadius: "10px", border: "1.5px solid #ece6dc",
-            }}>
-              <span style={{ fontSize: 13, fontWeight: 800, color: "#2563eb" }}>LV.{user?.level ?? 1}</span>
-              <div style={{ width: 100, height: 6, background: "#e5e7eb", borderRadius: 3, overflow: "hidden" }}>
-                <div style={{
-                  width: `${Math.min(100, ((user?.experience ?? 0) / ((user?.level ?? 1) * ((user?.level ?? 1) + 1) * 50)) * 100)}%`,
-                  height: "100%", background: "linear-gradient(90deg, #3b82f6, #2563eb)", borderRadius: 3,
-                }} />
-              </div>
-              <span style={{ fontSize: 11, color: "#9e8e82", fontWeight: 500 }}>
-                {user?.experience ?? 0} / {(user?.level ?? 1) * ((user?.level ?? 1) + 1) * 50} EXP
-              </span>
-            </div>
+            <button
+              onClick={() => setShowEdit(true)}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "8px 16px", borderRadius: 10,
+                border: "1.5px solid #c23d3f", background: "#c23d3f",
+                color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer",
+              }}
+            >
+              ✏️ Sửa hồ sơ
+            </button>
+            <button
+              onClick={() => setShowChangePw(true)}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "8px 16px", borderRadius: 10,
+                border: "1.5px solid #ddd5c8", background: "#fff",
+                color: "#6b5a4e", fontWeight: 700, fontSize: 13, cursor: "pointer",
+              }}
+            >
+              🔐 Đổi mật khẩu
+            </button>
           </div>
         </div>
 
@@ -185,7 +186,7 @@ export function ProfilePage() {
       {/* ── Stats ── */}
       <div className="profile-stats-grid">
         {[
-          { num: user?.totalFollowedStories ?? 0, label: "Lượt đọc",   icon: "📖" },
+          { num: user?.totalFollowedStories ?? 0, label: "Yêu thích",   icon: "📖" },
           { num: 0,                               label: "Tác phẩm",   icon: "✍️"  },
           { num: 0,                               label: "Đánh giá",   icon: "⭐"  },
           { num: user?.walletBalance ?? 0,        label: "Coin đã kiếm", icon: "🪙" },
@@ -259,91 +260,14 @@ export function ProfilePage() {
         </div>
       )}
 
-      {activeTab === "stories" && (
-        <div className="fade-in">
-          {storiesLoading ? (
-            <div className="empty-state">⏳ Đang tải tác phẩm...</div>
-          ) : myStories.length === 0 ? (
-            <div className="empty-state">Chưa có tác phẩm nào</div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              {myStories.map((s: any) => (
-                <div key={s.id} style={{
-                  background: "#fff", borderRadius: 14, border: "1.5px solid #ece6dc",
-                  padding: "14px 18px", display: "flex", alignItems: "center", gap: 14,
-                }}>
-                  {s.coverUrl && !s.coverUrl.includes("placeholder") ? (
-                    <img src={s.coverUrl} alt={s.title} style={{ width: 48, height: 68, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
-                  ) : (
-                    <div style={{ width: 48, height: 68, borderRadius: 8, background: "linear-gradient(135deg,#f093fb,#f5576c)", flexShrink: 0 }} />
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: "#1c1512", marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
-                    <div style={{ fontSize: 12, color: "#9e8e82" }}>
-                      {s.categories?.[0]?.name ?? ""} · {s.publishedChapterCount ?? s.totalChapterCount ?? 0} chương
-                    </div>
-                    <div style={{ fontSize: 11, marginTop: 4 }}>
-                      <span style={{
-                        padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 700,
-                        background: s.status === "PUBLISHED" ? "#dcfce7" : s.status === "PENDING_REVIEW" ? "#fef3c7" : "#f5f5f5",
-                        color: s.status === "PUBLISHED" ? "#166534" : s.status === "PENDING_REVIEW" ? "#92400e" : "#6b5a4e",
-                      }}>
-                        {s.status === "PUBLISHED" ? "Đã xuất bản" : s.status === "PENDING_REVIEW" ? "Chờ duyệt" : s.status === "DRAFT" ? "Nháp" : s.status}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
       {activeTab === "reviews" && (
         <div className="fade-in">
           <div className="empty-state">Chưa có đánh giá nào</div>
         </div>
       )}
 
-      {/* ── Tab: Lịch sử coin ── */}
       {activeTab === "coins" && (
-        <div className="fade-in max-w-[680px] mx-auto">
-          {/* Filter bar */}
-          {!coinLoading && coinTxs.length > 0 && (
-            <div style={{ overflow: "hidden", marginBottom: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "nowrap", overflowX: "auto", paddingBottom: 4 }}>
-                {[
-                  { type: "ALL", label: "Tất cả", count: coinTxs.length },
-                  ...coinTypes.map((type) => ({
-                    type,
-                    label: (TX_TYPE_MAP[type] ?? { label: type }).label,
-                    count: coinTxs.filter((tx) => tx.type === type).length,
-                  })),
-                ].map(({ type, label, count }) => {
-                  const isActive = coinFilter === type;
-                  return (
-                    <button
-                      key={type}
-                      className={`profile-tab${isActive ? " active" : ""}`}
-                      onClick={() => { setCoinFilter(type); setCoinPage(1); }}
-                      style={{ display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", flexShrink: 0 }}
-                    >
-                      {label}
-                      <span style={{
-                        padding: "1px 7px", borderRadius: 20, fontSize: 10, fontWeight: 700,
-                        background: isActive ? "rgba(255,255,255,0.25)" : "#f0ece4",
-                        color: isActive ? "#fff" : "#9e8e82",
-                      }}>
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
+        <div className="fade-in">
           {coinLoading ? (
             <div className="empty-state">⏳ Đang tải lịch sử coin...</div>
           ) : coinTxs.length === 0 ? (
@@ -366,7 +290,7 @@ export function ProfilePage() {
                             {tx.description ?? mapped.label}
                           </div>
                           <div style={{ fontSize: 12, color: "#9e8e82" }}>
-                            {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString("vi-VN") : ""}
+                          {tx.createdAt ? formatVNDate(tx.createdAt) : ""}
                           </div>
                         </div>
                       </div>
@@ -424,8 +348,6 @@ export function ProfilePage() {
           )}
         </div>
       )}
-
-      {/* ── Tab: Rút tiền ── */}
       {activeTab === "withdraw" && (
         <div className="fade-in">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -449,7 +371,7 @@ export function ProfilePage() {
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 15, color: "#1c1512" }}>-{req.amount} coin</div>
                     <div style={{ fontSize: 12, color: "#9e8e82" }}>Yêu cầu rút tiền</div>
-                    <div style={{ fontSize: 11, color: "#bfad9e", marginTop: 2 }}>{new Date(req.createdAt).toLocaleString("vi-VN")}</div>
+                    <div style={{ fontSize: 11, color: "#bfad9e", marginTop: 2 }}>{formatVNDateTime(req.createdAt)}</div>
                   </div>
                   <div style={{
                     padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700,

@@ -7,6 +7,7 @@ import usePaymentService from "@/api/usePayment.service";
 import { CoinPackage } from "@/api/usePayment.service";
 import { WalletInfo, WalletTx } from "@/types/myStoriesPage";
 import { T, WALLET_FALLBACK_PKGS } from "@/utils/myStoriesPage.constants";
+import { formatVNDate } from "@/utils/time";
 
 const TX_COLOR_MAP: Record<string, string> = {
   TOPUP: T.success,
@@ -226,14 +227,25 @@ export function WalletSection({
           padding: "18px 20px",
         }}
       >
-        <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 4 }}>
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 700,
+            color: T.text,
+            marginBottom: 4,
+          }}
+        >
           💳 Nạp coin qua PayOS
         </div>
         <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 14 }}>
           Thanh toán an toàn · Coin vào ngay sau khi thanh toán thành công
         </div>
         <div
-          style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(5, 1fr)",
+            gap: 10,
+          }}
         >
           {packages.map((pkg) => (
             <button
@@ -286,8 +298,7 @@ export function WalletSection({
                   fontSize: 11,
                   fontWeight: 600,
                   color: "#fff",
-                  background:
-                    buyingId === pkg.id ? T.textMuted : T.accent,
+                  background: buyingId === pkg.id ? T.textMuted : T.accent,
                   borderRadius: 6,
                   padding: "3px 10px",
                   marginTop: 2,
@@ -360,12 +371,42 @@ export function WalletSection({
               Yêu cầu quy đổi xu sang tiền mặt. Quản trị viên sẽ xử lý trong
               vòng 1-3 ngày làm việc.
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 12,
+              }}
+            >
               {[
-                { key: "amount", label: "Số xu muốn rút", type: "number", placeholder: "VD: 50000", required: true },
-                { key: "bankName", label: "Ngân hàng", type: "text", placeholder: "VD: Vietcombank", required: true },
-                { key: "bankAccount", label: "Số tài khoản", type: "text", placeholder: "VD: 1234567890", required: true },
-                { key: "bankOwner", label: "Chủ tài khoản", type: "text", placeholder: "VD: NGUYEN VAN A", required: true },
+                {
+                  key: "amount",
+                  label: "Số xu muốn rút",
+                  type: "number",
+                  placeholder: "VD: 50000",
+                  required: true,
+                },
+                {
+                  key: "bankName",
+                  label: "Ngân hàng",
+                  type: "text",
+                  placeholder: "VD: Vietcombank",
+                  required: true,
+                },
+                {
+                  key: "bankAccount",
+                  label: "Số tài khoản",
+                  type: "text",
+                  placeholder: "VD: 1234567890",
+                  required: true,
+                },
+                {
+                  key: "bankOwner",
+                  label: "Chủ tài khoản",
+                  type: "text",
+                  placeholder: "VD: NGUYEN VAN A",
+                  required: true,
+                },
               ].map(({ key, label, type, placeholder, required }) => (
                 <div key={key}>
                   <label
@@ -378,9 +419,7 @@ export function WalletSection({
                     }}
                   >
                     {label}{" "}
-                    {required && (
-                      <span style={{ color: T.danger }}>*</span>
-                    )}
+                    {required && <span style={{ color: T.danger }}>*</span>}
                   </label>
                   <input
                     type={type}
@@ -478,11 +517,13 @@ export function WalletSection({
                     {wr.status === "APPROVED"
                       ? "✅ Đã duyệt"
                       : wr.status === "REJECTED"
-                      ? "❌ Từ chối"
-                      : "⏳ Chờ duyệt"}
+                        ? "❌ Từ chối"
+                        : "⏳ Chờ duyệt"}
                   </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>
+                    <div
+                      style={{ fontSize: 13, fontWeight: 700, color: T.text }}
+                    >
                       {(wr.amount ?? 0).toLocaleString()} xu
                     </div>
                     <div style={{ fontSize: 12, color: T.textSec }}>
@@ -507,7 +548,7 @@ export function WalletSection({
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {new Date(wr.createdAt).toLocaleDateString("vi-VN")}
+                    {formatVNDate(wr.createdAt)}
                   </div>
                 </div>
               ))
@@ -575,9 +616,7 @@ export function WalletSection({
                 >
                   {tx.type}
                 </span>
-                <div
-                  style={{ flex: 1, fontSize: 13, color: T.text }}
-                >
+                <div style={{ flex: 1, fontSize: 13, color: T.text }}>
                   {tx.description || "—"}
                 </div>
                 <div
@@ -590,10 +629,8 @@ export function WalletSection({
                   {tx.amount >= 0 ? "+" : ""}
                   {tx.amount.toLocaleString()}
                 </div>
-                <div
-                  style={{ fontSize: 11, color: T.textMuted }}
-                >
-                  {new Date(tx.createdAt).toLocaleDateString("vi-VN")}
+                <div style={{ fontSize: 11, color: T.textMuted }}>
+                  {formatVNDate(tx.createdAt)}
                 </div>
               </div>
             ))

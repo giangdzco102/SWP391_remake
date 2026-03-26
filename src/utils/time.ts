@@ -1,11 +1,41 @@
-import moment from "moment";
-import "moment/locale/vi"; // thêm dòng này
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+import relativeTime from "dayjs/plugin/relativeTime";
+import "dayjs/locale/vi";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(relativeTime);
+dayjs.locale("vi");
+
+const VN_TZ = "Asia/Ho_Chi_Minh";
+
+/**
+ * Chuyển chuỗi thời gian UTC (dù có hay không có chữ Z) sang giờ Việt Nam
+ * rồi format theo pattern truyền vào.
+ * Mặc định: 'HH:mm DD/MM/YYYY'
+ */
+export const formatVNTime = (
+  raw: string | null | undefined,
+  pattern = "HH:mm DD/MM/YYYY"
+): string => {
+  if (!raw) return "—";
+  return dayjs.utc(raw).tz(VN_TZ).format(pattern);
+};
+
+/** Format chỉ ngày: DD/MM/YYYY */
+export const formatVNDate = (raw: string | null | undefined) =>
+  formatVNTime(raw, "DD/MM/YYYY");
+
+/** Format đầy đủ: HH:mm:ss DD/MM/YYYY */
+export const formatVNDateTime = (raw: string | null | undefined) =>
+  formatVNTime(raw, "HH:mm:ss DD/MM/YYYY");
 
 export const timeStartToNow = (createAt: string | Date) => {
-  moment.locale("vi");
-  const now = moment();
-  const created = moment(createAt);
-  const diffInMinutes = now.diff(created, "minutes");
+  const created = dayjs.utc(createAt as string).tz(VN_TZ);
+  const now = dayjs().tz(VN_TZ);
+  const diffInMinutes = now.diff(created, "minute");
 
   if (diffInMinutes < 1440) {
     // < 1 ngày
@@ -52,22 +82,12 @@ export function initThemeModeByTime(): "dark" | "light" {
 }
 
 export const showTimeStart1 = (createAt: string) => {
-  moment.locale("vi");
-  const b = moment().format();
-  const a = moment(createAt, "YYYY-MM-DD");
-  const c = -a.diff(b, "minutes");
-  let result = createAt;
-  if (c < 1440) {
-    result = moment(result).fromNow(); // ví dụ: "một giờ trước"
-  } else if (c < 2880) {
-    result = "Hôm qua";
-  } else {
-    const date = moment(result).date();
-    const month = moment(result).month() + 1;
-    const year = moment(result).year();
-    result = `${date}/${month}/${year}`;
-  }
-  return result;
+  const d = dayjs.utc(createAt).tz(VN_TZ);
+  const now = dayjs().tz(VN_TZ);
+  const c = now.diff(d, "minute");
+  if (c < 1440) return d.fromNow();
+  if (c < 2880) return "Hôm qua";
+  return d.format("D/M/YYYY");
 };
 
 type DateFormat =

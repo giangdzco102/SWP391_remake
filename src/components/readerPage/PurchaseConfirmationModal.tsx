@@ -2,19 +2,49 @@ import React, { useState } from "react";
 import { useAuthStore } from "@/stores";
 import useChapterService from "@/api/useChapter.service";
 import { useToast } from "@/hooks/use-toast";
-import { ReaderChapterData } from "@/types/story";
+import { ReaderChapterData as ChapterData } from "@/types/story";
+import { useReaderTheme } from "@/hooks/useReaderTheme";
 
 interface Props {
-  chapterData: ReaderChapterData;
+  chapterData: ChapterData;
   onClose: () => void;
-  onSuccess: (updatedChapter: ReaderChapterData) => void;
+  onSuccess: (updatedChapter: ChapterData) => void;
 }
 
-export function PurchaseConfirmationModal({ chapterData, onClose, onSuccess }: Props) {
-  const { updateBalance } = useAuthStore();
+export function PurchaseConfirmationModal({
+  chapterData,
+  onClose,
+  onSuccess,
+}: Props) {
   const { purchaseChapter, getChapter } = useChapterService();
+  const { updateBalance } = useAuthStore();
+  const { dk } = useReaderTheme();
   const toast = useToast();
+
   const [purchasing, setPurchasing] = useState(false);
+
+  const handlePurchase = async () => {
+    setPurchasing(true);
+    try {
+      await purchaseChapter(chapterData.id);
+      updateBalance(chapterData.coinPrice);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const res: any = await getChapter(chapterData.id);
+      const data = res?.data ?? res;
+      toast.success(
+        `Chương "${chapterData.title}" đã được mở khóa.`,
+        "Mở khóa thành công!",
+      );
+      onSuccess(data);
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.message ?? "Không đủ xu hoặc lỗi hệ thống.",
+        "Mở khóa thất bại",
+      );
+    } finally {
+      setPurchasing(false);
+    }
+  };
 
   return (
     <div
@@ -33,13 +63,14 @@ export function PurchaseConfirmationModal({ chapterData, onClose, onSuccess }: P
     >
       <div
         style={{
-          background: "#fff",
+          background: dk.modalBg,
           borderRadius: 20,
           padding: "32px 28px",
           maxWidth: 400,
           width: "100%",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
           textAlign: "center",
+          border: `1px solid ${dk.border}`,
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -50,7 +81,7 @@ export function PurchaseConfirmationModal({ chapterData, onClose, onSuccess }: P
             fontFamily: "'Playfair Display',serif",
             fontSize: 20,
             fontWeight: 800,
-            color: "#1c1512",
+            color: dk.text,
           }}
         >
           Xác nhận mua chương
@@ -59,20 +90,20 @@ export function PurchaseConfirmationModal({ chapterData, onClose, onSuccess }: P
           style={{
             margin: "0 0 16px",
             fontSize: 14,
-            color: "#6b5a4e",
+            color: dk.navBtnText,
             lineHeight: 1.6,
           }}
         >
           Bạn sắp mua{" "}
-          <strong style={{ color: "#1c1512" }}>
+          <strong style={{ color: dk.text }}>
             &ldquo;{chapterData.title}&rdquo;
           </strong>{" "}
           với giá
         </p>
         <div
           style={{
-            background: "#fffbeb",
-            border: "1.5px solid #fcd34d",
+            background: dk.lockedCoin,
+            border: `1.5px solid ${dk.lockedCoinBdr}`,
             borderRadius: 12,
             padding: "14px 20px",
             marginBottom: 24,
@@ -91,9 +122,9 @@ export function PurchaseConfirmationModal({ chapterData, onClose, onSuccess }: P
               flex: 1,
               padding: "11px 20px",
               borderRadius: 10,
-              border: "1.5px solid #e8e0d6",
-              background: "#fff",
-              color: "#6b5a4e",
+              border: `1.5px solid ${dk.border}`,
+              background: dk.surface,
+              color: dk.navBtnText,
               fontSize: 14,
               fontWeight: 600,
               cursor: "pointer",
@@ -103,28 +134,7 @@ export function PurchaseConfirmationModal({ chapterData, onClose, onSuccess }: P
           </button>
           <button
             disabled={purchasing}
-            onClick={async () => {
-              setPurchasing(true);
-              try {
-                await purchaseChapter(chapterData.id);
-                updateBalance(chapterData.coinPrice || 0);
-                const res: any = await getChapter(chapterData.id);
-                const data = res?.data ?? res;
-                toast.success(
-                  `Chương "${chapterData.title}" đã được mở khóa.`,
-                  "Mở khóa thành công!"
-                );
-                onSuccess(data);
-                onClose();
-              } catch (err: any) {
-                toast.error(
-                  err?.response?.data?.message ?? "Không đủ xu hoặc lỗi hệ thống.",
-                  "Mở khóa thất bại"
-                );
-              } finally {
-                setPurchasing(false);
-              }
-            }}
+            onClick={handlePurchase}
             style={{
               flex: 1,
               padding: "11px 20px",

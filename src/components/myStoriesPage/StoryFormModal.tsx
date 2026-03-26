@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import useHttpClient from "@/api/useHttpClient";
 import APP_CONFIG from "@/config/app-config";
 import { useToast } from "@/hooks/use-toast";
@@ -19,24 +19,28 @@ interface StoryFormModalProps {
   onSaved: () => void;
 }
 
-export function StoryFormModal({ story, onClose, onSaved }: StoryFormModalProps) {
+export function StoryFormModal({
+  story,
+  onClose,
+  onSaved,
+}: StoryFormModalProps) {
   const httpClient = useHttpClient();
   const toast = useToast();
   const isEdit = !!story;
-
   const [title, setTitle] = useState(story?.title ?? "");
   const [description, setDescription] = useState(
-    story?.summary ?? story?.description ?? ""
+    story?.summary ?? story?.description ?? "",
   );
   const [coverUrl, setCoverUrl] = useState(story?.coverUrl ?? "");
   const [selectedCategories, setSelectedCategories] = useState<number[]>(
-    story?.categoryIds ?? story?.categories?.map((c) => c.id) ?? []
+    story?.categoryIds ?? story?.categories?.map((c) => c.id) ?? [],
   );
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [loadingCats, setLoadingCats] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const coverFileRef = useRef<HTMLInputElement>(null);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     httpClient
       .get(APP_CONFIG.CATEGORY.LIST)
@@ -46,12 +50,43 @@ export function StoryFormModal({ story, onClose, onSaved }: StoryFormModalProps)
       })
       .catch(() => setCategories([]))
       .finally(() => setLoadingCats(false));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleCat = (id: number) =>
     setSelectedCategories((p) =>
-      p.includes(id) ? p.filter((c) => c !== id) : [...p, id]
+      p.includes(id) ? p.filter((c) => c !== id) : [...p, id],
     );
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vui lòng chọn file ảnh!");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Ảnh quá lớn! Tối đa 5MB.");
+      return;
+    }
+    setCoverUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const raw: any = await httpClient.post(
+        APP_CONFIG.UPLOAD.IMAGE("cover"),
+        formData,
+      );
+      const url: string = raw?.data?.url ?? raw?.url;
+      if (!url) throw new Error("Không nhận được URL ảnh bìa từ server.");
+      setCoverUrl(url);
+      toast.success("Đã tải ảnh bìa lên!");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Upload ảnh bìa thất bại!");
+    } finally {
+      setCoverUploading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!title.trim()) return;
@@ -110,7 +145,6 @@ export function StoryFormModal({ story, onClose, onSaved }: StoryFormModalProps)
           boxShadow: T.shadowMd,
         }}
       >
-        {/* Header */}
         <div
           style={{
             padding: "22px 28px 16px",
@@ -157,8 +191,6 @@ export function StoryFormModal({ story, onClose, onSaved }: StoryFormModalProps)
             ✕
           </button>
         </div>
-
-        {/* Body */}
         <div
           style={{
             overflowY: "auto",
@@ -169,7 +201,6 @@ export function StoryFormModal({ story, onClose, onSaved }: StoryFormModalProps)
           }}
         >
           <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
-            {/* Cover */}
             <div style={{ flexShrink: 0, width: 120 }}>
               <label style={fLabel()}>Ảnh bìa</label>
               <div
@@ -192,24 +223,53 @@ export function StoryFormModal({ story, onClose, onSaved }: StoryFormModalProps)
                   <img
                     src={coverUrl}
                     alt="cover"
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
                     onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                      (e.currentTarget as HTMLImageElement).style.display =
+                        "none";
                     }}
                   />
                 ) : (
                   "📖"
                 )}
               </div>
+              <button
+                type="button"
+                onClick={() => coverFileRef.current?.click()}
+                disabled={coverUploading}
+                style={{
+                  width: "100%",
+                  padding: "6px 0",
+                  background: T.accentLight,
+                  color: T.accent,
+                  border: `1.5px solid ${T.accent}`,
+                  borderRadius: T.radiusSm,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: coverUploading ? "wait" : "pointer",
+                  marginBottom: 6,
+                }}
+              >
+                {coverUploading ? "⏳ Đang tải..." : "📷 Tải ảnh lên"}
+              </button>
+              <input
+                ref={coverFileRef}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={handleCoverUpload}
+              />
               <input
                 value={coverUrl}
                 onChange={(e) => setCoverUrl(e.target.value)}
-                placeholder="URL ảnh bìa…"
+                placeholder="Hoặc dán URL ảnh bìa…"
                 style={{ ...fInput(), fontSize: 11, padding: "7px 10px" }}
               />
             </div>
-
-            {/* Title + Description */}
             <div
               style={{
                 flex: 1,
@@ -260,8 +320,6 @@ export function StoryFormModal({ story, onClose, onSaved }: StoryFormModalProps)
               </div>
             </div>
           </div>
-
-          {/* Categories */}
           <div>
             <label style={fLabel()}>
               Thể loại{" "}
@@ -311,7 +369,6 @@ export function StoryFormModal({ story, onClose, onSaved }: StoryFormModalProps)
               </div>
             )}
           </div>
-
           {!isEdit && (
             <div
               style={{
@@ -325,13 +382,11 @@ export function StoryFormModal({ story, onClose, onSaved }: StoryFormModalProps)
               }}
             >
               💡 <strong>Mẹo:</strong> Tác phẩm vừa tạo sẽ ở trạng thái{" "}
-              <strong>Bản nháp</strong>. Thêm chương xong rồi hãy nộp kiểm
-              duyệt để xuất bản.
+              <strong>Bản nháp</strong>. Thêm chương xong rồi hãy nộp kiểm duyệt
+              để xuất bản.
             </div>
           )}
         </div>
-
-        {/* Footer */}
         <div
           style={{
             padding: "16px 28px",
@@ -351,11 +406,7 @@ export function StoryFormModal({ story, onClose, onSaved }: StoryFormModalProps)
             disabled={!title.trim() || saving}
             style={!title.trim() || saving ? btnDisabled : btnPrimary}
           >
-            {saving
-              ? "Đang lưu…"
-              : isEdit
-              ? "💾 Cập nhật"
-              : "🚀 Tạo tác phẩm"}
+            {saving ? "Đang lưu…" : isEdit ? "💾 Cập nhật" : "🚀 Tạo tác phẩm"}
           </button>
         </div>
       </div>

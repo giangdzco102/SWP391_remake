@@ -1,153 +1,82 @@
 ﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useNavStore } from "@/stores/navStore";
 import { useAuthStore } from "@/stores";
 import useChapterService from "@/api/useChapter.service";
 import useReportService from "@/api/useReport.service";
 import useStoryService from "@/api/useStory.service";
+import { formatVNDate } from "@/utils/time";
 import { useStoryStore } from "@/stores/storyStore";
 import { useGotoReader } from "@/hooks/useGotoReader";
+import { useReaderTheme } from "@/hooks/useReaderTheme";
 import Utils from "@/utils/utils";
-import { Ico } from "@/components/Icons";
 import { useToast } from "@/hooks/use-toast";
 
-import { ReaderChapterData as ChapterData } from "@/types/story";
+import {
+  ReaderChapterData as ChapterData,
+} from "@/types/story";
 import { FONT_OPTIONS } from "@/utils/constants";
-import { ReadingSettingsPanel } from "@/components/popup/ReadingSettingsPanel";
+
+import { ReaderNav } from "@/components/readerPage/ReaderNav";
+import { ReaderMeta } from "@/components/readerPage/ReaderMeta";
+import { ReaderBottomNav } from "@/components/readerPage/ReaderBottomNav";
+import { LockedChapterGate } from "@/components/readerPage/LockedChapterGate";
+import { PurchaseConfirmationModal } from "@/components/readerPage/PurchaseConfirmationModal";
+import { ReaderCommentsSection } from "@/components/readerPage/ReaderCommentsSection";
 import { ChapterListModal } from "@/components/modals/ChapterListModal";
 import { ReportModal } from "@/components/modals/ReportModal";
-
-import { PurchaseConfirmationModal } from "@/components/readerPage/PurchaseConfirmationModal";
-import { LockedChapterGate } from "@/components/readerPage/LockedChapterGate";
-import { ReaderCommentsSection } from "@/components/readerPage/ReaderCommentsSection";
 
 // ── Main Page ─────────────────────────────────────────────────────────────
 export default function ReaderPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const gotoReader = useGotoReader();
-  const { selectedStory, selectedChapterId, setSelectedChapterId, setSelectedStory } =
-    useNavStore();
+  const {
+    selectedStory,
+    selectedChapterId,
+    setSelectedChapterId,
+    setSelectedStory,
+  } = useNavStore();
   const { chapters, setChapters } = useStoryStore();
   const { user } = useAuthStore();
   const { getChapter, getChaptersByStory } = useChapterService();
   const { getStoryDetail } = useStoryService();
   const { createReport } = useReportService();
   const toast = useToast();
+  const { dk } = useReaderTheme();
 
-  const [chapterData, setChapterData] = useState<ChapterData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [confirmPurchase, setConfirmPurchase] = useState(false);
-  const [chapterError, setChapterError] = useState<string | null>(null);
+  // Reading settings
   const [fontSize, setFontSize] = useState(16);
   const [fontFamily, setFontFamily] = useState(FONT_OPTIONS[0].value);
   const [lineHeight, setLineHeight] = useState(1.8);
+
+  // UI state
   const [scrollPct, setScrollPct] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [showChapterList, setShowChapterList] = useState(false);
 
-  // Report state
+  // Chapter data
+  const [chapterData, setChapterData] = useState<ChapterData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [chapterError, setChapterError] = useState<string | null>(null);
+
+  // Purchase
+  const [confirmPurchase, setConfirmPurchase] = useState(false);
+
+  // Report modal
   const [reportModal, setReportModal] = useState<{
     targetType: string;
     targetId: number;
     label: string;
   } | null>(null);
   const [reporting, setReporting] = useState(false);
+
+  // Story author (for comment author badge)
   const [storyAuthorId, setStoryAuthorId] = useState<number | null>(null);
 
-  // Fetch chapter list for prev/next navigation
-  useEffect(() => {
-    const sId = searchParams.get("storyId");
-    const storyId = chapterData?.storyId || (sId ? Number(sId) : null);
-    if (!storyId || (chapters.length > 0 && chapters[0].id)) {
-      return;
-    }
-
-    const mapChapters = (list: any[]) =>
-      list.map((ch: any) => ({
-        id: ch.id,
-        title: ch.title,
-        chapterOrder: ch.chapterOrder ?? 0,
-        coinPrice: ch.coinPrice ?? 0,
-        isPurchased: ch.isPurchased ?? false,
-        words: 0,
-        readTime: "—",
-        publishedAt: ch.publishAt
-          ? new Date(ch.publishAt).toLocaleDateString("vi-VN")
-          : undefined,
-        locked: (ch.coinPrice ?? 0) > 0 && !(ch.isPurchased ?? false),
-        price: ch.coinPrice ?? 0,
-      }));
-
-    const loadFromDetail = () =>
-      getStoryDetail(storyId)
-        .then((r: any) => {
-          const det = r?.data ?? r;
-          const detList: any[] = Array.isArray(det?.chapters)
-            ? det.chapters
-            : [];
-          if (detList.length) setChapters(mapChapters(detList));
-        })
-        .catch(() => {});
-
-    getChaptersByStory(storyId)
-      .then((res: any) => {
-        const list: any[] = Array.isArray(res?.data)
-          ? res.data
-          : Array.isArray(res)
-            ? res
-            : [];
-        if (!list.length) {
-          return loadFromDetail();
-        }
-        setChapters(mapChapters(list));
-      })
-      .catch(() => {
-        loadFromDetail();
-      });
-  }, [
-    chapterData?.storyId,
-    chapters.length,
-    getChaptersByStory,
-    getStoryDetail,
-    setChapters,
-  ]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Fetch story author ID (for "Tác giả" badge in comments)
-  useEffect(() => {
-    const storyId = chapterData?.storyId;
-    if (!storyId) return;
-    getStoryDetail(storyId)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .then((r: any) => {
-        const det = r?.data ?? r;
-        const authorId: number | undefined = det?.authorId ?? det?.author?.id;
-        if (authorId) setStoryAuthorId(authorId);
-      })
-      .catch(() => {});
-  }, [chapterData?.storyId, getStoryDetail]);
-
-  // Sync from URL
-  useEffect(() => {
-    const sId = searchParams.get("storyId");
-    const cId = searchParams.get("chapterId");
-    if (!sId || !cId) return;
-
-    if (!isNaN(Number(cId))) {
-      if (Number(cId) !== selectedChapterId) {
-        setSelectedChapterId(Number(cId));
-      }
-    } else if (chapters.length > 0) {
-      const found = chapters.find(ch => Utils.slugify(ch.title) === cId);
-      if (found && found.id !== selectedChapterId) {
-        setSelectedChapterId(found.id);
-      }
-    }
-  }, [searchParams, selectedChapterId, chapters]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Scroll progress
+  // ── Scroll progress ───────────────────────────────────────────────────────
   useEffect(() => {
     const handler = () => {
       const el = document.documentElement;
@@ -160,7 +89,86 @@ export default function ReaderPage() {
     return () => window.removeEventListener("scroll", handler);
   }, []);
 
-  // Fetch chapter when id changes
+  // ── Sync chapterId from URL ───────────────────────────────────────────────
+  useEffect(() => {
+    const sId = searchParams.get("storyId");
+    const cId = searchParams.get("chapterId");
+    if (!sId || !cId) return;
+
+    if (!isNaN(Number(cId))) {
+      if (Number(cId) !== selectedChapterId) {
+        setSelectedChapterId(Number(cId));
+      }
+    } else if (chapters.length > 0) {
+      const found = chapters.find((ch) => Utils.slugify(ch.title) === cId);
+      if (found && found.id !== selectedChapterId) {
+        setSelectedChapterId(found.id);
+      }
+    }
+  }, [searchParams, selectedChapterId, chapters]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Fetch chapter list for prev/next navigation ───────────────────────────
+  useEffect(() => {
+    const sId = searchParams.get("storyId");
+    const storyId = chapterData?.storyId || (sId ? Number(sId) : null);
+    if (!storyId || (chapters.length > 0 && chapters[0].id)) return;
+
+    const mapChapters = (list: any[]) =>
+      list.map((ch: any) => ({
+        id: ch.id,
+        title: ch.title,
+        chapterOrder: ch.chapterOrder ?? 0,
+        coinPrice: ch.coinPrice ?? 0,
+        isPurchased: ch.isPurchased ?? false,
+        words: 0,
+        readTime: "—",
+        publishedAt: ch.publishAt ? formatVNDate(ch.publishAt) : undefined,
+        locked: (ch.coinPrice ?? 0) > 0 && !(ch.isPurchased ?? false),
+        price: ch.coinPrice ?? 0,
+      }));
+
+    const loadFromDetail = () =>
+      getStoryDetail(storyId)
+        .then((r: any) => {
+          const det = r?.data ?? r;
+          const detList: any[] = Array.isArray(det?.chapters) ? det.chapters : [];
+          if (detList.length) setChapters(mapChapters(detList));
+        })
+        .catch(() => {});
+
+    getChaptersByStory(storyId)
+      .then((res: any) => {
+        const list: any[] = Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res)
+            ? res
+            : [];
+        if (!list.length) return loadFromDetail();
+        setChapters(mapChapters(list));
+      })
+      .catch(() => loadFromDetail());
+  }, [
+    chapterData?.storyId,
+    chapters.length,
+    getChaptersByStory,
+    getStoryDetail,
+    setChapters,
+  ]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Fetch story author ID ─────────────────────────────────────────────────
+  useEffect(() => {
+    const storyId = chapterData?.storyId;
+    if (!storyId) return;
+    getStoryDetail(storyId)
+      .then((r: any) => {
+        const det = r?.data ?? r;
+        const authorId: number | undefined = det?.authorId ?? det?.author?.id;
+        if (authorId) setStoryAuthorId(authorId);
+      })
+      .catch(() => {});
+  }, [chapterData?.storyId, getStoryDetail]);
+
+  // ── Fetch chapter when ID changes ─────────────────────────────────────────
   useEffect(() => {
     if (!selectedChapterId) {
       setLoading(false);
@@ -174,7 +182,6 @@ export default function ReaderPage() {
     window.scrollTo(0, 0);
 
     getChapter(selectedChapterId)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .then((res: any) => {
         const data: ChapterData = res?.data ?? res;
         if (!data?.id) {
@@ -187,7 +194,6 @@ export default function ReaderPage() {
           }
         }
       })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .catch((err: any) => {
         setChapterData(null);
         const status = err?.response?.status;
@@ -204,17 +210,17 @@ export default function ReaderPage() {
       .finally(() => setLoading(false));
   }, [selectedChapterId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleOpenReport = (
-    targetType: string,
-    targetId: number,
-    label: string,
-  ) => {
-    if (!user) {
-      router.push("?login");
-      return;
-    }
-    setReportModal({ targetType, targetId, label });
-  };
+  // ── Report handlers ───────────────────────────────────────────────────────
+  const handleOpenReport = useCallback(
+    (targetType: string, targetId: number, label: string) => {
+      if (!user) {
+        router.push("?login");
+        return;
+      }
+      setReportModal({ targetType, targetId, label });
+    },
+    [user, router],
+  );
 
   const handleSubmitReport = async (reason: string) => {
     if (!reportModal) return;
@@ -234,21 +240,26 @@ export default function ReaderPage() {
     }
   };
 
+  // ── Chapter navigation ────────────────────────────────────────────────────
   const currentIdx = chapters.findIndex((c) => c.id === selectedChapterId);
   const prevChapter = currentIdx > 0 ? chapters[currentIdx - 1] : null;
   const nextChapter =
     currentIdx < chapters.length - 1 ? chapters[currentIdx + 1] : null;
 
-  const goToChapter = (id: number) => {
-    const sId = searchParams.get("storyId") || selectedStory?.id;
-    if (sId) {
-      const ch = chapters.find(c => c.id === id);
-      gotoReader(sId, id, ch?.title);
-    } else {
-      setSelectedChapterId(id);
-    }
-  };
+  const goToChapter = useCallback(
+    (id: number) => {
+      const sId = searchParams.get("storyId") || selectedStory?.id;
+      if (sId) {
+        const ch = chapters.find((c) => c.id === id);
+        gotoReader(sId, id, ch?.title);
+      } else {
+        setSelectedChapterId(id);
+      }
+    },
+    [searchParams, selectedStory, chapters, gotoReader, setSelectedChapterId],
+  );
 
+  // ── Loading state ─────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div
@@ -258,7 +269,7 @@ export default function ReaderPage() {
           justifyContent: "center",
           minHeight: "60vh",
           fontSize: 14,
-          color: "#9e8e82",
+          color: dk.textFaint,
         }}
       >
         <div>⏳ Đang tải chương...</div>
@@ -266,6 +277,7 @@ export default function ReaderPage() {
     );
   }
 
+  // ── Error / not found state ───────────────────────────────────────────────
   if (!chapterData) {
     return (
       <div style={{ textAlign: "center", padding: "80px 24px" }}>
@@ -274,7 +286,7 @@ export default function ReaderPage() {
           style={{
             fontSize: 18,
             fontWeight: 700,
-            color: "#1c1512",
+            color: dk.text,
             marginBottom: 8,
           }}
         >
@@ -285,7 +297,7 @@ export default function ReaderPage() {
             style={{
               fontSize: 14,
               color: "#c23d3f",
-              background: "#fde8e8",
+              background: dk.navBtnActive,
               borderRadius: 10,
               padding: "10px 20px",
               display: "inline-block",
@@ -309,9 +321,9 @@ export default function ReaderPage() {
             style={{
               padding: "10px 24px",
               borderRadius: 10,
-              border: "1.5px solid #e8e0d6",
-              background: "#fff",
-              color: "#6b5a4e",
+              border: `1.5px solid ${dk.border}`,
+              background: dk.surface,
+              color: dk.navBtnText,
               fontWeight: 600,
               cursor: "pointer",
               fontSize: 13,
@@ -341,148 +353,57 @@ export default function ReaderPage() {
     );
   }
 
+  // ── Derived content values ────────────────────────────────────────────────
   const rawContent = chapterData.content ?? "";
   const isHtmlContent = /<[a-z][\s\S]*>/i.test(rawContent);
-  const paragraphs = isHtmlContent
-    ? []
-    : rawContent.split(/\n+/).filter(Boolean);
+  const paragraphs = isHtmlContent ? [] : rawContent.split(/\n+/).filter(Boolean);
   const wordCount = isHtmlContent
-    ? rawContent
-        .replace(/<[^>]*>/g, " ")
-        .replace(/\s+/g, " ")
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean).length
+    ? rawContent.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().split(/\s+/).filter(Boolean).length
     : rawContent.trim().split(/\s+/).filter(Boolean).length;
   const readMins = Math.max(1, Math.ceil(wordCount / 200));
   const isLocked = (chapterData.coinPrice ?? 0) > 0 && !chapterData.isPurchased;
+  const storyTitle = selectedStory?.title ?? chapterData.storyTitle;
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="reader-wrap fade-in">
+    <div
+      className="reader-wrap fade-in"
+      style={{ background: dk.bg, minHeight: "100vh" }}
+    >
+      {/* Progress bar */}
       <div className="progress-bar">
         <div className="progress-fill" style={{ width: `${scrollPct}%` }} />
       </div>
 
-      <div className="reader-nav">
-        <button className="nav-ch-btn" onClick={() => router.back()}>
-          <Ico.Back />
-          Trang truyện
-        </button>
-        <div
-          className="reader-chapter-title"
-          style={{
-            maxWidth: 340,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {chapterData.title}
-        </div>
+      {/* Top navigation */}
+      <ReaderNav
+        chapterTitle={chapterData.title}
+        showChapterList={showChapterList}
+        setShowChapterList={setShowChapterList}
+        showSettings={showSettings}
+        setShowSettings={setShowSettings}
+        fontSize={fontSize}
+        setFontSize={setFontSize}
+        fontFamily={fontFamily}
+        setFontFamily={setFontFamily}
+        lineHeight={lineHeight}
+        setLineHeight={setLineHeight}
+      />
 
-        <button
-          onClick={() => setShowChapterList((v) => !v)}
-          title="Danh sách chương"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "6px 14px",
-            borderRadius: 8,
-            border: showChapterList
-              ? "1.5px solid #c23d3f"
-              : "1.5px solid #e8e0d6",
-            background: showChapterList ? "#fde8e8" : "#fdfaf7",
-            cursor: "pointer",
-            fontSize: 13,
-            fontWeight: 600,
-            color: showChapterList ? "#c23d3f" : "#6b5a4e",
-            transition: "all 0.15s",
-          }}
-        >
-          <span style={{ fontSize: 14 }}>☰</span>
-          <span>Chương</span>
-        </button>
+      {/* Chapter meta */}
+      <ReaderMeta
+        chapterTitle={chapterData.title}
+        storyTitle={storyTitle}
+        readMins={readMins}
+        wordCount={wordCount}
+        scrollPct={scrollPct}
+      />
 
-        <div style={{ position: "relative" }}>
-          <button
-            onClick={() => setShowSettings((v) => !v)}
-            title="Tuỳ chỉnh hiển thị"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "6px 14px",
-              borderRadius: 8,
-              border: showSettings
-                ? "1.5px solid #c23d3f"
-                : "1.5px solid #e8e0d6",
-              background: showSettings ? "#fde8e8" : "#fdfaf7",
-              cursor: "pointer",
-              fontSize: 13,
-              fontWeight: 600,
-              color: showSettings ? "#c23d3f" : "#6b5a4e",
-              transition: "all 0.15s",
-            }}
-          >
-            <span style={{ fontSize: 15 }}>Aa</span>
-            <span style={{ fontSize: 10, opacity: 0.7 }}>
-              {showSettings ? "▲" : "▼"}
-            </span>
-          </button>
-
-          {showSettings && (
-            <ReadingSettingsPanel
-              fontSize={fontSize}
-              setFontSize={setFontSize}
-              fontFamily={fontFamily}
-              setFontFamily={setFontFamily}
-              lineHeight={lineHeight}
-              setLineHeight={setLineHeight}
-              onClose={() => setShowSettings(false)}
-            />
-          )}
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 680, margin: "0 auto 24px", padding: "0 16px" }}>
-        <h1
-          style={{
-            fontFamily: "'Playfair Display',serif",
-            fontSize: 22,
-            fontWeight: 800,
-            color: "#1c1512",
-            marginBottom: 8,
-            textAlign: "center",
-          }}
-        >
-          {chapterData.title}
-        </h1>
-        <div
-          style={{
-            textAlign: "center",
-            fontSize: 12,
-            color: "#b0a096",
-            display: "flex",
-            gap: 12,
-            justifyContent: "center",
-            flexWrap: "wrap",
-          }}
-        >
-          <span>📖 {selectedStory?.title ?? chapterData.storyTitle}</span>
-          <span>·</span>
-          <span>⏱ {readMins} phút đọc</span>
-          <span>·</span>
-          <span>{wordCount.toLocaleString()} chữ</span>
-          <span>·</span>
-          <span>{scrollPct}% đã đọc</span>
-        </div>
-      </div>
-
+      {/* Locked gate or chapter content */}
       {isLocked ? (
         <LockedChapterGate
-          coinPrice={chapterData.coinPrice || 0}
-          onPurchaseClick={() => setConfirmPurchase(true)}
+          chapterData={chapterData}
+          onConfirmPurchase={() => setConfirmPurchase(true)}
         />
       ) : (
         <div
@@ -508,54 +429,15 @@ export default function ReaderPage() {
         </div>
       )}
 
-      <div
-        style={{
-          display: "flex",
-          gap: 12,
-          justifyContent: "center",
-          marginTop: 48,
-          paddingTop: 32,
-          borderTop: "1.5px solid #e8e0d6",
-          flexWrap: "wrap",
-          padding: "32px 16px 0",
-        }}
-      >
-        <button
-          className="nav-ch-btn"
-          disabled={!prevChapter}
-          onClick={() => prevChapter && goToChapter(prevChapter.id)}
-        >
-          <Ico.Back />
-          Chương trước
-        </button>
-        <button
-          className="nav-ch-btn"
-          style={{
-            background: "#fde8e8",
-            color: "#c23d3f",
-            borderColor: "#e8a0a1",
-          }}
-          onClick={() => router.back()}
-        >
-          Về trang truyện
-        </button>
-        <button
-          className="nav-ch-btn"
-          onClick={() => setShowChapterList(true)}
-          style={{ gap: 6 }}
-        >
-          ☰ Chương
-        </button>
-        <button
-          className="nav-ch-btn"
-          disabled={!nextChapter}
-          onClick={() => nextChapter && goToChapter(nextChapter.id)}
-        >
-          Chương tiếp
-          <Ico.Next />
-        </button>
-      </div>
+      {/* Bottom navigation */}
+      <ReaderBottomNav
+        prevChapter={prevChapter}
+        nextChapter={nextChapter}
+        goToChapter={goToChapter}
+        setShowChapterList={setShowChapterList}
+      />
 
+      {/* Comments section */}
       <ReaderCommentsSection
         chapterId={chapterData.id}
         storyId={chapterData.storyId}
@@ -564,6 +446,7 @@ export default function ReaderPage() {
         onOpenReport={handleOpenReport}
       />
 
+      {/* Report Modal */}
       {reportModal && (
         <ReportModal
           targetLabel={reportModal.label}
@@ -573,11 +456,12 @@ export default function ReaderPage() {
         />
       )}
 
+      {/* Chapter List Modal */}
       {showChapterList && (
         <ChapterListModal
           chapters={chapters}
           currentChapterId={selectedChapterId}
-          storyTitle={selectedStory?.title ?? chapterData?.storyTitle ?? ""}
+          storyTitle={storyTitle}
           onSelect={(id) => {
             goToChapter(id);
             setShowChapterList(false);
@@ -586,12 +470,14 @@ export default function ReaderPage() {
         />
       )}
 
-      {confirmPurchase && chapterData && (
+      {/* Purchase Confirmation Modal */}
+      {confirmPurchase && (
         <PurchaseConfirmationModal
           chapterData={chapterData}
           onClose={() => setConfirmPurchase(false)}
           onSuccess={(updatedChapter) => {
             setChapterData(updatedChapter);
+            setConfirmPurchase(false);
           }}
         />
       )}

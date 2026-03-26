@@ -3003,3 +3003,210 @@ a {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   DARK MODE — READER PAGE
+   html.dark → tất cả selector dưới đây được áp dụng
+   ══════════════════════════════════════════════════════════════ */
+
+/* Nền tổng thể */
+html.dark .reader-wrap {
+  background: #0f0e0c;
+  color: #d4c9be;
+}
+
+/* Progress bar */
+html.dark .progress-bar {
+  background: #2a2520;
+}
+html.dark .progress-fill {
+  background: linear-gradient(90deg, #e8726a, #c23d3f);
+}
+
+/* Nav bar */
+html.dark .reader-nav {
+  border-bottom-color: #2e2820;
+  background: #0f0e0c;
+}
+html.dark .reader-chapter-title {
+  color: #e8ddd5;
+}
+html.dark .nav-ch-btn {
+  background: #1c1814;
+  border-color: #2e2820;
+  color: #b0a096;
+}
+html.dark .nav-ch-btn:hover:not(:disabled) {
+  border-color: #e8726a;
+  color: #e8726a;
+  background: #261d1b;
+}
+
+/* Chapter title / meta */
+html.dark .reader-wrap h1 {
+  color: #f0e8e0;
+}
+html.dark .reader-wrap [style*="color: #b0a096"],
+html.dark .reader-wrap [style*="color:#b0a096"] {
+  color: #6b5a4e !important;
+}
+html.dark .reader-wrap [style*="color: #1c1512"],
+html.dark .reader-wrap [style*="color:#1c1512"] {
+  color: #e8ddd5 !important;
+}
+
+/* Main reading content */
+html.dark .reader-content {
+  color: #c8bcb0;
+}
+html.dark .reader-content p {
+  color: #c8bcb0;
+}
+html.dark .reader-content p:first-child::first-letter {
+  color: #e8726a;
+}
+
+/* Locked gate */
+html.dark .reader-wrap [style*="background: #fff"],
+html.dark .reader-wrap [style*='background:"#fff"'],
+html.dark .reader-wrap [style*="background:#fff"] {
+  background: #1c1814 !important;
+  border-color: #2e2820 !important;
+}
+html.dark .reader-wrap [style*="background: #fffbeb"] {
+  background: #241e0f !important;
+  border-color: #4a3a10 !important;
+}
+html.dark .reader-wrap [style*="color: #1c1512"] {
+  color: #e8ddd5 !important;
+}
+
+/* Prev / Next border */
+html.dark .reader-wrap [style*="border-top: 1.5px solid #e8e0d6"] {
+  border-top-color: #2e2820 !important;
+}
+
+/* Comments section */
+html.dark .reader-wrap > div[style*="margin: 48px auto"] {
+  color: #d4c9be;
+}
+
+/* "Bình luận" title */
+html.dark .reader-wrap [style*="color: #1c1512"][style*="font-size: 20px"],
+html.dark .reader-wrap [style*="Playfair"] {
+  color: #f0e8e0 !important;
+}
+
+/* Report chapter button */
+html.dark .reader-wrap [style*="border: 1px solid #e8e0d6"] {
+  border-color: #3a3028 !important;
+  color: #6b5a4e !important;
+  background: #1c1814 !important;
+}
+
+/* Comment input box */
+html.dark .reader-wrap [style*="background: #fdfaf7"],
+html.dark .reader-wrap [style*="background:#fdfaf7"] {
+  background: #1c1814 !important;
+  border-color: #2e2820 !important;
+}
+html.dark .reader-wrap textarea {
+  color: #d4c9be !important;
+  background: transparent !important;
+  caret-color: #e8726a;
+}
+html.dark .reader-wrap textarea::placeholder {
+  color: #4a3f38 !important;
+}
+
+/* Gift button */
+html.dark .reader-wrap [style*="border: 1px solid #e8e0d6"][style*="background: none"] {
+  border-color: #3a3028 !important;
+  color: #7a6a60 !important;
+}
+
+/* Gift options dropdown */
+html.dark .reader-wrap [style*="background: #fff"][style*="border: 1.5px solid #e8e0d6"] {
+  background: #1c1814 !important;
+  border-color: #3a3028 !important;
+}
+html.dark .reader-wrap [style*="color: #1c1512"][style*="font-weight: 700"] {
+  color: #e8ddd5 !important;
+}
+
+/* ── Story Detail dark mode ── */
+html.dark .detail-title { color: #e8ddd5; }
+html.dark .detail-desc { color: #b0a096; border-left-color: #3a2a18; }
+html.dark .sec-title { color: #e8ddd5; }
+html.dark .sec-head { border-bottom-color: #2e2820; }
+html.dark .back-btn { color: #8c7b70; }
+html.dark .back-btn:hover { color: #e8726a; }
+html.dark .stat-num { color: #e8ddd5; }
+html.dark .stat-label { color: #5a4f48; }
+html.dark .tag { background: #2a2218; color: #a09080; border-color: #3a3020; }
+html.dark .chapter-item { background: #1c1814; border-color: transparent; color: #d4c9be; }
+html.dark .chapter-item:hover { background: #221d17; border-color: #3a3028; }
+html.dark .chapter-locked { background: #1e1a14 !important; border-color: #3a3020 !important; }
+html.dark .chapter-locked:hover { background: #1e1a14 !important; border-color: #3a3020 !important; }
+html.dark .ch-title { color: #d4c9be; }
+html.dark .ch-meta { color: #5a4f48; }
+html.dark .sidebar-card { background: #1c1814; border-color: #2a2420; }
+html.dark .sidebar-title { color: #e8ddd5; }
+html.dark .detail-cover-row { background: #0e0c0a; }
+html.dark .detail-wrap { background: #0e0c0a; }
+html.dark .reader-wrap [style*="color: #6b5a4e"] {
+  color: #8c7b70 !important;
+}
+
+/* Comment nodes — reuse existing .fdfaf7 rule above */
+html.dark .reader-wrap [style*="background: #fdfaf7"][style*="border: 1px solid #ede6dd"] {
+  background: #1a1614 !important;
+  border-color: #2e2820 !important;
+}
+
+/* Empty comment state */
+html.dark .reader-wrap [style*="color: #b0a096"] {
+  color: #4a3f38 !important;
+}
+
+/* Purchase confirm modal */
+html.dark #__next [style*="background: #fff"][style*="border-radius: 20px"][style*="padding: 32px"] {
+  background: #1c1814 !important;
+}
+html.dark [style*="background: #fff"][style*="border-radius: 20px"] {
+  background: #1c1814 !important;
+}
+
+/* Scrollbar in dark mode */
+html.dark ::-webkit-scrollbar-track {
+  background: #1a1512;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #3a3028;
+}
+
+/* Nav buttons with inline style overrides */
+html.dark button.nav-ch-btn[style*="background: #fde8e8"] {
+  background: #3a1a1a !important;
+  border-color: #5c2a2a !important;
+  color: #e8726a !important;
+}
+
+/* Settings / chapter list trigger buttons */
+html.dark button[style*="background: #fdfaf7"],
+html.dark button[style*='background:"#fdfaf7"'] {
+  background: #1c1814 !important;
+  border-color: #2e2820 !important;
+  color: #b0a096 !important;
+}
+html.dark button[style*="background: #fde8e8"][style*="border: 1.5px solid #c23d3f"] {
+  background: #3a1a1a !important;
+  color: #e8726a !important;
+}
+
+/* Chapter / settings button when active (red border) */
+html.dark button[style*='border: 1.5px solid #c23d3f'] {
+  background: #2a1515 !important;
+  color: #e8726a !important;
+}
+

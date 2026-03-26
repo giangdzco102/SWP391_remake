@@ -15,6 +15,7 @@ import { EmptyState, ActionBtn, StatusBadge } from "./ui";
 import { TYPE_COLOR, TYPE_LABEL, MISSION_TYPES } from "@/utils/adminConstants";
 import useAdminService from "@/api/useAdmin.service";
 import { useToast } from "@/hooks/use-toast";
+import { formatVNDate, formatVNDateTime } from "@/utils/time";
 
 function PaginationBar({ page, totalPages, onPage }: { page: number; totalPages: number; onPage: (p: number) => void }) {
   if (totalPages <= 1) return null;
@@ -104,6 +105,52 @@ export function OverviewTab({ stats }: { stats: any }) {
       color: "#7c3aed",
     },
   ];
+
+  const revenueCards = [
+    {
+      label: "Tổng doanh thu (VND)",
+      value: `${(stats.totalRevenueVnd ?? 0).toLocaleString("vi-VN")} ₫`,
+      icon: "💰",
+      bg: "#dcfce7",
+      color: "#15803d",
+    },
+    {
+      label: "Đơn nạp coin thành công",
+      value: stats.totalPaidOrders ?? "—",
+      icon: "🧾",
+      bg: "#dbeafe",
+      color: "#2563eb",
+    },
+    {
+      label: "Tổng coin đã tiêu",
+      value: `${(stats.totalCoinSpend ?? 0).toLocaleString()} 🪙`,
+      icon: "💸",
+      bg: "#fff7ed",
+      color: "#ea580c",
+    },
+    {
+      label: "Hoa hồng hệ thống (20%)",
+      value: `${(stats.systemEarningCoin ?? 0).toLocaleString()} 🪙`,
+      icon: "🏦",
+      bg: "#f5f3ff",
+      color: "#7c3aed",
+    },
+    {
+      label: "Tổng lượt mua chương",
+      value: (stats.totalChapterPurchases ?? 0).toLocaleString(),
+      icon: "📄",
+      bg: "#fce7f3",
+      color: "#db2777",
+    },
+    {
+      label: "Tỉ lệ hoa hồng hiện tại",
+      value: `${((stats.commissionRate ?? 0) * 100).toFixed(0)}%`,
+      icon: "⚙️",
+      bg: "#fef3c7",
+      color: "#d97706",
+    },
+  ];
+
   return (
     <div>
       <h2 style={sectionTitle}>📊 Thống kê hệ thống</h2>
@@ -149,6 +196,62 @@ export function OverviewTab({ stats }: { stats: any }) {
                   fontWeight: 800,
                   color: c.color,
                   lineHeight: 1,
+                }}
+              >
+                {c.value}
+              </div>
+              <div style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}>
+                {c.label}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Revenue / Commission section */}
+      <h2 style={{ ...sectionTitle, marginTop: 32 }}>💹 Doanh thu &amp; Hoa hồng</h2>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+          gap: 14,
+        }}
+      >
+        {revenueCards.map((c) => (
+          <div
+            key={c.label}
+            style={{
+              background: "#fff",
+              borderRadius: 14,
+              padding: "20px 22px",
+              border: "1.5px solid #f0ebe3",
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
+            }}
+          >
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 12,
+                background: c.bg,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 22,
+                flexShrink: 0,
+              }}
+            >
+              {c.icon}
+            </div>
+            <div>
+              <div
+                style={{
+                  fontSize: 22,
+                  fontWeight: 800,
+                  color: c.color,
+                  lineHeight: 1.1,
                 }}
               >
                 {c.value}
@@ -838,7 +941,7 @@ export function ReportsTab({ reports, onResolve, onViewDetail }: any) {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {new Date(r.createdAt).toLocaleDateString("vi-VN")}
+                    {formatVNDate(r.createdAt)}
                   </td>
                   <td style={td}>
                     <div style={{ display: "flex", gap: 5 }}>
@@ -1015,7 +1118,7 @@ export function RoleRequestsTab({ roleReqs, onApprove, onReject }: any) {
                     {stConf.label}
                   </span>
                   <div style={{ fontSize: 12, color: "#9ca3af" }}>
-                    {new Date(r.createdAt).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                    {formatVNDate(r.createdAt)}
                   </div>
                   {r.status === "PENDING" && (
                     <div style={{ display: "flex", gap: 6 }}>
@@ -1152,7 +1255,7 @@ export function WithdrawsTab({ withdraws, onApprove, onReject }: any) {
                     <StatusBadge status={w.status} />
                   </td>
                   <td style={{ ...td, fontSize: 12, color: "#9ca3af", whiteSpace: "nowrap" }}>
-                    {new Date(w.createdAt).toLocaleDateString("vi-VN")}
+                    {formatVNDate(w.createdAt)}
                   </td>
                   <td style={td}>
                     {w.status === "PENDING" && (
@@ -1314,6 +1417,7 @@ export function MissionsTab({ missions, onAdd, onEdit, onDelete }: any) {
 
 export function SystemOpsTab({
   stats,
+  dashboardStats,
   alerts,
   jobHistory,
   onRunStatsJob,
@@ -1360,58 +1464,238 @@ export function SystemOpsTab({
 
   return (
     <div>
-      <h2 style={{ ...sectionTitle, marginBottom: 20 }}>⚙️ Vận hành hệ thống</h2>
+      <h2 style={{ ...sectionTitle, marginBottom: 20 }}>
+        ⚙️ Vận hành hệ thống
+      </h2>
 
       {/* KPIs */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 24 }}>
-        <div style={{ background: "#fff", padding: "16px 20px", borderRadius: 12, border: "1.5px solid #f0ebe3" }}>
-          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>DAU/MAU Ratio</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: "#2563eb" }}>{stats?.dauMauRatio ?? "0.0%"}</div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: 14,
+          marginBottom: 24,
+        }}
+      >
+        <div
+          style={{
+            background: "#fff",
+            padding: "16px 20px",
+            borderRadius: 12,
+            border: "1.5px solid #f0ebe3",
+          }}
+        >
+          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>
+            DAU/MAU Ratio
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: "#2563eb" }}>
+            {stats?.dauMauRatio != null
+              ? `${parseFloat(stats.dauMauRatio).toFixed(4)}%`
+              : "0.0000%"}
+          </div>
         </div>
-        <div style={{ background: "#fff", padding: "16px 20px", borderRadius: 12, border: "1.5px solid #f0ebe3" }}>
-          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Doanh thu (7 ngày)</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: "#059669" }}>+{(stats?.revenue7d ?? 0).toLocaleString()} VND</div>
+        <div
+          style={{
+            background: "#fff",
+            padding: "16px 20px",
+            borderRadius: 12,
+            border: "1.5px solid #f0ebe3",
+          }}
+        >
+          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 2 }}>
+            📅 Doanh thu 7 ngày gần nhất
+          </div>
+          <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 6 }}>
+            Chỉ tính trong 7 ngày qua
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: "#059669" }}>
+            +{(stats?.revenue7d ?? 0).toLocaleString()} VND
+          </div>
         </div>
-        <div style={{ background: errBg, padding: "16px 20px", borderRadius: 12, border: `1.5px solid ${errBorder}` }}>
-          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>Lỗi thanh toán</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: errColor }}>{errRate}%</div>
-          {errRate > 5 && <div style={{ fontSize: 11, color: errColor, marginTop: 4 }}>⚠ Vượt ngưỡng báo động!</div>}
-          {errRate > 1 && errRate <= 5 && <div style={{ fontSize: 11, color: errColor, marginTop: 4 }}>⚡ Cần theo dõi</div>}
+        <div
+          style={{
+            background: "#dcfce7",
+            padding: "16px 20px",
+            borderRadius: 12,
+            border: "1.5px solid #a7f3d0",
+          }}
+        >
+          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 2 }}>
+            💰 Tổng doanh thu (toàn thời gian)
+          </div>
+          <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 6 }}>
+            Tích lũy từ PayOS — bao gồm cả 7 ngày trên
+          </div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: "#15803d" }}>
+            {(dashboardStats?.totalRevenueVnd ?? 0).toLocaleString("vi-VN")} ₫
+          </div>
+        </div>
+        <div
+          style={{
+            background: "#f5f3ff",
+            padding: "16px 20px",
+            borderRadius: 12,
+            border: "1.5px solid #ddd6fe",
+          }}
+        >
+          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>
+            Hoa hồng HT · Lượt mua chương
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: "#7c3aed" }}>
+            {(dashboardStats?.systemEarningCoin ?? 0).toLocaleString()} 🪙
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 500,
+                color: "#9ca3af",
+                marginLeft: 8,
+              }}
+            >
+              ({(dashboardStats?.totalChapterPurchases ?? 0).toLocaleString()}{" "}
+              lượt · {((dashboardStats?.commissionRate ?? 0) * 100).toFixed(0)}
+              %)
+            </span>
+          </div>
+        </div>
+        <div
+          style={{
+            background: errBg,
+            padding: "16px 20px",
+            borderRadius: 12,
+            border: `1.5px solid ${errBorder}`,
+          }}
+        >
+          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>
+            Lỗi thanh toán
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: errColor }}>
+            {errRate}%
+          </div>
+          {errRate > 5 && (
+            <div style={{ fontSize: 11, color: errColor, marginTop: 4 }}>
+              ⚠ Vượt ngưỡng báo động!
+            </div>
+          )}
+          {errRate > 1 && errRate <= 5 && (
+            <div style={{ fontSize: 11, color: errColor, marginTop: 4 }}>
+              ⚡ Cần theo dõi
+            </div>
+          )}
         </div>
       </div>
 
       {/* Batch Jobs */}
       <div style={{ marginBottom: 24 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: "#1c1512", marginBottom: 12 }}>🚀 Batch Jobs</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <h3
+          style={{
+            fontSize: 14,
+            fontWeight: 700,
+            color: "#1c1512",
+            marginBottom: 12,
+          }}
+        >
+          🚀 Batch Jobs
+        </h3>
+        <div
+          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}
+        >
           {[
-            { name: "StatsAggregator", label: "Stats Aggregator", icon: "📊", color: "#2563eb", bg: "#dbeafe", onClick: onRunStatsJob },
-            { name: "MonthlySettlementCalculator", label: "Monthly Settlement", icon: "💳", color: "#d97706", bg: "#fef3c7", onClick: onRunSettlementJob },
-          ].map(job => {
+            {
+              name: "StatsAggregator",
+              label: "Stats Aggregator",
+              icon: "📊",
+              color: "#2563eb",
+              bg: "#dbeafe",
+              onClick: onRunStatsJob,
+            },
+            {
+              name: "MonthlySettlementCalculator",
+              label: "Monthly Settlement",
+              icon: "💳",
+              color: "#d97706",
+              bg: "#fef3c7",
+              onClick: onRunSettlementJob,
+            },
+          ].map((job) => {
             const last = getLastRun(job.name);
             return (
-              <div key={job.name} style={{ background: "#fff", padding: "16px 20px", borderRadius: 12, border: "1.5px solid #f0ebe3" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div
+                key={job.name}
+                style={{
+                  background: "#fff",
+                  padding: "16px 20px",
+                  borderRadius: 12,
+                  border: "1.5px solid #f0ebe3",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: 10,
+                  }}
+                >
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 8 }}
+                  >
                     <span style={{ fontSize: 20 }}>{job.icon}</span>
-                    <span style={{ fontWeight: 700, fontSize: 14, color: "#1c1512" }}>{job.label}</span>
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        fontSize: 14,
+                        color: "#1c1512",
+                      }}
+                    >
+                      {job.label}
+                    </span>
                   </div>
                   <button
                     onClick={job.onClick}
-                    style={{ padding: "6px 14px", background: job.bg, color: job.color, border: "none", borderRadius: 7, fontWeight: 700, cursor: "pointer", fontSize: 12 }}
+                    style={{
+                      padding: "6px 14px",
+                      background: job.bg,
+                      color: job.color,
+                      border: "none",
+                      borderRadius: 7,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontSize: 12,
+                    }}
                   >
                     ▶ Chạy
                   </button>
                 </div>
                 {last ? (
                   <div style={{ fontSize: 12, color: "#6b7280" }}>
-                    <span style={{ fontWeight: 700, color: jobStatusColor(last.status) }}>{last.status}</span>
-                    {" · "}{new Date(last.startedAt).toLocaleString("vi-VN")}
-                    {last.durationMs != null && ` · ${(last.durationMs / 1000).toFixed(1)}s`}
-                    {last.note && <div style={{ marginTop: 4, color: "#9ca3af", fontStyle: "italic" }}>{last.note}</div>}
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        color: jobStatusColor(last.status),
+                      }}
+                    >
+                      {last.status}
+                    </span>
+                    {" · "}
+                    {formatVNDateTime(last.startedAt)}
+                    {last.durationMs != null &&
+                      ` · ${(last.durationMs / 1000).toFixed(1)}s`}
+                    {last.note && (
+                      <div
+                        style={{
+                          marginTop: 4,
+                          color: "#9ca3af",
+                          fontStyle: "italic",
+                        }}
+                      >
+                        {last.note}
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <div style={{ fontSize: 12, color: "#9ca3af" }}>Chưa có lịch sử chạy</div>
+                  <div style={{ fontSize: 12, color: "#9ca3af" }}>
+                    Chưa có lịch sử chạy
+                  </div>
                 )}
               </div>
             );
@@ -1422,30 +1706,102 @@ export function SystemOpsTab({
       {/* Alerts */}
       {(alerts?.length ?? 0) > 0 && (
         <div style={{ marginBottom: 24 }}>
-          <h3 style={{ fontSize: 14, fontWeight: 700, color: "#1c1512", marginBottom: 10 }}>⚠️ Cảnh báo hệ thống</h3>
+          <h3
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: "#1c1512",
+              marginBottom: 10,
+            }}
+          >
+            ⚠️ Cảnh báo hệ thống
+          </h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {alerts.map((a: any, i: number) => {
-              const sv = a.severity === "CRITICAL"
-                ? { bg: "#fef2f2", border: "#fecaca", txt: "#991b1b", badge: "#dc2626" }
-                : a.severity === "WARNING"
-                ? { bg: "#fffbeb", border: "#fde68a", txt: "#92400e", badge: "#d97706" }
-                : { bg: "#eff6ff", border: "#bfdbfe", txt: "#1e40af", badge: "#3b82f6" };
+              const sv =
+                a.severity === "CRITICAL"
+                  ? {
+                      bg: "#fef2f2",
+                      border: "#fecaca",
+                      txt: "#991b1b",
+                      badge: "#dc2626",
+                    }
+                  : a.severity === "WARNING"
+                    ? {
+                        bg: "#fffbeb",
+                        border: "#fde68a",
+                        txt: "#92400e",
+                        badge: "#d97706",
+                      }
+                    : {
+                        bg: "#eff6ff",
+                        border: "#bfdbfe",
+                        txt: "#1e40af",
+                        badge: "#3b82f6",
+                      };
               return (
-                <div key={i} style={{ background: sv.bg, padding: "10px 14px", borderRadius: 8, border: `1px solid ${sv.border}`, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                <div
+                  key={i}
+                  style={{
+                    background: sv.bg,
+                    padding: "10px 14px",
+                    borderRadius: 8,
+                    border: `1px solid ${sv.border}`,
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: 10,
+                  }}
+                >
                   <div>
-                    <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, color: "#fff", background: sv.badge, marginRight: 8 }}>
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 800,
+                        padding: "2px 6px",
+                        borderRadius: 4,
+                        color: "#fff",
+                        background: sv.badge,
+                        marginRight: 8,
+                      }}
+                    >
                       {a.severity ?? "INFO"}
                     </span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: sv.txt }}>{a.message}</span>
-                    {a.source && <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 3 }}>Nguồn: {a.source}</div>}
+                    <span
+                      style={{ fontSize: 13, fontWeight: 600, color: sv.txt }}
+                    >
+                      {a.message}
+                    </span>
+                    {a.source && (
+                      <div
+                        style={{ fontSize: 11, color: "#9ca3af", marginTop: 3 }}
+                      >
+                        Nguồn: {a.source}
+                      </div>
+                    )}
                     {a.isAcknowledged && (
-                      <div style={{ fontSize: 11, color: "#059669", marginTop: 3 }}>✓ Đã xử lý bởi {a.acknowledgedBy}</div>
+                      <div
+                        style={{ fontSize: 11, color: "#059669", marginTop: 3 }}
+                      >
+                        ✓ Đã xử lý bởi {a.acknowledgedBy}
+                      </div>
                     )}
                   </div>
                   {!a.isAcknowledged && (
                     <button
                       onClick={() => onAcknowledgeAlert?.(a.id)}
-                      style={{ padding: "4px 10px", background: "#fff", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 12, fontWeight: 600, color: "#374151", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}
+                      style={{
+                        padding: "4px 10px",
+                        background: "#fff",
+                        border: "1px solid #d1d5db",
+                        borderRadius: 6,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "#374151",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
+                      }}
                     >
                       ✓ Xử lý
                     </button>
@@ -1459,18 +1815,52 @@ export function SystemOpsTab({
 
       {/* Logs */}
       <div>
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: "#1c1512", marginBottom: 10 }}>📜 Server Logs</h3>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+        <h3
+          style={{
+            fontSize: 14,
+            fontWeight: 700,
+            color: "#1c1512",
+            marginBottom: 10,
+          }}
+        >
+          📜 Server Logs
+        </h3>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 12,
+            flexWrap: "wrap",
+          }}
+        >
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {["", "DEBUG", "INFO", "WARN", "ERROR"].map(sev => (
+            {["", "DEBUG", "INFO", "WARN", "ERROR"].map((sev) => (
               <button
                 key={sev}
-                onClick={() => { setLogSeverity(sev); setLogPage(0); }}
+                onClick={() => {
+                  setLogSeverity(sev);
+                  setLogPage(0);
+                }}
                 style={{
-                  padding: "5px 12px", borderRadius: 20, border: "1.5px solid", fontSize: 12, fontWeight: 600, cursor: "pointer",
-                  background: logSeverity === sev
-                    ? (sev === "ERROR" ? "#dc2626" : sev === "WARN" ? "#d97706" : sev === "INFO" ? "#2563eb" : sev === "DEBUG" ? "#6b7280" : "#ff500a")
-                    : "#fff",
+                  padding: "5px 12px",
+                  borderRadius: 20,
+                  border: "1.5px solid",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  background:
+                    logSeverity === sev
+                      ? sev === "ERROR"
+                        ? "#dc2626"
+                        : sev === "WARN"
+                          ? "#d97706"
+                          : sev === "INFO"
+                            ? "#2563eb"
+                            : sev === "DEBUG"
+                              ? "#6b7280"
+                              : "#ff500a"
+                      : "#fff",
                   color: logSeverity === sev ? "#fff" : "#6b7280",
                   borderColor: logSeverity === sev ? "transparent" : "#e5e7eb",
                 }}
@@ -1482,12 +1872,22 @@ export function SystemOpsTab({
           <input
             placeholder="Lọc theo component..."
             value={logComponent}
-            onChange={e => { setLogComponent(e.target.value); setLogPage(0); }}
-            style={{ ...inputStyle, width: 200, padding: "6px 12px", fontSize: 13 }}
+            onChange={(e) => {
+              setLogComponent(e.target.value);
+              setLogPage(0);
+            }}
+            style={{
+              ...inputStyle,
+              width: 200,
+              padding: "6px 12px",
+              fontSize: 13,
+            }}
           />
         </div>
         {logLoading ? (
-          <div style={{ textAlign: "center", padding: 32, color: "#9ca3af" }}>Đang tải logs...</div>
+          <div style={{ textAlign: "center", padding: 32, color: "#9ca3af" }}>
+            Đang tải logs...
+          </div>
         ) : (
           <>
             <div style={tableWrap}>
@@ -1503,31 +1903,91 @@ export function SystemOpsTab({
                 </thead>
                 <tbody>
                   {logs.length === 0 ? (
-                    <tr><td colSpan={5} style={{ ...td, textAlign: "center", color: "#9ca3af", padding: "32px 0" }}>Không có log</td></tr>
-                  ) : logs.map((l: any, i: number) => (
-                    <tr key={l.id ?? i}>
-                      <td style={{ ...td, fontSize: 12, color: "#6b7280", whiteSpace: "nowrap" }}>
-                        {l.timestamp ? new Date(l.timestamp).toLocaleString("vi-VN") : "—"}
+                    <tr>
+                      <td
+                        colSpan={5}
+                        style={{
+                          ...td,
+                          textAlign: "center",
+                          color: "#9ca3af",
+                          padding: "32px 0",
+                        }}
+                      >
+                        Không có log
                       </td>
-                      <td style={td}>
-                        <span style={{
-                          fontSize: 10, fontWeight: 800, padding: "2px 6px", borderRadius: 4, color: "#fff",
-                          background: l.severity === "ERROR" ? "#dc2626" : l.severity === "WARN" ? "#d97706" : l.severity === "INFO" ? "#2563eb" : "#6b7280",
-                        }}>
-                          {l.severity}
-                        </span>
-                      </td>
-                      <td style={{ ...td, fontSize: 13, fontWeight: 600 }}>{l.component}</td>
-                      <td style={{ ...td, fontSize: 13, color: "#374151" }}>{l.message}</td>
-                      <td style={{ ...td, fontSize: 11, color: "#9ca3af", fontFamily: "monospace" }}>{l.traceId ?? "—"}</td>
                     </tr>
-                  ))}
+                  ) : (
+                    logs.map((l: any, i: number) => (
+                      <tr key={l.id ?? i}>
+                        <td
+                          style={{
+                            ...td,
+                            fontSize: 12,
+                            color: "#6b7280",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {l.timestamp ? formatVNDateTime(l.timestamp) : "—"}
+                        </td>
+                        <td style={td}>
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 800,
+                              padding: "2px 6px",
+                              borderRadius: 4,
+                              color: "#fff",
+                              background:
+                                l.severity === "ERROR"
+                                  ? "#dc2626"
+                                  : l.severity === "WARN"
+                                    ? "#d97706"
+                                    : l.severity === "INFO"
+                                      ? "#2563eb"
+                                      : "#6b7280",
+                            }}
+                          >
+                            {l.severity}
+                          </span>
+                        </td>
+                        <td style={{ ...td, fontSize: 13, fontWeight: 600 }}>
+                          {l.component}
+                        </td>
+                        <td style={{ ...td, fontSize: 13, color: "#374151" }}>
+                          {l.message}
+                        </td>
+                        <td
+                          style={{
+                            ...td,
+                            fontSize: 11,
+                            color: "#9ca3af",
+                            fontFamily: "monospace",
+                          }}
+                        >
+                          {l.traceId ?? "—"}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
-              <span style={{ fontSize: 12, color: "#9ca3af" }}>Trang {logPage + 1} / {totalLogPages}</span>
-              <PaginationBar page={logPage + 1} totalPages={totalLogPages} onPage={p => setLogPage(p - 1)} />
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginTop: 12,
+              }}
+            >
+              <span style={{ fontSize: 12, color: "#9ca3af" }}>
+                Trang {logPage + 1} / {totalLogPages}
+              </span>
+              <PaginationBar
+                page={logPage + 1}
+                totalPages={totalLogPages}
+                onPage={(p) => setLogPage(p - 1)}
+              />
             </div>
           </>
         )}

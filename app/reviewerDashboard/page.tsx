@@ -13,6 +13,7 @@ import { timeAgo } from "@/utils/reviewerDashboard.utils";
 
 import { StoryDetailModal } from "@/components/reviewerDashboard/StoryDetailModal";
 import { ChapterReviewModal } from "@/components/reviewerDashboard/ChapterReviewModal";
+import { formatVNDate } from "@/utils/time";
 
 /* ================================================================
    MAIN PAGE
@@ -305,7 +306,7 @@ export default function ReviewerDashboardPage() {
                           {h.targetType === "STORY" ? "📖 " : "📄 "}{h.targetTitle}
                         </div>
                         <div style={{ fontSize: 12, color: T.textMuted }}>
-                          {h.storyTitle ? `${h.storyTitle} · ` : ""}{new Date(h.createdAt).toLocaleDateString("vi-VN")}
+                          {h.storyTitle ? `${h.storyTitle} · ` : ""}{formatVNDate(h.createdAt)}
                         </div>
                       </div>
                       <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, ...(h.action === "APPROVE" ? { background: T.successBg, color: T.success } : { background: T.dangerBg, color: T.danger }) }}>
