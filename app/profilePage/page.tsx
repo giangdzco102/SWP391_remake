@@ -161,8 +161,6 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
         background: "#fff", borderRadius: 20, width: "100%", maxWidth: 440,
         boxShadow: "0 24px 64px rgba(0,0,0,0.25)", animation: "popIn 0.2s ease",
       }} onClick={e => e.stopPropagation()}>
-
-        {/* Header */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "20px 24px 16px", borderBottom: "1.5px solid #f5ede4",
@@ -179,18 +177,14 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>✕</button>
         </div>
-
         <form onSubmit={handleSubmit(onSubmit)} style={{ padding: "20px 24px 24px" }}>
           <PwField name="currentPassword"    label="Mật khẩu hiện tại"
             show={showPw.current} toggle={() => setShowPw(s => ({ ...s, current: !s.current }))} />
-
           <div style={{ height: 1, background: "#f5ede4", margin: "4px 0 16px" }} />
-
           <PwField name="newPassword"         label="Mật khẩu mới"
             show={showPw.next}    toggle={() => setShowPw(s => ({ ...s, next: !s.next }))} />
           <PwField name="confirmNewPassword"  label="Xác nhận mật khẩu mới"
             show={showPw.confirm} toggle={() => setShowPw(s => ({ ...s, confirm: !s.confirm }))} />
-
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
             <button type="button" onClick={onClose} style={{
               padding: "10px 20px", borderRadius: 10, border: "1.5px solid #ddd5c8",
@@ -227,7 +221,7 @@ function WithdrawModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
     setSaving(true);
     try {
       await createWithdrawRequest(data);
-      updateBalance(data.amount); // Deduct coins immediately
+      updateBalance(data.amount);
       toast.success("Gửi yêu cầu rút tiền thành công! Vui lòng chờ Admin duyệt.");
       onSuccess();
       onClose();
@@ -296,6 +290,7 @@ function WithdrawModal({ onClose, onSuccess }: { onClose: () => void; onSuccess:
     </div>
   );
 }
+
 // ───────────────────────────────────────────────────────────────
 
 type TabKey = "info" | "stories" | "reviews" | "coins" | "withdraw";
@@ -332,11 +327,8 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
       toast.error("Ảnh quá lớn! Tối đa 5MB.");
       return;
     }
-    // Chỉ hiển thị preview, lưu file để upload sau
     const reader = new FileReader();
-    reader.onload = (e) => {
-      setAvatarPreview(e.target?.result as string);
-    };
+    reader.onload = (e) => setAvatarPreview(e.target?.result as string);
     reader.readAsDataURL(file);
     setSelectedFile(file);
   }, [toast]);
@@ -364,19 +356,12 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
     setSaving(true);
     try {
       let finalAvatarUrl = data.avatarUrl;
-
-      // Bước 1: Nếu có file ảnh mới → upload lên trước
-      if (selectedFile) {
-        finalAvatarUrl = await uploadAvatar!(selectedFile);
-      }
-
-      // Bước 2: Update profile với URL ảnh (hoặc URL cũ nếu không đổi ảnh)
+      if (selectedFile) finalAvatarUrl = await uploadAvatar!(selectedFile);
       await updateProfile!({ ...data, avatarUrl: finalAvatarUrl });
       toast.success("✅ Cập nhật hồ sơ thành công!");
       onClose();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || "Cập nhật thất bại, vui lòng thử lại.";
-      toast.error(msg);
+      toast.error(err?.response?.data?.message || err?.message || "Cập nhật thất bại, vui lòng thử lại.");
     } finally {
       setSaving(false);
     }
@@ -409,11 +394,8 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
       <div style={{
         background: "#fff", borderRadius: 20, width: "100%", maxWidth: 520,
         maxHeight: "90vh", overflowY: "auto",
-        boxShadow: "0 24px 64px rgba(0,0,0,0.25)",
-        animation: "popIn 0.2s ease",
+        boxShadow: "0 24px 64px rgba(0,0,0,0.25)", animation: "popIn 0.2s ease",
       }} onClick={e => e.stopPropagation()}>
-
-        {/* Header */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "20px 24px 16px", borderBottom: "1.5px solid #f5ede4",
@@ -430,96 +412,60 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>✕</button>
         </div>
-
-        {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)} style={{ padding: "20px 24px 24px" }}>
-          {/* Họ tên */}
           <div style={fieldStyle}>
             <label style={labelStyle}>Họ và tên *</label>
-            <Controller name="fullName" control={control}
-              rules={{ required: "Vui lòng nhập họ tên" }}
-              render={({ field }) => (
-                <input {...field} style={inputStyle} placeholder="Nguyễn Văn A" />
-              )} />
+            <Controller name="fullName" control={control} rules={{ required: "Vui lòng nhập họ tên" }}
+              render={({ field }) => <input {...field} style={inputStyle} placeholder="Nguyễn Văn A" />} />
             {errors.fullName && <div style={errorStyle}>{errors.fullName.message}</div>}
           </div>
-
-          {/* Bio */}
           <div style={fieldStyle}>
             <label style={labelStyle}>Giới thiệu bản thân</label>
             <Controller name="bio" control={control}
               render={({ field }) => (
-                <textarea {...field} rows={3} style={{ ...inputStyle, resize: "vertical" }}
-                  placeholder="Viết vài dòng về bạn..." />
+                <textarea {...field} rows={3} style={{ ...inputStyle, resize: "vertical" }} placeholder="Viết vài dòng về bạn..." />
               )} />
           </div>
-
-          {/* Avatar Upload */}
           <div style={fieldStyle}>
             <label style={labelStyle}>Ảnh đại diện</label>
             <Controller name="avatarUrl" control={control} render={() => <></>} />
-
             <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
-              {/* Preview */}
               <div style={{ flexShrink: 0 }}>
                 {avatarPreview ? (
                   <div style={{ position: "relative", width: 80, height: 80 }}>
-                    <img
-                      src={avatarPreview}
-                      alt="Avatar preview"
-                      style={{
-                        width: 80, height: 80, borderRadius: "50%",
-                        objectFit: "cover", border: "3px solid #c23d3f",
-                        boxShadow: "0 4px 12px rgba(194,61,63,0.25)",
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleRemoveAvatar}
-                      title="Xóa ảnh"
-                      style={{
-                        position: "absolute", top: -4, right: -4,
-                        width: 22, height: 22, borderRadius: "50%",
-                        background: "#c23d3f", border: "2px solid #fff",
-                        cursor: "pointer", fontSize: 11, color: "#fff",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontWeight: 700, lineHeight: 1,
-                      }}
-                    >✕</button>
+                    <img src={avatarPreview} alt="Avatar preview" style={{
+                      width: 80, height: 80, borderRadius: "50%", objectFit: "cover",
+                      border: "3px solid #c23d3f", boxShadow: "0 4px 12px rgba(194,61,63,0.25)",
+                    }} />
+                    <button type="button" onClick={handleRemoveAvatar} title="Xóa ảnh" style={{
+                      position: "absolute", top: -4, right: -4, width: 22, height: 22,
+                      borderRadius: "50%", background: "#c23d3f", border: "2px solid #fff",
+                      cursor: "pointer", fontSize: 11, color: "#fff",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontWeight: 700, lineHeight: 1,
+                    }}>✕</button>
                   </div>
                 ) : (
                   <div style={{
                     width: 80, height: 80, borderRadius: "50%",
                     background: "linear-gradient(135deg,#c23d3f,#9e2d2f)",
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 24, fontWeight: 900, color: "#fff",
-                    border: "3px solid #f5ede4",
-                  }}>
-                    {avatarInitials}
-                  </div>
+                    fontSize: 24, fontWeight: 900, color: "#fff", border: "3px solid #f5ede4",
+                  }}>{avatarInitials}</div>
                 )}
               </div>
-
-              {/* Drop zone */}
               <div
                 onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
                 onDragLeave={() => setIsDragOver(false)}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
                 style={{
-                  flex: 1,
-                  border: `2px dashed ${isDragOver ? "#c23d3f" : "#ddd5c8"}`,
-                  borderRadius: 12,
-                  padding: "16px 14px",
+                  flex: 1, border: `2px dashed ${isDragOver ? "#c23d3f" : "#ddd5c8"}`,
+                  borderRadius: 12, padding: "16px 14px",
                   background: isDragOver ? "#fdf3f3" : "#fdfaf7",
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 4,
-                  textAlign: "center",
+                  cursor: "pointer", transition: "all 0.15s",
+                  display: "flex", flexDirection: "column",
+                  alignItems: "center", justifyContent: "center", gap: 4, textAlign: "center",
                 }}
               >
                 <span style={{ fontSize: 24 }}>📷</span>
@@ -530,26 +476,14 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
                   Kéo thả hoặc click · JPG, PNG, GIF, WebP · Tối đa 5MB
                 </div>
               </div>
-
-              {/* Hidden file input */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                style={{ display: "none" }}
-                onChange={handleFileChange}
-              />
+              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileChange} />
             </div>
           </div>
-
-          {/* 2 cols: phone + gender */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
             <div>
               <label style={labelStyle}>Số điện thoại</label>
               <Controller name="phone" control={control}
-                render={({ field }) => (
-                  <input {...field} style={inputStyle} placeholder="0912345678" />
-                )} />
+                render={({ field }) => <input {...field} style={inputStyle} placeholder="0912345678" />} />
             </div>
             <div>
               <label style={labelStyle}>Giới tính</label>
@@ -563,41 +497,29 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
                 )} />
             </div>
           </div>
-
-          {/* 2 cols: dob + location */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
             <div>
               <label style={labelStyle}>Ngày sinh</label>
               <Controller name="dateOfBirth" control={control}
-                render={({ field }) => (
-                  <input {...field} type="date" style={inputStyle} />
-                )} />
+                render={({ field }) => <input {...field} type="date" style={inputStyle} />} />
             </div>
             <div>
               <label style={labelStyle}>Địa chỉ</label>
               <Controller name="location" control={control}
-                render={({ field }) => (
-                  <input {...field} style={inputStyle} placeholder="Hà Nội" />
-                )} />
+                render={({ field }) => <input {...field} style={inputStyle} placeholder="Hà Nội" />} />
             </div>
           </div>
-
-          {/* Buttons */}
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
             <button type="button" onClick={onClose} style={{
               padding: "10px 20px", borderRadius: 10, border: "1.5px solid #ddd5c8",
               background: "#fff", color: "#6b5a4e", fontWeight: 600, fontSize: 14, cursor: "pointer",
-            }}>
-              Hủy
-            </button>
+            }}>Hủy</button>
             <button type="submit" disabled={saving} style={{
               padding: "10px 24px", borderRadius: 10, border: "none",
               background: saving ? "#d4a5a5" : "#c23d3f",
               color: "#fff", fontWeight: 700, fontSize: 14, cursor: saving ? "not-allowed" : "pointer",
               display: "flex", alignItems: "center", gap: 8,
-            }}>
-              {saving ? "⏳ Đang lưu..." : "💾 Lưu thay đổi"}
-            </button>
+            }}>{saving ? "⏳ Đang lưu..." : "💾 Lưu thay đổi"}</button>
           </div>
         </form>
       </div>
@@ -605,6 +527,8 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
   );
 }
 // ───────────────────────────────────────────────────────────────
+
+const COIN_PER_PAGE = 10;
 
 export function ProfilePage() {
   const { user } = useAuthStore();
@@ -626,6 +550,8 @@ export function ProfilePage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [coinTxs, setCoinTxs] = useState<any[]>([]);
   const [coinLoading, setCoinLoading] = useState(false);
+  const [coinPage, setCoinPage] = useState(1);
+  const [coinFilter, setCoinFilter] = useState<string>("ALL");
   const [withdrawReqs, setWithdrawReqs] = useState<WithdrawResponse[]>([]);
   const [withdrawLoading, setWithdrawLoading] = useState(false);
 
@@ -638,6 +564,15 @@ export function ProfilePage() {
     EDIT_REWARD:  { label: "Thưởng biên tập",  type: "earn"  },
     WITHDRAW:     { label: "Rút tiền",         type: "spend" },
   };
+
+  const coinTypes = Array.from(new Set(coinTxs.map((tx) => tx.type).filter(Boolean)));
+
+  const filteredCoinTxs = coinFilter === "ALL"
+    ? coinTxs
+    : coinTxs.filter((tx) => tx.type === coinFilter);
+
+  const coinTotalPages = Math.ceil(filteredCoinTxs.length / COIN_PER_PAGE);
+  const pagedCoinTxs = filteredCoinTxs.slice((coinPage - 1) * COIN_PER_PAGE, coinPage * COIN_PER_PAGE);
 
   const fetchWithdraws = useCallback(() => {
     setWithdrawLoading(true);
@@ -730,14 +665,7 @@ export function ProfilePage() {
             <span style={{ fontSize: 20 }}>{avatarUploading ? "⏳" : "📷"}</span>
             <span>{avatarUploading ? "Đang tải..." : "Đổi ảnh"}</span>
           </div>
-          {/* Hidden file input */}
-          <input
-            ref={quickAvatarRef}
-            type="file"
-            accept="image/*"
-            style={{ display: "none" }}
-            onChange={handleQuickAvatar}
-          />
+          <input ref={quickAvatarRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleQuickAvatar} />
         </div>
 
         <div style={{ flex: 1 }}>
@@ -754,21 +682,14 @@ export function ProfilePage() {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <span className={`role-chip ${roleChipClass}`}>{roleIcon} {roleLabel}</span>
             <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              background: "#fdf7f0",
-              padding: "4px 12px",
-              borderRadius: "10px",
-              border: "1.5px solid #ece6dc",
+              display: "flex", alignItems: "center", gap: 8,
+              background: "#fdf7f0", padding: "4px 12px", borderRadius: "10px", border: "1.5px solid #ece6dc",
             }}>
               <span style={{ fontSize: 13, fontWeight: 800, color: "#2563eb" }}>LV.{user?.level ?? 1}</span>
               <div style={{ width: 100, height: 6, background: "#e5e7eb", borderRadius: 3, overflow: "hidden" }}>
                 <div style={{
                   width: `${Math.min(100, ((user?.experience ?? 0) / ((user?.level ?? 1) * ((user?.level ?? 1) + 1) * 50)) * 100)}%`,
-                  height: "100%",
-                  background: "linear-gradient(90deg, #3b82f6, #2563eb)",
-                  borderRadius: 3
+                  height: "100%", background: "linear-gradient(90deg, #3b82f6, #2563eb)", borderRadius: 3,
                 }} />
               </div>
               <span style={{ fontSize: 11, color: "#9e8e82", fontWeight: 500 }}>
@@ -815,30 +736,15 @@ export function ProfilePage() {
 
       {/* ── Tab: Thông tin ── */}
       {activeTab === "info" && (
-        <div className="fade-in" style={{
-          background: "#fff",
-          borderRadius: 14,
-          border: "1.5px solid #ece6dc",
-          padding: "8px 24px 4px",
-        }}>
-          {/* Section header */}
+        <div className="fade-in" style={{ background: "#fff", borderRadius: 14, border: "1.5px solid #ece6dc", padding: "8px 24px 4px" }}>
           <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "16px 0 12px",
-            borderBottom: "2px solid #f5ede4",
-            marginBottom: 4,
+            display: "flex", alignItems: "center", gap: 10,
+            padding: "16px 0 12px", borderBottom: "2px solid #f5ede4", marginBottom: 4,
           }}>
             <div style={{
-              width: 40,
-              height: 40,
-              borderRadius: 12,
+              width: 40, height: 40, borderRadius: 12,
               background: "linear-gradient(135deg,#c23d3f,#9e2d2f)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 18,
+              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
             }}>👤</div>
             <div>
               <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, fontWeight: 700, color: "#1c1512" }}>
@@ -854,20 +760,14 @@ export function ProfilePage() {
           <InfoRow icon="📧" label="Email"         value={user?.email                 || "—"} />
           <InfoRow icon="📱" label="Số điện thoại" value={user?.phone                 || "—"} />
           <InfoRow icon="⚧"  label="Giới tính"     value={user?.gender === "MALE" ? "Nam" : user?.gender === "FEMALE" ? "Nữ" : "—"} />
-          <InfoRow icon="🎂" label="Ngày sinh"      value={formatDate(user?.dateOfBirth)}       />
+          <InfoRow icon="🎂" label="Ngày sinh"      value={formatDate(user?.dateOfBirth)} />
           <InfoRow icon="📍" label="Địa chỉ"        value={user?.location              || "—"} />
-          <InfoRow icon="📅" label="Tham gia"       value={formatDate(user?.createdAt)}         />
+          <InfoRow icon="📅" label="Tham gia"       value={formatDate(user?.createdAt)} />
 
-          {/* Coin highlight */}
           <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            margin: "12px 0",
-            padding: "14px 16px",
-            background: "linear-gradient(135deg,#fffbeb,#fef3c7)",
-            borderRadius: 12,
-            border: "1.5px solid #fcd34d",
+            display: "flex", alignItems: "center", gap: 12, margin: "12px 0",
+            padding: "14px 16px", background: "linear-gradient(135deg,#fffbeb,#fef3c7)",
+            borderRadius: 12, border: "1.5px solid #fcd34d",
           }}>
             <span style={{ fontSize: 24 }}>🪙</span>
             <div>
@@ -929,42 +829,126 @@ export function ProfilePage() {
         </div>
       )}
 
+      {/* ── Tab: Lịch sử coin ── */}
       {activeTab === "coins" && (
-        <div className="fade-in">
+        <div className="fade-in max-w-[680px] mx-auto">
+          {/* Filter bar */}
+          {!coinLoading && coinTxs.length > 0 && (
+            <div style={{ overflow: "hidden", marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "nowrap", overflowX: "auto", paddingBottom: 4 }}>
+                {[
+                  { type: "ALL", label: "Tất cả", count: coinTxs.length },
+                  ...coinTypes.map((type) => ({
+                    type,
+                    label: (TX_TYPE_MAP[type] ?? { label: type }).label,
+                    count: coinTxs.filter((tx) => tx.type === type).length,
+                  })),
+                ].map(({ type, label, count }) => {
+                  const isActive = coinFilter === type;
+                  return (
+                    <button
+                      key={type}
+                      className={`profile-tab${isActive ? " active" : ""}`}
+                      onClick={() => { setCoinFilter(type); setCoinPage(1); }}
+                      style={{ display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", flexShrink: 0 }}
+                    >
+                      {label}
+                      <span style={{
+                        padding: "1px 7px", borderRadius: 20, fontSize: 10, fontWeight: 700,
+                        background: isActive ? "rgba(255,255,255,0.25)" : "#f0ece4",
+                        color: isActive ? "#fff" : "#9e8e82",
+                      }}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {coinLoading ? (
             <div className="empty-state">⏳ Đang tải lịch sử coin...</div>
           ) : coinTxs.length === 0 ? (
             <div className="empty-state">Chưa có lịch sử coin</div>
+          ) : filteredCoinTxs.length === 0 ? (
+            <div className="empty-state">Không có giao dịch nào trong mục này.</div>
           ) : (
-            <div className="coin-history">
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              {coinTxs.map((tx: any, i: number) => {
-                const mapped = TX_TYPE_MAP[tx.type] ?? { label: tx.type ?? "Giao dịch", type: "earn" as const };
-                return (
-                  <div key={tx.id ?? i} className="coin-tx">
-                    <div className="coin-tx-info">
-                      <div className={`coin-tx-icon ${mapped.type === "earn" ? "coin-tx-earn" : "coin-tx-spend"}`}>
-                        {mapped.type === "earn" ? "🪙" : "💸"}
+            <>
+              <div className="coin-history">
+                {pagedCoinTxs.map((tx: any, i: number) => {
+                  const mapped = TX_TYPE_MAP[tx.type] ?? { label: tx.type ?? "Giao dịch", type: "earn" as const };
+                  return (
+                    <div key={tx.id ?? i} className="coin-tx">
+                      <div className="coin-tx-info">
+                        <div className={`coin-tx-icon ${mapped.type === "earn" ? "coin-tx-earn" : "coin-tx-spend"}`}>
+                          {mapped.type === "earn" ? "🪙" : "💸"}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: "#1c1512" }}>
+                            {tx.description ?? mapped.label}
+                          </div>
+                          <div style={{ fontSize: 12, color: "#9e8e82" }}>
+                            {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString("vi-VN") : ""}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: "#1c1512" }}>
-                          {tx.description ?? mapped.label}
-                        </div>
-                        <div style={{ fontSize: 12, color: "#9e8e82" }}>
-                          {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString("vi-VN") : ""}
-                        </div>
+                      <div className={`coin-tx-amount ${mapped.type === "earn" ? "coin-earn-color" : "coin-spend-color"}`}>
+                        {mapped.type === "earn" ? "+" : "-"}{tx.amount}🪙
                       </div>
                     </div>
-                    <div className={`coin-tx-amount ${mapped.type === "earn" ? "coin-earn-color" : "coin-spend-color"}`}>
-                      {mapped.type === "earn" ? "+" : "-"}{tx.amount}🪙
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+
+              {/* Phân trang */}
+              {coinTotalPages > 1 && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 20, flexWrap: "wrap" }}>
+                  <button
+                    onClick={() => setCoinPage((p) => Math.max(1, p - 1))}
+                    disabled={coinPage === 1}
+                    className="profile-tab"
+                    style={{ padding: "6px 14px", opacity: coinPage === 1 ? 0.4 : 1 }}
+                  >‹</button>
+
+                  {Array.from({ length: coinTotalPages }, (_, i) => i + 1)
+                    .filter((p) => p === 1 || p === coinTotalPages || Math.abs(p - coinPage) <= 1)
+                    .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                      if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
+                      acc.push(p);
+                      return acc;
+                    }, [])
+                    .map((p, idx) =>
+                      p === "..." ? (
+                        <span key={`e-${idx}`} style={{ fontSize: 13, color: "#9e8e82", padding: "0 2px" }}>…</span>
+                      ) : (
+                        <button
+                          key={p}
+                          onClick={() => setCoinPage(p as number)}
+                          className={`profile-tab${coinPage === p ? " active" : ""}`}
+                          style={{ padding: "6px 12px", minWidth: 36 }}
+                        >{p}</button>
+                      )
+                    )}
+
+                  <button
+                    onClick={() => setCoinPage((p) => Math.min(coinTotalPages, p + 1))}
+                    disabled={coinPage === coinTotalPages}
+                    className="profile-tab"
+                    style={{ padding: "6px 14px", opacity: coinPage === coinTotalPages ? 0.4 : 1 }}
+                  >›</button>
+
+                  <span style={{ fontSize: 12, color: "#9e8e82", marginLeft: 4 }}>
+                    {(coinPage - 1) * COIN_PER_PAGE + 1}–{Math.min(coinPage * COIN_PER_PAGE, filteredCoinTxs.length)} / {filteredCoinTxs.length}
+                  </span>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
+
+      {/* ── Tab: Rút tiền ── */}
       {activeTab === "withdraw" && (
         <div className="fade-in">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -993,7 +977,7 @@ export function ProfilePage() {
                   <div style={{
                     padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700,
                     background: req.status === "APPROVED" ? "#dcfce7" : req.status === "REJECTED" ? "#fde8e8" : "#fef3c7",
-                    color: req.status === "APPROVED" ? "#166534" : req.status === "REJECTED" ? "#c23d3f" : "#92400e"
+                    color: req.status === "APPROVED" ? "#166534" : req.status === "REJECTED" ? "#c23d3f" : "#92400e",
                   }}>
                     {req.status === "PENDING" ? "Đang chờ" : req.status === "APPROVED" ? "Đã duyệt" : "Bị từ chối"}
                   </div>
