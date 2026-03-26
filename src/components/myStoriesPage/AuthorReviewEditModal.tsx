@@ -235,11 +235,9 @@ export function AuthorReviewEditModal({
                     minHeight: 200,
                     maxHeight: 400,
                     overflowY: "auto",
-                    whiteSpace: "pre-wrap",
                   }}
-                >
-                  {request.editedContent || "(Trống)"}
-                </div>
+                  dangerouslySetInnerHTML={{ __html: request.editedContent || "<em>(Trống)</em>" }}
+                />
               </div>
             </div>
           ) : (
@@ -255,11 +253,9 @@ export function AuthorReviewEditModal({
                 minHeight: 200,
                 maxHeight: 500,
                 overflowY: "auto",
-                whiteSpace: "pre-wrap",
               }}
-            >
-              {request.editedContent || "(Trống)"}
-            </div>
+              dangerouslySetInnerHTML={{ __html: request.editedContent || "<em>(Trống)</em>" }}
+            />
           )}
 
           <div>

@@ -572,27 +572,16 @@ export function UsersTab({
                         </ActionBtn>
                         {!(u.roles ?? []).includes("ADMIN") && (
                           <>
-                            <ActionBtn
-                              color={u.enabled !== false ? "#dc2626" : "#059669"}
-                              onClick={() => onToggleStatus(u)}
-                            >
-                              {u.enabled !== false ? (
-                                <>
-                                  <AdminIcon.Lock /> Khóa
-                                </>
-                              ) : (
-                                <>
-                                  <AdminIcon.Unlock /> Mở khóa
-                                </>
-                              )}
-                            </ActionBtn>
-                            <ActionBtn
+                            {u.banUntil == null && (
+                              <ActionBtn
                               color="#92400e"
                               onClick={() => setBanDialog({ user: u, days: "7" })}
                             >
                               🔒 Cấm
                             </ActionBtn>
-                            {u.enabled === false && (
+                            )}
+                            
+                            {u.banUntil !== null && (
                               <ActionBtn color="#7c3aed" onClick={() => onUnban(u)}>
                                 🔓 Bỏ cấm
                               </ActionBtn>

@@ -52,6 +52,8 @@ export default function MyStoriesPage() {
   const [loading, setLoading] = useState(true);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [reviewEditModal, setReviewEditModal] = useState<EditRequest | null>(null);
+  const [originalContentForReview, setOriginalContentForReview] = useState("");
+  const [loadingOriginalReview, setLoadingOriginalReview] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [chaptersMap, setChaptersMap] = useState<Record<number, ChapterItem[]>>({});
   const [chapterTotalMap, setChapterTotalMap] = useState<Record<number, number>>({});
@@ -224,6 +226,16 @@ export default function MyStoriesPage() {
       setReviewEditModal(null); loadEditRequests();
       if (isApprove) loadWallet();
     } catch (err: any) { toast.error(err?.response?.data?.message || "Lỗi cập nhật yêu cầu"); }
+  };
+
+  const openReviewModal = async (req: EditRequest) => {
+    setReviewEditModal(req);
+    setOriginalContentForReview("");
+    setLoadingOriginalReview(true);
+    try {
+      const res: any = await httpClient.get(APP_CONFIG.CHAPTER.GET(req.chapterId));
+      setOriginalContentForReview(res?.data?.content ?? res?.content ?? "");
+    } catch { /* silent */ } finally { setLoadingOriginalReview(false); }
   };
 
   const handleCancelEditReq = async (reqId: number) => {
@@ -514,7 +526,7 @@ export default function MyStoriesPage() {
                       </div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                         {req.status === "OPEN" && <button onClick={() => handleCancelEditReq(req.id)} style={btnOutline}>Huỷ yêu cầu</button>}
-                        {req.status === "SUBMITTED" && <button onClick={() => setReviewEditModal(req)} style={btnPrimary}>👁 Duyệt bản chỉnh sửa</button>}
+                        {req.status === "SUBMITTED" && <button onClick={() => openReviewModal(req)} style={btnPrimary}>👁 Duyệt bản chỉnh sửa</button>}
                         {req.status === "APPROVED" && <span style={{ fontSize: 13, color: T.success, fontWeight: 700 }}>✅ Hoàn thành</span>}
                       </div>
                     </div>
@@ -643,7 +655,7 @@ export default function MyStoriesPage() {
       {showStoryForm !== false && <StoryFormModal story={showStoryForm} onClose={() => setShowStoryForm(false)} onSaved={loadStories} />}
       {chapterModal && <ChapterFormModal storyId={chapterModal.storyId} chapter={chapterModal.chapter} nextOrder={chapterModal.nextOrder} onClose={() => setChapterModal(null)} onSaved={() => loadChapters(chapterModal.storyId)} />}
       {editRequestModal && <CreateEditRequestModal chapter={editRequestModal} walletBalance={wallet?.balance ?? 0} onClose={() => setEditRequestModal(null)} onCreated={() => { loadEditRequests(); loadWallet(); }} />}
-      {reviewEditModal && <AuthorReviewEditModal request={reviewEditModal} onClose={() => setReviewEditModal(null)} onAction={handleActionEditReq} />}
+      {reviewEditModal && <AuthorReviewEditModal request={reviewEditModal} originalContent={loadingOriginalReview ? undefined : originalContentForReview} onClose={() => setReviewEditModal(null)} onAction={handleActionEditReq} />}
 
       {scheduleModal && (
         <div onClick={(e) => { if (e.target === e.currentTarget) setScheduleModal(null); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(3px)" }}>

@@ -26,7 +26,7 @@ export function EditorWorkModal({ request, onClose, onSubmit, onWithdraw }: { re
   }, [request.chapterId]);
 
   const handleSubmit = async () => {
-    if (!stripHtml(editedContent).trim()) return;
+    if (!stripHtml(editedContent).trim() || !editorNote.trim()) return;
     setSaving(true);
     try { await onSubmit(request.id, editedContent, editorNote); onClose(); }
     catch { /* error handled in parent */ }
@@ -96,9 +96,9 @@ export function EditorWorkModal({ request, onClose, onSubmit, onWithdraw }: { re
             </div>
             <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "12px 16px", minHeight: 0 }}>
               {isSubmitted ? (
-                <div style={{ flex: 1, overflowY: "auto", fontSize: 14, color: T.text, lineHeight: 1.8, fontFamily: "'Lora',serif", whiteSpace: "pre-wrap", overflowWrap: "break-word", wordBreak: "break-word" }}>
-                  {editedContent || "(Trống)"}
-                </div>
+                <div style={{ flex: 1, overflowY: "auto", fontSize: 14, color: T.text, lineHeight: 1.8, fontFamily: "'Lora',serif", overflowWrap: "break-word", wordBreak: "break-word" }}
+                  dangerouslySetInnerHTML={{ __html: editedContent || "<em>(Trống)</em>" }}
+                />
               ) : (
                 <RichEditor value={editedContent} onChange={setEditedContent} height="100%" />
               )}
@@ -110,7 +110,7 @@ export function EditorWorkModal({ request, onClose, onSubmit, onWithdraw }: { re
         <div style={{ padding: "12px 22px", borderTop: `1.5px solid ${T.borderLight}`, display: "flex", gap: 12, alignItems: "flex-end", flexShrink: 0, background: T.grayBg }}>
           {!isSubmitted && (
             <div style={{ flex: 1 }}>
-              <label style={{ ...fLabel(), marginBottom: 4 }}>Ghi chú cho Author</label>
+              <label style={{ ...fLabel(), marginBottom: 4 }}>Ghi chú cho Author (bắt buộc)</label>
               <input value={editorNote} onChange={(e) => setEditorNote(e.target.value)} placeholder="Giải thích những thay đổi bạn đã thực hiện…" style={{ ...fInput(), padding: "8px 12px", fontSize: 13 }} />
             </div>
           )}
@@ -120,7 +120,7 @@ export function EditorWorkModal({ request, onClose, onSubmit, onWithdraw }: { re
               <button onClick={async () => { await onWithdraw(request.id); onClose(); }} style={{ ...btnOutline, color: T.danger }}>🚪 Rút lui</button>
             )}
             {!isSubmitted && (
-              <button onClick={handleSubmit} disabled={!stripHtml(editedContent).trim() || saving} style={!stripHtml(editedContent).trim() || saving ? btnDisabled : btnPrimary}>
+              <button onClick={handleSubmit} disabled={!stripHtml(editedContent).trim() || !editorNote.trim() || saving} style={!stripHtml(editedContent).trim() || !editorNote.trim() || saving ? btnDisabled : btnPrimary}>
                 {saving ? "Đang nộp…" : "📤 Nộp bản chỉnh sửa"}
               </button>
             )}
