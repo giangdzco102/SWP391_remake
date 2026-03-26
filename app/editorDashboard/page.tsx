@@ -272,7 +272,7 @@ export default function EditorDashboardPage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {filteredMine.map((req) => {
                     const isSubmitted = req.status === "SUBMITTED";
-                    const isRejected = req.status === "IN_PROGRESS" && req.attemptCount > 1;
+                    const isRejected = req.status === "IN_PROGRESS" && (!!req.authorNote?.trim() || req.attemptCount > 1);
                     return (
                       <div key={req.id} style={{ background: T.card, border: `1.5px solid ${isRejected ? T.dangerBorder : isSubmitted ? T.infoBorder : T.accentBorder}`, borderRadius: 16, padding: "16px 20px", boxShadow: T.shadow }}>
                         <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
@@ -291,14 +291,15 @@ export default function EditorDashboardPage() {
                               {req.attemptCount > 1 && <span style={{ fontSize: 11, color: T.warn }}>Lần #{req.attemptCount}</span>}
                             </div>
                             <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 8 }}>📖 {req.storyTitle} · ✍️ {req.authorName}</div>
-                            {isRejected && req.authorNote && (
+                            {isRejected && (
                               <div style={{ background: T.dangerBg, border: `1.5px solid ${T.dangerBorder}`, borderRadius: 8, padding: "8px 12px", fontSize: 13, color: T.danger, marginBottom: 8 }}>
-                                ❌ <strong>Author từ chối:</strong> {req.authorNote}
+                                ❌ <strong>Author từ chối:</strong>{" "}
+                                {req.authorNote?.trim() ? req.authorNote : "Không có lý do được ghi lại. Vui lòng xem lại yêu cầu gốc và chỉnh sửa lại bản của bạn."}
                               </div>
                             )}
                             <div style={{ display: "flex", gap: 8 }}>
                               <button onClick={() => setEditModal(req)} style={btnPrimary}>
-                                {isSubmitted ? "👁 Xem bản đã nộp" : "✏️ Mở soạn thảo"}
+                                {isSubmitted ? "👁 Xem bản đã nộp" : isRejected ? "✏️ Chỉnh sửa lại" : "✏️ Mở soạn thảo"}
                               </button>
                             </div>
                           </div>

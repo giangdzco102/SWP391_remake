@@ -296,7 +296,7 @@ export function CommentNode({
                       🚫 Chặn người dùng
                     </button>
                   )}
-                  {isOwn && (
+                  {(isOwn || (storyAuthorId != null && currentUserId === storyAuthorId)) && (
                     <button
                       onClick={() => {
                         setMenuOpen(false);

@@ -17,7 +17,15 @@ import useAdminService from "@/api/useAdmin.service";
 import { useToast } from "@/hooks/use-toast";
 import { formatVNDate, formatVNDateTime } from "@/utils/time";
 
-function PaginationBar({ page, totalPages, onPage }: { page: number; totalPages: number; onPage: (p: number) => void }) {
+function PaginationBar({
+  page,
+  totalPages,
+  onPage,
+}: {
+  page: number;
+  totalPages: number;
+  onPage: (p: number) => void;
+}) {
   if (totalPages <= 1) return null;
   const pages: number[] = [];
   const rangeStart = Math.max(1, page - 2);
@@ -25,24 +33,74 @@ function PaginationBar({ page, totalPages, onPage }: { page: number; totalPages:
   for (let i = rangeStart; i <= rangeEnd; i++) pages.push(i);
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-      <button disabled={page === 1} onClick={() => onPage(page - 1)} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #e5e7eb", background: "#fff", cursor: page === 1 ? "not-allowed" : "pointer", color: page === 1 ? "#9ca3af" : "#374151", fontSize: 13 }}>‹</button>
-      {rangeStart > 1 && <span style={{ fontSize: 13, color: "#9ca3af" }}>…</span>}
-      {pages.map(p => (
-        <button key={p} onClick={() => onPage(p)} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid", fontSize: 13, fontWeight: p === page ? 700 : 400, background: p === page ? "#ff500a" : "#fff", color: p === page ? "#fff" : "#374151", borderColor: p === page ? "#ff500a" : "#e5e7eb", cursor: "pointer", minWidth: 32 }}>{p}</button>
+      <button
+        disabled={page === 1}
+        onClick={() => onPage(page - 1)}
+        style={{
+          padding: "4px 10px",
+          borderRadius: 6,
+          border: "1px solid #e5e7eb",
+          background: "#fff",
+          cursor: page === 1 ? "not-allowed" : "pointer",
+          color: page === 1 ? "#9ca3af" : "#374151",
+          fontSize: 13,
+        }}
+      >
+        ‹
+      </button>
+      {rangeStart > 1 && (
+        <span style={{ fontSize: 13, color: "#9ca3af" }}>…</span>
+      )}
+      {pages.map((p) => (
+        <button
+          key={p}
+          onClick={() => onPage(p)}
+          style={{
+            padding: "4px 10px",
+            borderRadius: 6,
+            border: "1px solid",
+            fontSize: 13,
+            fontWeight: p === page ? 700 : 400,
+            background: p === page ? "#ff500a" : "#fff",
+            color: p === page ? "#fff" : "#374151",
+            borderColor: p === page ? "#ff500a" : "#e5e7eb",
+            cursor: "pointer",
+            minWidth: 32,
+          }}
+        >
+          {p}
+        </button>
       ))}
-      {rangeEnd < totalPages && <span style={{ fontSize: 13, color: "#9ca3af" }}>…</span>}
-      <button disabled={page === totalPages} onClick={() => onPage(page + 1)} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #e5e7eb", background: "#fff", cursor: page === totalPages ? "not-allowed" : "pointer", color: page === totalPages ? "#9ca3af" : "#374151", fontSize: 13 }}>›</button>
+      {rangeEnd < totalPages && (
+        <span style={{ fontSize: 13, color: "#9ca3af" }}>…</span>
+      )}
+      <button
+        disabled={page === totalPages}
+        onClick={() => onPage(page + 1)}
+        style={{
+          padding: "4px 10px",
+          borderRadius: 6,
+          border: "1px solid #e5e7eb",
+          background: "#fff",
+          cursor: page === totalPages ? "not-allowed" : "pointer",
+          color: page === totalPages ? "#9ca3af" : "#374151",
+          fontSize: 13,
+        }}
+      >
+        ›
+      </button>
     </div>
   );
 }
 
-const ROLE_BADGE: Record<string, { bg: string; color: string; icon: string }> = {
-  AUTHOR:   { bg: "#d1fae5", color: "#059669", icon: "✍️" },
-  EDITOR:   { bg: "#dbeafe", color: "#2563eb", icon: "✏️" },
-  REVIEWER: { bg: "#f5f3ff", color: "#7c3aed", icon: "🔍" },
-  ADMIN:    { bg: "#fff0ea", color: "#ff500a", icon: "🛡" },
-  READER:   { bg: "#f3f4f6", color: "#6b7280", icon: "📖" },
-};
+const ROLE_BADGE: Record<string, { bg: string; color: string; icon: string }> =
+  {
+    AUTHOR: { bg: "#d1fae5", color: "#059669", icon: "✍️" },
+    EDITOR: { bg: "#dbeafe", color: "#2563eb", icon: "✏️" },
+    REVIEWER: { bg: "#f5f3ff", color: "#7c3aed", icon: "🔍" },
+    ADMIN: { bg: "#fff0ea", color: "#ff500a", icon: "🛡" },
+    READER: { bg: "#f3f4f6", color: "#6b7280", icon: "📖" },
+  };
 
 export function OverviewTab({ stats }: { stats: any }) {
   if (!stats)
@@ -209,7 +267,9 @@ export function OverviewTab({ stats }: { stats: any }) {
       </div>
 
       {/* Revenue / Commission section */}
-      <h2 style={{ ...sectionTitle, marginTop: 32 }}>💹 Doanh thu &amp; Hoa hồng</h2>
+      <h2 style={{ ...sectionTitle, marginTop: 32 }}>
+        💹 Doanh thu &amp; Hoa hồng
+      </h2>
       <div
         style={{
           display: "grid",
@@ -284,7 +344,10 @@ export function UsersTab({
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [sort, setSort] = useState<"newest" | "oldest">("newest");
   const [page, setPage] = useState(1);
-  const [banDialog, setBanDialog] = useState<{ user: any; days: string } | null>(null);
+  const [banDialog, setBanDialog] = useState<{
+    user: any;
+    days: string;
+  } | null>(null);
   const PAGE_SIZE = 15;
 
   const filtered = [...users]
@@ -307,31 +370,85 @@ export function UsersTab({
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const handleSearch = (v: string) => { setSearch(v); setPage(1); };
-  const handleRoleFilter = (v: string) => { setRoleFilter(v); setPage(1); };
-  const handleSort = (v: "newest" | "oldest") => { setSort(v); setPage(1); };
+  const handleSearch = (v: string) => {
+    setSearch(v);
+    setPage(1);
+  };
+  const handleRoleFilter = (v: string) => {
+    setRoleFilter(v);
+    setPage(1);
+  };
+  const handleSort = (v: "newest" | "oldest") => {
+    setSort(v);
+    setPage(1);
+  };
 
   return (
     <div>
       {banDialog && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ background: "#fff", borderRadius: 14, padding: 28, width: 340, boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}>
-            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🔒 Cấm người dùng</div>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.45)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 14,
+              padding: 28,
+              width: 340,
+              boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+            }}
+          >
+            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>
+              🔒 Cấm người dùng
+            </div>
             <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 16 }}>
-              Cấm <strong>{banDialog.user.fullName}</strong> trong bao nhiêu ngày?
+              Cấm <strong>{banDialog.user.fullName}</strong> trong bao nhiêu
+              ngày?
               <br />
-              <span style={{ fontSize: 12, color: "#9ca3af" }}>Nhập -1 để cấm vĩnh viễn.</span>
+              <span style={{ fontSize: 12, color: "#9ca3af" }}>
+                Nhập -1 để cấm vĩnh viễn.
+              </span>
             </div>
             <input
               type="number"
               value={banDialog.days}
-              onChange={(e) => setBanDialog((d) => d ? { ...d, days: e.target.value } : null)}
-              style={{ ...inputStyle, width: "100%", marginBottom: 16, fontSize: 15, textAlign: "center" }}
+              onChange={(e) =>
+                setBanDialog((d) => (d ? { ...d, days: e.target.value } : null))
+              }
+              style={{
+                ...inputStyle,
+                width: "100%",
+                marginBottom: 16,
+                fontSize: 15,
+                textAlign: "center",
+              }}
               min={-1}
               placeholder="Số ngày (ví dụ: 7)"
             />
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button onClick={() => setBanDialog(null)} style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#6b7280" }}>
+            <div
+              style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
+            >
+              <button
+                onClick={() => setBanDialog(null)}
+                style={{
+                  padding: "8px 18px",
+                  borderRadius: 8,
+                  border: "1px solid #e5e7eb",
+                  background: "#fff",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#6b7280",
+                }}
+              >
                 Hủy
               </button>
               <button
@@ -341,7 +458,16 @@ export function UsersTab({
                   onBan(banDialog.user, days);
                   setBanDialog(null);
                 }}
-                style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#dc2626", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}
+                style={{
+                  padding: "8px 18px",
+                  borderRadius: 8,
+                  border: "none",
+                  background: "#dc2626",
+                  color: "#fff",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
               >
                 Xác nhận cấm
               </button>
@@ -406,7 +532,14 @@ export function UsersTab({
               </option>
             ))}
           </select>
-          <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid #e5e7eb" }}>
+          <div
+            style={{
+              display: "flex",
+              borderRadius: 8,
+              overflow: "hidden",
+              border: "1px solid #e5e7eb",
+            }}
+          >
             {(["newest", "oldest"] as const).map((s) => (
               <button
                 key={s}
@@ -434,7 +567,26 @@ export function UsersTab({
           <table style={tableStyle}>
             <thead>
               <tr style={{ background: "#f8f7f4" }}>
-                {(Array.isArray(["ID", "Họ tên", "Email", "Roles", "Số dư", "Trạng thái", "Thao tác"]) ? ["ID", "Họ tên", "Email", "Roles", "Số dư", "Trạng thái", "Thao tác"] : []).map((h) => (
+                {(Array.isArray([
+                  "ID",
+                  "Họ tên",
+                  "Email",
+                  "Roles",
+                  "Số dư",
+                  "Trạng thái",
+                  "Thao tác",
+                ])
+                  ? [
+                      "ID",
+                      "Họ tên",
+                      "Email",
+                      "Roles",
+                      "Số dư",
+                      "Trạng thái",
+                      "Thao tác",
+                    ]
+                  : []
+                ).map((h) => (
                   <th key={h} style={th}>
                     {h}
                   </th>
@@ -498,29 +650,33 @@ export function UsersTab({
                       <div
                         style={{ display: "flex", flexWrap: "wrap", gap: 4 }}
                       >
-                        {(Array.isArray(ALL_ROLES) ? ALL_ROLES : []).map((r: string) => (
-                          <button
-                            key={r}
-                            onClick={() => onToggleRole(r)}
-                            style={{
-                              padding: "2px 8px",
-                              borderRadius: 20,
-                              border: "1.5px solid",
-                              fontSize: 11,
-                              fontWeight: 600,
-                              cursor: "pointer",
-                              background: editRoles.includes(r)
-                                ? "#ff500a"
-                                : "#fff",
-                              color: editRoles.includes(r) ? "#fff" : "#6b7280",
-                              borderColor: editRoles.includes(r)
-                                ? "#ff500a"
-                                : "#e5e7eb",
-                            }}
-                          >
-                            {r}
-                          </button>
-                        ))}
+                        {(Array.isArray(ALL_ROLES) ? ALL_ROLES : []).map(
+                          (r: string) => (
+                            <button
+                              key={r}
+                              onClick={() => onToggleRole(r)}
+                              style={{
+                                padding: "2px 8px",
+                                borderRadius: 20,
+                                border: "1.5px solid",
+                                fontSize: 11,
+                                fontWeight: 600,
+                                cursor: "pointer",
+                                background: editRoles.includes(r)
+                                  ? "#ff500a"
+                                  : "#fff",
+                                color: editRoles.includes(r)
+                                  ? "#fff"
+                                  : "#6b7280",
+                                borderColor: editRoles.includes(r)
+                                  ? "#ff500a"
+                                  : "#e5e7eb",
+                              }}
+                            >
+                              {r}
+                            </button>
+                          ),
+                        )}
                       </div>
                     ) : (
                       <div
@@ -574,15 +730,20 @@ export function UsersTab({
                           <>
                             {u.banUntil == null && (
                               <ActionBtn
-                              color="#92400e"
-                              onClick={() => setBanDialog({ user: u, days: "7" })}
-                            >
-                              🔒 Cấm
-                            </ActionBtn>
+                                color="#92400e"
+                                onClick={() =>
+                                  setBanDialog({ user: u, days: "7" })
+                                }
+                              >
+                                🔒 Cấm
+                              </ActionBtn>
                             )}
-                            
+
                             {u.banUntil !== null && (
-                              <ActionBtn color="#7c3aed" onClick={() => onUnban(u)}>
+                              <ActionBtn
+                                color="#7c3aed"
+                                onClick={() => onUnban(u)}
+                              >
                                 🔓 Bỏ cấm
                               </ActionBtn>
                             )}
@@ -607,9 +768,15 @@ export function UsersTab({
             }}
           >
             <span style={{ fontSize: 12, color: "#9ca3af" }}>
-              Hiển thị {filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} / {filtered.length} người dùng
+              Hiển thị {filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–
+              {Math.min(page * PAGE_SIZE, filtered.length)} / {filtered.length}{" "}
+              người dùng
             </span>
-            <PaginationBar page={page} totalPages={totalPages} onPage={setPage} />
+            <PaginationBar
+              page={page}
+              totalPages={totalPages}
+              onPage={setPage}
+            />
           </div>
         </div>
       )}
@@ -743,7 +910,9 @@ export function ReportsTab({ reports, onResolve, onViewDetail }: any) {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
 
-  const pendingCount = reports.filter((r: any) => r.status === "PENDING").length;
+  const pendingCount = reports.filter(
+    (r: any) => r.status === "PENDING",
+  ).length;
 
   const filtered = [...reports]
     .filter((r: any) => {
@@ -765,9 +934,18 @@ export function ReportsTab({ reports, onResolve, onViewDetail }: any) {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const handleSearch = (v: string) => { setSearch(v); setPage(1); };
-  const handleStatus = (v: string) => { setStatusFilter(v); setPage(1); };
-  const handleSort = (v: "newest" | "oldest") => { setSort(v); setPage(1); };
+  const handleSearch = (v: string) => {
+    setSearch(v);
+    setPage(1);
+  };
+  const handleStatus = (v: string) => {
+    setStatusFilter(v);
+    setPage(1);
+  };
+  const handleSort = (v: "newest" | "oldest") => {
+    setSort(v);
+    setPage(1);
+  };
 
   return (
     <div>
@@ -800,16 +978,38 @@ export function ReportsTab({ reports, onResolve, onViewDetail }: any) {
             </span>
           )}
         </h2>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+            alignItems: "center",
+          }}
+        >
           <div style={{ position: "relative" }}>
-            <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "#9ca3af", pointerEvents: "none", display: "flex" }}>
+            <span
+              style={{
+                position: "absolute",
+                left: 9,
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "#9ca3af",
+                pointerEvents: "none",
+                display: "flex",
+              }}
+            >
               <AdminIcon.Search />
             </span>
             <input
               placeholder="Tìm người báo cáo, nội dung..."
               value={search}
               onChange={(e) => handleSearch(e.target.value)}
-              style={{ ...inputStyle, paddingLeft: 32, width: 220, fontSize: 13 }}
+              style={{
+                ...inputStyle,
+                paddingLeft: 32,
+                width: 220,
+                fontSize: 13,
+              }}
             />
           </div>
           <div style={{ display: "flex", gap: 6 }}>
@@ -837,7 +1037,14 @@ export function ReportsTab({ reports, onResolve, onViewDetail }: any) {
               </button>
             ))}
           </div>
-          <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid #e5e7eb" }}>
+          <div
+            style={{
+              display: "flex",
+              borderRadius: 8,
+              overflow: "hidden",
+              border: "1px solid #e5e7eb",
+            }}
+          >
             {(["newest", "oldest"] as const).map((s) => (
               <button
                 key={s}
@@ -963,9 +1170,15 @@ export function ReportsTab({ reports, onResolve, onViewDetail }: any) {
             }}
           >
             <span style={{ fontSize: 12, color: "#9ca3af" }}>
-              Hiển thị {filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} / {filtered.length} báo cáo
+              Hiển thị {filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–
+              {Math.min(page * PAGE_SIZE, filtered.length)} / {filtered.length}{" "}
+              báo cáo
             </span>
-            <PaginationBar page={page} totalPages={totalPages} onPage={setPage} />
+            <PaginationBar
+              page={page}
+              totalPages={totalPages}
+              onPage={setPage}
+            />
           </div>
         </div>
       )}
@@ -980,14 +1193,24 @@ export function RoleRequestsTab({ roleReqs, onApprove, onReject }: any) {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
 
-  const pendingCount = roleReqs.filter((r: any) => r.status === "PENDING").length;
+  const pendingCount = roleReqs.filter(
+    (r: any) => r.status === "PENDING",
+  ).length;
 
   const filtered = [...roleReqs]
     .filter((r: any) => {
       const matchStatus = statusFilter === "ALL" || r.status === statusFilter;
-      const name = r.requesterName ?? r.userName ?? r.userFullName ?? r.user?.fullName ?? "";
+      const name =
+        r.requesterName ??
+        r.userName ??
+        r.userFullName ??
+        r.user?.fullName ??
+        "";
       const q = search.toLowerCase();
-      const matchSearch = !q || name.toLowerCase().includes(q) || r.requestedRole?.toLowerCase().includes(q);
+      const matchSearch =
+        !q ||
+        name.toLowerCase().includes(q) ||
+        r.requestedRole?.toLowerCase().includes(q);
       return matchStatus && matchSearch;
     })
     .sort((a: any, b: any) => {
@@ -999,40 +1222,103 @@ export function RoleRequestsTab({ roleReqs, onApprove, onReject }: any) {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const handleSearch = (v: string) => { setSearch(v); setPage(1); };
-  const handleStatus = (v: string) => { setStatusFilter(v); setPage(1); };
-  const handleSort = (v: "newest" | "oldest") => { setSort(v); setPage(1); };
+  const handleSearch = (v: string) => {
+    setSearch(v);
+    setPage(1);
+  };
+  const handleStatus = (v: string) => {
+    setStatusFilter(v);
+    setPage(1);
+  };
+  const handleSort = (v: "newest" | "oldest") => {
+    setSort(v);
+    setPage(1);
+  };
 
   return (
     <div>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 20,
+          flexWrap: "wrap",
+          gap: 12,
+        }}
+      >
         <div>
-          <h2 style={{ ...sectionTitle, marginBottom: 2 }}>🛡 Yêu cầu thay đổi Role</h2>
+          <h2 style={{ ...sectionTitle, marginBottom: 2 }}>
+            🛡 Yêu cầu thay đổi Role
+          </h2>
           <p style={{ margin: 0, fontSize: 13, color: "#9ca3af" }}>
             {roleReqs.length} yêu cầu tổng •{" "}
             {pendingCount > 0 ? (
-              <span style={{ color: "#d97706", fontWeight: 600 }}>{pendingCount} đang chờ duyệt</span>
+              <span style={{ color: "#d97706", fontWeight: 600 }}>
+                {pendingCount} đang chờ duyệt
+              </span>
             ) : (
               <span style={{ color: "#059669" }}>Không có yêu cầu chờ</span>
             )}
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+            alignItems: "center",
+          }}
+        >
           <div style={{ position: "relative" }}>
-            <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "#9ca3af", pointerEvents: "none", display: "flex" }}>
+            <span
+              style={{
+                position: "absolute",
+                left: 9,
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "#9ca3af",
+                pointerEvents: "none",
+                display: "flex",
+              }}
+            >
               <AdminIcon.Search />
             </span>
             <input
               placeholder="Tìm theo tên, role..."
               value={search}
               onChange={(e) => handleSearch(e.target.value)}
-              style={{ ...inputStyle, paddingLeft: 32, width: 200, fontSize: 13 }}
+              style={{
+                ...inputStyle,
+                paddingLeft: 32,
+                width: 200,
+                fontSize: 13,
+              }}
             />
           </div>
-          <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid #e5e7eb" }}>
+          <div
+            style={{
+              display: "flex",
+              borderRadius: 8,
+              overflow: "hidden",
+              border: "1px solid #e5e7eb",
+            }}
+          >
             {(["newest", "oldest"] as const).map((s) => (
-              <button key={s} onClick={() => handleSort(s)} style={{ padding: "7px 14px", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, background: sort === s ? "#7c3aed" : "#fff", color: sort === s ? "#fff" : "#6b7280" }}>
+              <button
+                key={s}
+                onClick={() => handleSort(s)}
+                style={{
+                  padding: "7px 14px",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  background: sort === s ? "#7c3aed" : "#fff",
+                  color: sort === s ? "#fff" : "#6b7280",
+                }}
+              >
                 {s === "newest" ? "Mới nhất" : "Cũ nhất"}
               </button>
             ))}
@@ -1041,19 +1327,52 @@ export function RoleRequestsTab({ roleReqs, onApprove, onReject }: any) {
       </div>
 
       {/* Status Filter Tabs */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+      <div
+        style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}
+      >
         {[
-          { v: "ALL",      l: "Tất cả",    count: roleReqs.length,                                                     color: "#6b7280", bg: "#f3f4f6" },
-          { v: "PENDING",  l: "Chờ duyệt", count: roleReqs.filter((r: any) => r.status === "PENDING").length,   color: "#d97706", bg: "#fef3c7" },
-          { v: "APPROVED", l: "Đã duyệt",  count: roleReqs.filter((r: any) => r.status === "APPROVED").length,  color: "#059669", bg: "#d1fae5" },
-          { v: "REJECTED", l: "Từ chối",   count: roleReqs.filter((r: any) => r.status === "REJECTED").length,  color: "#dc2626", bg: "#fee2e2" },
+          {
+            v: "ALL",
+            l: "Tất cả",
+            count: roleReqs.length,
+            color: "#6b7280",
+            bg: "#f3f4f6",
+          },
+          {
+            v: "PENDING",
+            l: "Chờ duyệt",
+            count: roleReqs.filter((r: any) => r.status === "PENDING").length,
+            color: "#d97706",
+            bg: "#fef3c7",
+          },
+          {
+            v: "APPROVED",
+            l: "Đã duyệt",
+            count: roleReqs.filter((r: any) => r.status === "APPROVED").length,
+            color: "#059669",
+            bg: "#d1fae5",
+          },
+          {
+            v: "REJECTED",
+            l: "Từ chối",
+            count: roleReqs.filter((r: any) => r.status === "REJECTED").length,
+            color: "#dc2626",
+            bg: "#fee2e2",
+          },
         ].map((s) => (
           <button
             key={s.v}
             onClick={() => handleStatus(s.v)}
             style={{
-              display: "flex", alignItems: "center", gap: 6, padding: "7px 16px", borderRadius: 20, border: "1.5px solid",
-              cursor: "pointer", fontSize: 13, fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "7px 16px",
+              borderRadius: 20,
+              border: "1.5px solid",
+              cursor: "pointer",
+              fontSize: 13,
+              fontWeight: 600,
               background: statusFilter === s.v ? s.color : "#fff",
               color: statusFilter === s.v ? "#fff" : s.color,
               borderColor: statusFilter === s.v ? s.color : "#e5e7eb",
@@ -1061,7 +1380,17 @@ export function RoleRequestsTab({ roleReqs, onApprove, onReject }: any) {
             }}
           >
             {s.l}
-            <span style={{ fontSize: 11, background: statusFilter === s.v ? "rgba(255,255,255,0.25)" : s.bg, color: statusFilter === s.v ? "#fff" : s.color, borderRadius: 20, padding: "1px 7px", fontWeight: 700 }}>
+            <span
+              style={{
+                fontSize: 11,
+                background:
+                  statusFilter === s.v ? "rgba(255,255,255,0.25)" : s.bg,
+                color: statusFilter === s.v ? "#fff" : s.color,
+                borderRadius: 20,
+                padding: "1px 7px",
+                fontWeight: 700,
+              }}
+            >
               {s.count}
             </span>
           </button>
@@ -1073,37 +1402,138 @@ export function RoleRequestsTab({ roleReqs, onApprove, onReject }: any) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {paged.map((r: any) => {
-            const name = r.requesterName ?? r.userName ?? r.userFullName ?? r.user?.fullName ?? "Không rõ";
-            const roleBadge = ROLE_BADGE[r.requestedRole] ?? { bg: "#f3f4f6", color: "#6b7280", icon: "❓" };
-            const statusConfig: Record<string, { bg: string; color: string; label: string }> = {
-              PENDING:  { bg: "#fef3c7", color: "#d97706", label: "Chờ duyệt" },
+            const name =
+              r.requesterName ??
+              r.userName ??
+              r.userFullName ??
+              r.user?.fullName ??
+              "Không rõ";
+            const roleBadge = ROLE_BADGE[r.requestedRole] ?? {
+              bg: "#f3f4f6",
+              color: "#6b7280",
+              icon: "❓",
+            };
+            const statusConfig: Record<
+              string,
+              { bg: string; color: string; label: string }
+            > = {
+              PENDING: { bg: "#fef3c7", color: "#d97706", label: "Chờ duyệt" },
               APPROVED: { bg: "#d1fae5", color: "#059669", label: "Đã duyệt" },
               REJECTED: { bg: "#fee2e2", color: "#dc2626", label: "Từ chối" },
             };
-            const stConf = statusConfig[r.status] ?? { bg: "#f3f4f6", color: "#6b7280", label: r.status };
+            const stConf = statusConfig[r.status] ?? {
+              bg: "#f3f4f6",
+              color: "#6b7280",
+              label: r.status,
+            };
             return (
-              <div key={r.id} style={{ background: "#fff", borderRadius: 14, border: "1.5px solid #f0ebe3", padding: "16px 20px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+              <div
+                key={r.id}
+                style={{
+                  background: "#fff",
+                  borderRadius: 14,
+                  border: "1.5px solid #f0ebe3",
+                  padding: "16px 20px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16,
+                  flexWrap: "wrap",
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+                }}
+              >
                 {/* Avatar */}
-                <div style={{ width: 44, height: 44, borderRadius: "50%", background: roleBadge.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, color: roleBadge.color, flexShrink: 0, border: `2px solid ${roleBadge.color}33` }}>
+                <div
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: "50%",
+                    background: roleBadge.bg,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 18,
+                    fontWeight: 800,
+                    color: roleBadge.color,
+                    flexShrink: 0,
+                    border: `2px solid ${roleBadge.color}33`,
+                  }}
+                >
                   {name[0]?.toUpperCase() ?? "?"}
                 </div>
                 {/* Info */}
                 <div style={{ flex: 1, minWidth: 160 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
-                    <span style={{ fontWeight: 700, fontSize: 15, color: "#1c1512" }}>{name}</span>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 20, background: roleBadge.bg, color: roleBadge.color, fontSize: 12, fontWeight: 700, border: `1px solid ${roleBadge.color}33` }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      flexWrap: "wrap",
+                      marginBottom: 4,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        fontSize: 15,
+                        color: "#1c1512",
+                      }}
+                    >
+                      {name}
+                    </span>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        padding: "3px 10px",
+                        borderRadius: 20,
+                        background: roleBadge.bg,
+                        color: roleBadge.color,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        border: `1px solid ${roleBadge.color}33`,
+                      }}
+                    >
                       {roleBadge.icon} {r.requestedRole}
                     </span>
                   </div>
                   {r.reason && (
-                    <div style={{ fontSize: 13, color: "#374151", background: "#f8f7f4", borderRadius: 8, padding: "6px 12px", borderLeft: `3px solid ${roleBadge.color}`, maxWidth: 480, fontStyle: "italic" }}>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: "#374151",
+                        background: "#f8f7f4",
+                        borderRadius: 8,
+                        padding: "6px 12px",
+                        borderLeft: `3px solid ${roleBadge.color}`,
+                        maxWidth: 480,
+                        fontStyle: "italic",
+                      }}
+                    >
                       &quot;{r.reason}&quot;
                     </div>
                   )}
                 </div>
                 {/* Meta + Actions */}
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
-                  <span style={{ padding: "4px 12px", borderRadius: 20, background: stConf.bg, color: stConf.color, fontSize: 12, fontWeight: 700 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-end",
+                    gap: 8,
+                    flexShrink: 0,
+                  }}
+                >
+                  <span
+                    style={{
+                      padding: "4px 12px",
+                      borderRadius: 20,
+                      background: stConf.bg,
+                      color: stConf.color,
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                  >
                     {stConf.label}
                   </span>
                   <div style={{ fontSize: 12, color: "#9ca3af" }}>
@@ -1123,11 +1553,26 @@ export function RoleRequestsTab({ roleReqs, onApprove, onReject }: any) {
               </div>
             );
           })}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 4px", flexWrap: "wrap", gap: 8 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "10px 4px",
+              flexWrap: "wrap",
+              gap: 8,
+            }}
+          >
             <span style={{ fontSize: 12, color: "#9ca3af" }}>
-              Hiển thị {filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} / {filtered.length} yêu cầu
+              Hiển thị {filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–
+              {Math.min(page * PAGE_SIZE, filtered.length)} / {filtered.length}{" "}
+              yêu cầu
             </span>
-            <PaginationBar page={page} totalPages={totalPages} onPage={setPage} />
+            <PaginationBar
+              page={page}
+              totalPages={totalPages}
+              onPage={setPage}
+            />
           </div>
         </div>
       )}
@@ -1162,45 +1607,116 @@ export function WithdrawsTab({ withdraws, onApprove, onReject }: any) {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const handleSearch = (v: string) => { setSearch(v); setPage(1); };
-  const handleStatus = (v: string) => { setStatusFilter(v); setPage(1); };
-  const handleSort = (v: "newest" | "oldest") => { setSort(v); setPage(1); };
+  const handleSearch = (v: string) => {
+    setSearch(v);
+    setPage(1);
+  };
+  const handleStatus = (v: string) => {
+    setStatusFilter(v);
+    setPage(1);
+  };
+  const handleSort = (v: "newest" | "oldest") => {
+    setSort(v);
+    setPage(1);
+  };
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-        <h2 style={{ ...sectionTitle, marginBottom: 0 }}>💸 Yêu cầu rút tiền ({withdraws.length})</h2>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 16,
+          flexWrap: "wrap",
+          gap: 10,
+        }}
+      >
+        <h2 style={{ ...sectionTitle, marginBottom: 0 }}>
+          💸 Yêu cầu rút tiền ({withdraws.length})
+        </h2>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+            alignItems: "center",
+          }}
+        >
           <div style={{ position: "relative" }}>
-            <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "#9ca3af", pointerEvents: "none", display: "flex" }}>
+            <span
+              style={{
+                position: "absolute",
+                left: 9,
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "#9ca3af",
+                pointerEvents: "none",
+                display: "flex",
+              }}
+            >
               <AdminIcon.Search />
             </span>
             <input
               placeholder="Tìm tên, ngân hàng..."
               value={search}
               onChange={(e) => handleSearch(e.target.value)}
-              style={{ ...inputStyle, paddingLeft: 32, width: 200, fontSize: 13 }}
+              style={{
+                ...inputStyle,
+                paddingLeft: 32,
+                width: 200,
+                fontSize: 13,
+              }}
             />
           </div>
           <div style={{ display: "flex", gap: 6 }}>
             {[
-              { v: "ALL",      l: "Tất cả" },
-              { v: "PENDING",  l: "Chờ duyệt" },
+              { v: "ALL", l: "Tất cả" },
+              { v: "PENDING", l: "Chờ duyệt" },
               { v: "APPROVED", l: "Đã duyệt" },
               { v: "REJECTED", l: "Từ chối" },
             ].map((s) => (
               <button
                 key={s.v}
                 onClick={() => handleStatus(s.v)}
-                style={{ padding: "6px 14px", borderRadius: 20, border: "1.5px solid", cursor: "pointer", fontSize: 12, fontWeight: 600, background: statusFilter === s.v ? "#db2777" : "#fff", color: statusFilter === s.v ? "#fff" : "#6b7280", borderColor: statusFilter === s.v ? "#db2777" : "#e5e7eb" }}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 20,
+                  border: "1.5px solid",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  background: statusFilter === s.v ? "#db2777" : "#fff",
+                  color: statusFilter === s.v ? "#fff" : "#6b7280",
+                  borderColor: statusFilter === s.v ? "#db2777" : "#e5e7eb",
+                }}
               >
                 {s.l}
               </button>
             ))}
           </div>
-          <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", border: "1px solid #e5e7eb" }}>
+          <div
+            style={{
+              display: "flex",
+              borderRadius: 8,
+              overflow: "hidden",
+              border: "1px solid #e5e7eb",
+            }}
+          >
             {(["newest", "oldest"] as const).map((s) => (
-              <button key={s} onClick={() => handleSort(s)} style={{ padding: "7px 14px", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, background: sort === s ? "#db2777" : "#fff", color: sort === s ? "#fff" : "#6b7280" }}>
+              <button
+                key={s}
+                onClick={() => handleSort(s)}
+                style={{
+                  padding: "7px 14px",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  background: sort === s ? "#db2777" : "#fff",
+                  color: sort === s ? "#fff" : "#6b7280",
+                }}
+              >
                 {s === "newest" ? "Mới nhất" : "Cũ nhất"}
               </button>
             ))}
@@ -1233,17 +1749,28 @@ export function WithdrawsTab({ withdraws, onApprove, onReject }: any) {
             <tbody>
               {(Array.isArray(withdraws) ? withdraws : []).map((w: any) => (
                 <tr key={w.id}>
-                  <td style={{ ...td, color: "#9ca3af", fontSize: 13 }}>{w.id}</td>
+                  <td style={{ ...td, color: "#9ca3af", fontSize: 13 }}>
+                    {w.id}
+                  </td>
                   <td style={{ ...td, fontSize: 13 }}>{w.requesterName}</td>
                   <td style={{ ...td, fontWeight: 700, color: "#ff500a" }}>
                     {w.amount?.toLocaleString()} VND
                   </td>
                   <td style={{ ...td, fontSize: 13 }}>{w.bankName}</td>
-                  <td style={{ ...td, fontFamily: "monospace", fontSize: 13 }}>{w.bankAccount}</td>
+                  <td style={{ ...td, fontFamily: "monospace", fontSize: 13 }}>
+                    {w.bankAccount}
+                  </td>
                   <td style={td}>
                     <StatusBadge status={w.status} />
                   </td>
-                  <td style={{ ...td, fontSize: 12, color: "#9ca3af", whiteSpace: "nowrap" }}>
+                  <td
+                    style={{
+                      ...td,
+                      fontSize: 12,
+                      color: "#9ca3af",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     {formatVNDate(w.createdAt)}
                   </td>
                   <td style={td}>
@@ -1262,11 +1789,27 @@ export function WithdrawsTab({ withdraws, onApprove, onReject }: any) {
               ))}
             </tbody>
           </table>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderTop: "1px solid #f0ebe3", flexWrap: "wrap", gap: 8 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "10px 14px",
+              borderTop: "1px solid #f0ebe3",
+              flexWrap: "wrap",
+              gap: 8,
+            }}
+          >
             <span style={{ fontSize: 12, color: "#9ca3af" }}>
-              Hiển thị {filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} / {filtered.length} yêu cầu
+              Hiển thị {filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–
+              {Math.min(page * PAGE_SIZE, filtered.length)} / {filtered.length}{" "}
+              yêu cầu
             </span>
-            <PaginationBar page={page} totalPages={totalPages} onPage={setPage} />
+            <PaginationBar
+              page={page}
+              totalPages={totalPages}
+              onPage={setPage}
+            />
           </div>
         </div>
       )}
@@ -1432,24 +1975,36 @@ export function SystemOpsTab({
       .then((res: any) => setLogData(res?.data ?? res))
       .catch(() => {})
       .finally(() => setLogLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logSeverity, logComponent, logPage]);
 
-  const logs: any[] = logData?.content ?? (Array.isArray(logData) ? logData : []);
+  const logs: any[] =
+    logData?.content ?? (Array.isArray(logData) ? logData : []);
   const totalLogPages: number = logData?.totalPages ?? 1;
 
   const errRate = Number(stats?.paymentErrorRate ?? 0);
-  const errColor = errRate > 5 ? "#dc2626" : errRate > 1 ? "#d97706" : "#059669";
-  const errBg   = errRate > 5 ? "#fee2e2" : errRate > 1 ? "#fef3c7" : "#d1fae5";
-  const errBorder = errRate > 5 ? "#fecaca" : errRate > 1 ? "#fde68a" : "#a7f3d0";
+  const errColor =
+    errRate > 5 ? "#dc2626" : errRate > 1 ? "#d97706" : "#059669";
+  const errBg = errRate > 5 ? "#fee2e2" : errRate > 1 ? "#fef3c7" : "#d1fae5";
+  const errBorder =
+    errRate > 5 ? "#fecaca" : errRate > 1 ? "#fde68a" : "#a7f3d0";
 
   const getLastRun = (name: string) =>
     (jobHistory ?? [])
       .filter((j: any) => j.jobName === name)
-      .sort((a: any, b: any) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())[0] ?? null;
+      .sort(
+        (a: any, b: any) =>
+          new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
+      )[0] ?? null;
 
   const jobStatusColor = (s: string) =>
-    s === "SUCCESS" ? "#059669" : s === "FAILED" ? "#dc2626" : s === "RUNNING" ? "#d97706" : "#6b7280";
+    s === "SUCCESS"
+      ? "#059669"
+      : s === "FAILED"
+        ? "#dc2626"
+        : s === "RUNNING"
+          ? "#d97706"
+          : "#6b7280";
 
   return (
     <div>
@@ -1985,10 +2540,7 @@ export function SystemOpsTab({
   );
 }
 
-export function CoinMonitoringTab({
-  stats,
-  onSetTab,
-}: any) {
+export function CoinMonitoringTab({ stats, onSetTab }: any) {
   const admin = useAdminService();
   const toast = useToast();
 
@@ -2004,7 +2556,9 @@ export function CoinMonitoringTab({
   const [bRole, setBRole] = useState("ALL");
   const [bLoading, setBLoading] = useState(false);
 
-  const netFlow = (stats?.totalDepositToday ?? 0) - (stats?.totalSpendToday ?? 0);
+  // totalSpendToday từ backend đã là số âm → cộng thẳng
+  const netFlow =
+    (stats?.totalDepositToday ?? 0) + (stats?.totalSpendToday ?? 0);
 
   const handleAdjust = async () => {
     const uid = parseInt(adjustUserId);
@@ -2016,9 +2570,13 @@ export function CoinMonitoringTab({
     setAdjustLoading(true);
     try {
       await admin.adjustUserCoin(uid, { amount: amt, reason: adjustReason });
-      toast.success(`Đã điều chỉnh ${amt > 0 ? "+" : ""}${amt} coin cho user #${uid}!`);
+      toast.success(
+        `Đã điều chỉnh ${amt > 0 ? "+" : ""}${amt} coin cho user #${uid}!`,
+      );
       setAdjustOpen(false);
-      setAdjustUserId(""); setAdjustAmount(""); setAdjustReason("");
+      setAdjustUserId("");
+      setAdjustAmount("");
+      setAdjustReason("");
     } catch (e: any) {
       toast.error(e?.message ?? "Điều chỉnh coin thất bại!");
     } finally {
@@ -2033,11 +2591,17 @@ export function CoinMonitoringTab({
     }
     setBLoading(true);
     try {
-      const res: any = await admin.broadcastNotification({ title: bTitle, message: bMessage, targetRole: bRole });
+      const res: any = await admin.broadcastNotification({
+        title: bTitle,
+        message: bMessage,
+        targetRole: bRole,
+      });
       const sentTo = res?.data?.sentTo ?? res?.sentTo ?? "?";
       toast.success(`Đã gửi thông báo tới ${sentTo} người dùng!`);
       setBroadcastOpen(false);
-      setBTitle(""); setBMessage(""); setBRole("ALL");
+      setBTitle("");
+      setBMessage("");
+      setBRole("ALL");
     } catch (e: any) {
       toast.error(e?.message ?? "Gửi thông báo thất bại!");
     } finally {
@@ -2046,72 +2610,224 @@ export function CoinMonitoringTab({
   };
 
   const kpis = [
-    { label: "Coin nạp hôm nay",          value: `+${(stats?.totalDepositToday ?? 0).toLocaleString()} 🪙`,         color: "#059669", bg: "#d1fae5", border: "#a7f3d0" },
-    { label: "Coin tiêu hôm nay",          value: `${(stats?.totalSpendToday ?? 0).toLocaleString()} 🪙`,            color: "#ff500a", bg: "#fff7ed", border: "#fed7aa" },
-    { label: "Coin rút được duyệt HN",     value: `${(stats?.totalWithdrawApprovedToday ?? 0).toLocaleString()} 🪙`, color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
-    { label: "Nợ nền tảng (VND)",          value: `${(stats?.pendingWithdrawAmountVnd ?? 0).toLocaleString()} ₫`,    color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
-    { label: "Coin lưu thông toàn hệ thống", value: `${(stats?.totalCoinInCirculation ?? 0).toLocaleString()} 🪙`,  color: "#2563eb", bg: "#dbeafe", border: "#bfdbfe" },
-    { label: "Yêu cầu rút đang chờ",       value: `${stats?.pendingWithdrawCount ?? 0} request`,                    color: "#d97706", bg: "#fef3c7", border: "#fde68a" },
+    {
+      label: "Coin nạp hôm nay",
+      value: `+${(stats?.totalDepositToday ?? 0).toLocaleString()} 🪙`,
+      color: "#059669",
+      bg: "#d1fae5",
+      border: "#a7f3d0",
+    },
+    {
+      label: "Coin tiêu hôm nay",
+      value: `${(stats?.totalSpendToday ?? 0).toLocaleString()} 🪙`,
+      color: "#ff500a",
+      bg: "#fff7ed",
+      border: "#fed7aa",
+    },
+    {
+      label: "Coin rút được duyệt HN",
+      value: `${(stats?.totalWithdrawApprovedToday ?? 0).toLocaleString()} 🪙`,
+      color: "#7c3aed",
+      bg: "#f5f3ff",
+      border: "#ddd6fe",
+    },
+    {
+      label: "Nợ nền tảng (VND)",
+      value: `${(stats?.pendingWithdrawAmountVnd ?? 0).toLocaleString()} ₫`,
+      color: "#dc2626",
+      bg: "#fef2f2",
+      border: "#fecaca",
+    },
+    {
+      label: "Coin lưu thông toàn hệ thống",
+      value: `${(stats?.totalCoinInCirculation ?? 0).toLocaleString()} 🪙`,
+      color: "#2563eb",
+      bg: "#dbeafe",
+      border: "#bfdbfe",
+    },
+    {
+      label: "Yêu cầu rút đang chờ",
+      value: `${stats?.pendingWithdrawCount ?? 0} request`,
+      color: "#d97706",
+      bg: "#fef3c7",
+      border: "#fde68a",
+    },
   ];
 
   const overlayStyle: React.CSSProperties = {
-    position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000,
-    display: "flex", alignItems: "center", justifyContent: "center",
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.45)",
+    zIndex: 1000,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   };
   const panelStyle: React.CSSProperties = {
-    background: "#fff", borderRadius: 14, padding: "28px 32px", width: 420, maxWidth: "95vw",
+    background: "#fff",
+    borderRadius: 14,
+    padding: "28px 32px",
+    width: 420,
+    maxWidth: "95vw",
     boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
   };
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <h2 style={{ ...sectionTitle, marginBottom: 0 }}>💰 Giám sát hệ thống Coin</h2>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 20,
+        }}
+      >
+        <h2 style={{ ...sectionTitle, marginBottom: 0 }}>
+          💰 Giám sát hệ thống Coin
+        </h2>
         <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={() => setAdjustOpen(true)} style={{ padding: "8px 16px", background: "#dbeafe", color: "#1d4ed8", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
+          <button
+            onClick={() => setAdjustOpen(true)}
+            style={{
+              padding: "8px 16px",
+              background: "#dbeafe",
+              color: "#1d4ed8",
+              border: "none",
+              borderRadius: 8,
+              fontWeight: 600,
+              cursor: "pointer",
+              fontSize: 13,
+            }}
+          >
             🔧 Điều chỉnh Coin
           </button>
-          <button onClick={() => setBroadcastOpen(true)} style={{ padding: "8px 16px", background: "#fef3c7", color: "#92400e", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
+          <button
+            onClick={() => setBroadcastOpen(true)}
+            style={{
+              padding: "8px 16px",
+              background: "#fef3c7",
+              color: "#92400e",
+              border: "none",
+              borderRadius: 8,
+              fontWeight: 600,
+              cursor: "pointer",
+              fontSize: 13,
+            }}
+          >
             📢 Broadcast thông báo
           </button>
         </div>
       </div>
 
       {/* KPI Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 24 }}>
-        {kpis.map(k => (
-          <div key={k.label} style={{ background: k.bg, padding: "16px 20px", borderRadius: 12, border: `1.5px solid ${k.border}` }}>
-            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>{k.label}</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: k.color }}>{k.value}</div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: 14,
+          marginBottom: 24,
+        }}
+      >
+        {kpis.map((k) => (
+          <div
+            key={k.label}
+            style={{
+              background: k.bg,
+              padding: "16px 20px",
+              borderRadius: 12,
+              border: `1.5px solid ${k.border}`,
+            }}
+          >
+            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 4 }}>
+              {k.label}
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: k.color }}>
+              {k.value}
+            </div>
           </div>
         ))}
       </div>
 
       {/* Net Flow */}
-      <div style={{ background: "#fff", padding: "16px 20px", borderRadius: 12, border: "1.5px solid #f0ebe3", marginBottom: 24 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "#1c1512", marginBottom: 6 }}>📈 Net Flow hôm nay</div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: netFlow >= 0 ? "#059669" : "#dc2626" }}>
-          {netFlow >= 0 ? "+" : ""}{netFlow.toLocaleString()} 🪙
+      <div
+        style={{
+          background: "#fff",
+          padding: "16px 20px",
+          borderRadius: 12,
+          border: "1.5px solid #f0ebe3",
+          marginBottom: 24,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 700,
+            color: "#1c1512",
+            marginBottom: 6,
+          }}
+        >
+          📈 Net Flow hôm nay
         </div>
+
+        {/* Phần con số tổng: Tự động đổi màu Xanh nếu dương, Đỏ nếu âm */}
+        <div
+          style={{
+            fontSize: 22,
+            fontWeight: 800,
+            color: netFlow >= 0 ? "#059669" : "#dc2626",
+          }}
+        >
+          {netFlow > 0 ? "+" : ""}
+          {netFlow.toLocaleString()} 🪙
+        </div>
+
+        {/* Phần giải thích: totalSpendToday là số âm nên dùng Math.abs để hiện dễ đọc */}
         <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>
-          Nạp − Tiêu = {(stats?.totalDepositToday ?? 0).toLocaleString()} − {(stats?.totalSpendToday ?? 0).toLocaleString()}
+          Nạp − Tiêu = {(stats?.totalDepositToday ?? 0).toLocaleString()} −{" "}
+          {Math.abs(stats?.totalSpendToday ?? 0).toLocaleString()}
         </div>
       </div>
 
       {/* Pending Withdraws Link */}
       {(stats?.pendingWithdrawCount ?? 0) > 0 && (
-        <div style={{ background: "#fffbeb", border: "1.5px solid #fde68a", borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+        <div
+          style={{
+            background: "#fffbeb",
+            border: "1.5px solid #fde68a",
+            borderRadius: 12,
+            padding: "16px 20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 24,
+          }}
+        >
           <div>
             <div style={{ fontWeight: 700, fontSize: 13, color: "#92400e" }}>
               ⏳ {stats?.pendingWithdrawCount} yêu cầu rút tiền đang chờ duyệt
             </div>
             <div style={{ fontSize: 12, color: "#a16207", marginTop: 3 }}>
-              Tổng: {(stats?.pendingWithdrawAmountVnd ?? stats?.pendingWithdrawAmount ?? 0).toLocaleString()} VND
+              Tổng:{" "}
+              {(
+                stats?.pendingWithdrawAmountVnd ??
+                stats?.pendingWithdrawAmount ??
+                0
+              ).toLocaleString()}{" "}
+              VND
             </div>
           </div>
           <button
             onClick={() => onSetTab?.("withdraws")}
-            style={{ padding: "8px 16px", background: "#d97706", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13 }}
+            style={{
+              padding: "8px 16px",
+              background: "#d97706",
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              fontWeight: 600,
+              cursor: "pointer",
+              fontSize: 13,
+            }}
           >
             → Xem tab Rút tiền
           </button>
@@ -2121,26 +2837,121 @@ export function CoinMonitoringTab({
       {/* Adjust Coin Modal */}
       {adjustOpen && (
         <div style={overlayStyle} onClick={() => setAdjustOpen(false)}>
-          <div style={panelStyle} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: "0 0 20px", fontSize: 17, fontWeight: 800, color: "#1c1512" }}>🔧 Điều chỉnh Coin thủ công</h3>
+          <div style={panelStyle} onClick={(e) => e.stopPropagation()}>
+            <h3
+              style={{
+                margin: "0 0 20px",
+                fontSize: 17,
+                fontWeight: 800,
+                color: "#1c1512",
+              }}
+            >
+              🔧 Điều chỉnh Coin thủ công
+            </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>User ID *</label>
-                <input value={adjustUserId} onChange={e => setAdjustUserId(e.target.value)} placeholder="Nhập ID người dùng" type="number" style={{ ...inputStyle, width: "100%" }} />
-              </div>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>
-                  Số coin * <span style={{ fontWeight: 400, color: "#9ca3af" }}>(dương = cộng, âm = trừ)</span>
+                <label
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "#374151",
+                    display: "block",
+                    marginBottom: 6,
+                  }}
+                >
+                  User ID *
                 </label>
-                <input value={adjustAmount} onChange={e => setAdjustAmount(e.target.value)} placeholder="VD: 500 hoặc -100" type="number" style={{ ...inputStyle, width: "100%" }} />
+                <input
+                  value={adjustUserId}
+                  onChange={(e) => setAdjustUserId(e.target.value)}
+                  placeholder="Nhập ID người dùng"
+                  type="number"
+                  style={{ ...inputStyle, width: "100%" }}
+                />
               </div>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>Lý do *</label>
-                <textarea value={adjustReason} onChange={e => setAdjustReason(e.target.value)} placeholder="VD: Bồi thường lỗi payment #12345" rows={3} style={{ ...inputStyle, width: "100%", resize: "vertical" as const }} />
+                <label
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "#374151",
+                    display: "block",
+                    marginBottom: 6,
+                  }}
+                >
+                  Số coin *{" "}
+                  <span style={{ fontWeight: 400, color: "#9ca3af" }}>
+                    (dương = cộng, âm = trừ)
+                  </span>
+                </label>
+                <input
+                  value={adjustAmount}
+                  onChange={(e) => setAdjustAmount(e.target.value)}
+                  placeholder="VD: 500 hoặc -100"
+                  type="number"
+                  style={{ ...inputStyle, width: "100%" }}
+                />
               </div>
-              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 4 }}>
-                <button onClick={() => setAdjustOpen(false)} style={{ padding: "9px 18px", background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>Hủy</button>
-                <button onClick={handleAdjust} disabled={adjustLoading} style={{ padding: "9px 18px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer", opacity: adjustLoading ? 0.7 : 1 }}>
+              <div>
+                <label
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "#374151",
+                    display: "block",
+                    marginBottom: 6,
+                  }}
+                >
+                  Lý do *
+                </label>
+                <textarea
+                  value={adjustReason}
+                  onChange={(e) => setAdjustReason(e.target.value)}
+                  placeholder="VD: Bồi thường lỗi payment #12345"
+                  rows={3}
+                  style={{
+                    ...inputStyle,
+                    width: "100%",
+                    resize: "vertical" as const,
+                  }}
+                />
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  justifyContent: "flex-end",
+                  marginTop: 4,
+                }}
+              >
+                <button
+                  onClick={() => setAdjustOpen(false)}
+                  style={{
+                    padding: "9px 18px",
+                    background: "#f3f4f6",
+                    color: "#374151",
+                    border: "none",
+                    borderRadius: 8,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleAdjust}
+                  disabled={adjustLoading}
+                  style={{
+                    padding: "9px 18px",
+                    background: "#2563eb",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 8,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    opacity: adjustLoading ? 0.7 : 1,
+                  }}
+                >
                   {adjustLoading ? "Đang xử lý..." : "✓ Xác nhận"}
                 </button>
               </div>
@@ -2152,28 +2963,126 @@ export function CoinMonitoringTab({
       {/* Broadcast Modal */}
       {broadcastOpen && (
         <div style={overlayStyle} onClick={() => setBroadcastOpen(false)}>
-          <div style={{ ...panelStyle, width: 480 }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: "0 0 20px", fontSize: 17, fontWeight: 800, color: "#1c1512" }}>📢 Gửi thông báo toàn hệ thống</h3>
+          <div
+            style={{ ...panelStyle, width: 480 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3
+              style={{
+                margin: "0 0 20px",
+                fontSize: 17,
+                fontWeight: 800,
+                color: "#1c1512",
+              }}
+            >
+              📢 Gửi thông báo toàn hệ thống
+            </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>Đối tượng nhận</label>
-                <select value={bRole} onChange={e => setBRole(e.target.value)} style={{ ...inputStyle, width: "100%" }}>
-                  {["ALL", "READER", "AUTHOR", "EDITOR", "REVIEWER"].map(r => (
-                    <option key={r} value={r}>{r === "ALL" ? "Tất cả người dùng" : r}</option>
-                  ))}
+                <label
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "#374151",
+                    display: "block",
+                    marginBottom: 6,
+                  }}
+                >
+                  Đối tượng nhận
+                </label>
+                <select
+                  value={bRole}
+                  onChange={(e) => setBRole(e.target.value)}
+                  style={{ ...inputStyle, width: "100%" }}
+                >
+                  {["ALL", "READER", "AUTHOR", "EDITOR", "REVIEWER"].map(
+                    (r) => (
+                      <option key={r} value={r}>
+                        {r === "ALL" ? "Tất cả người dùng" : r}
+                      </option>
+                    ),
+                  )}
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>Tiêu đề *</label>
-                <input value={bTitle} onChange={e => setBTitle(e.target.value)} placeholder="VD: Thông báo bảo trì hệ thống" style={{ ...inputStyle, width: "100%" }} />
+                <label
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "#374151",
+                    display: "block",
+                    marginBottom: 6,
+                  }}
+                >
+                  Tiêu đề *
+                </label>
+                <input
+                  value={bTitle}
+                  onChange={(e) => setBTitle(e.target.value)}
+                  placeholder="VD: Thông báo bảo trì hệ thống"
+                  style={{ ...inputStyle, width: "100%" }}
+                />
               </div>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>Nội dung *</label>
-                <textarea value={bMessage} onChange={e => setBMessage(e.target.value)} placeholder="Nhập nội dung thông báo..." rows={4} style={{ ...inputStyle, width: "100%", resize: "vertical" as const }} />
+                <label
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "#374151",
+                    display: "block",
+                    marginBottom: 6,
+                  }}
+                >
+                  Nội dung *
+                </label>
+                <textarea
+                  value={bMessage}
+                  onChange={(e) => setBMessage(e.target.value)}
+                  placeholder="Nhập nội dung thông báo..."
+                  rows={4}
+                  style={{
+                    ...inputStyle,
+                    width: "100%",
+                    resize: "vertical" as const,
+                  }}
+                />
               </div>
-              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 4 }}>
-                <button onClick={() => setBroadcastOpen(false)} style={{ padding: "9px 18px", background: "#f3f4f6", color: "#374151", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>Hủy</button>
-                <button onClick={handleBroadcast} disabled={bLoading} style={{ padding: "9px 18px", background: "#d97706", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, cursor: "pointer", opacity: bLoading ? 0.7 : 1 }}>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  justifyContent: "flex-end",
+                  marginTop: 4,
+                }}
+              >
+                <button
+                  onClick={() => setBroadcastOpen(false)}
+                  style={{
+                    padding: "9px 18px",
+                    background: "#f3f4f6",
+                    color: "#374151",
+                    border: "none",
+                    borderRadius: 8,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleBroadcast}
+                  disabled={bLoading}
+                  style={{
+                    padding: "9px 18px",
+                    background: "#d97706",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 8,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    opacity: bLoading ? 0.7 : 1,
+                  }}
+                >
                   {bLoading ? "Đang gửi..." : "📤 Gửi ngay"}
                 </button>
               </div>

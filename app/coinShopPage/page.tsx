@@ -85,10 +85,12 @@ export function CoinShopPage() {
         ))}
       </div>
 
-      {tab === "buy" && <BuyCoinTab />}
-      {tab === "topup_history" && <TopupHistoryTab onRecoverSuccess={loadWallet} />}
-      {tab === "history" && <WalletHistoryTab />}
-      {tab === "withdraw" && <WithdrawTab />}
+      <div className="coin-tab-content">
+        {tab === "buy" && <BuyCoinTab />}
+        {tab === "topup_history" && <TopupHistoryTab onRecoverSuccess={loadWallet} />}
+        {tab === "history" && <WalletHistoryTab />}
+        {tab === "withdraw" && <WithdrawTab />}
+      </div>
     </div>
   );
 }

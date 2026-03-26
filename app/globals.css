@@ -2631,9 +2631,11 @@ a {
 
 /* ──── COIN SHOP ──── */
 .coin-shop-wrap {
+  width: 100%;
   max-width: 1080px;
   margin: 0 auto;
   padding: 40px 32px;
+  box-sizing: border-box;
 }
 .coin-tabs {
   display: grid;
@@ -2644,6 +2646,13 @@ a {
   padding: 5px;
   border-radius: 12px;
   border: 1.5px solid #ece6dc;
+}
+html.dark .coin-tabs {
+  background: #2a2118;
+  border-color: #4a3728;
+}
+.coin-tab-content {
+  min-height: 420px;
 }
 .coin-tab-btn {
   text-align: center;
@@ -2660,11 +2669,22 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+html.dark .coin-tab-btn {
+  color: #c4a882;
+}
 .coin-tab-btn:hover {
   background: #fdf7f0;
   color: #c23d3f;
 }
+html.dark .coin-tab-btn:hover {
+  background: #3d2d20;
+  color: #e87070;
+}
 .coin-tab-btn.active {
+  background: #c23d3f;
+  color: #fff;
+}
+html.dark .coin-tab-btn.active {
   background: #c23d3f;
   color: #fff;
 }

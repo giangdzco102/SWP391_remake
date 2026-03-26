@@ -21,7 +21,12 @@ export const formatVNTime = (
   pattern = "HH:mm DD/MM/YYYY"
 ): string => {
   if (!raw) return "—";
-  return dayjs.utc(raw).tz(VN_TZ).format(pattern);
+  // DB stores "timestamp without time zone" = giờ VN thực tế, không phải UTC
+  // Dùng dayjs.tz(raw, VN_TZ) để parse đúng, không cộng thêm +7
+  const hasOffset = raw.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(raw);
+  return hasOffset
+    ? dayjs.utc(raw).tz(VN_TZ).format(pattern)
+    : dayjs.tz(raw, VN_TZ).format(pattern);
 };
 
 /** Format chỉ ngày: DD/MM/YYYY */
@@ -33,7 +38,11 @@ export const formatVNDateTime = (raw: string | null | undefined) =>
   formatVNTime(raw, "HH:mm:ss DD/MM/YYYY");
 
 export const timeStartToNow = (createAt: string | Date) => {
-  const created = dayjs.utc(createAt as string).tz(VN_TZ);
+  const raw = createAt as string;
+  const hasOffset = typeof raw === "string" && (raw.endsWith("Z") || /[+-]\d{2}:\d{2}$/.test(raw));
+  const created = hasOffset
+    ? dayjs.utc(raw).tz(VN_TZ)
+    : dayjs.tz(raw, VN_TZ);
   const now = dayjs().tz(VN_TZ);
   const diffInMinutes = now.diff(created, "minute");
 

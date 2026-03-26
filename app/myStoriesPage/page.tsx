@@ -272,6 +272,7 @@ export default function MyStoriesPage() {
   const publishedCount = stories.filter((s) => s.status === "APPROVED").length;
 
   const filteredStories = stories
+    .filter((s) => !s.isDeleted)
     .filter((s) => storyFilter === "ALL" || s.status === storyFilter)
     .filter((s) => !storySearch.trim() || s.title.toLowerCase().includes(storySearch.trim().toLowerCase()))
     .sort((a, b) => storySort === "newest"
@@ -336,9 +337,9 @@ export default function MyStoriesPage() {
             <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
               <input type="text" placeholder="🔍 Tìm theo tên truyện…" value={storySearch} onChange={(e) => setStorySearch(e.target.value)} style={{ ...fInput(), maxWidth: 260, padding: "7px 14px", fontSize: 13 }} />
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {["ALL", "DRAFT", "PENDING", "PUBLISHED", "REJECTED"].map((f) => (
+                {["ALL", "DRAFT", "PENDING", "APPROVED", "REJECTED"].map((f) => (
                   <button key={f} onClick={() => setStoryFilter(f)} style={{ padding: "6px 14px", borderRadius: 20, border: `1.5px solid ${storyFilter === f ? T.accent : T.border}`, background: storyFilter === f ? T.accentLight : T.card, color: storyFilter === f ? T.accent : T.textSec, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                    {f === "ALL" ? "Tất cả" : f === "DRAFT" ? "Bản nháp" : f === "PENDING" ? "Chờ duyệt" : f === "PUBLISHED" ? "Đã duyệt" : "Từ chối"}
+                    {f === "ALL" ? "Tất cả" : f === "DRAFT" ? "Bản nháp" : f === "PENDING" ? "Chờ duyệt" : f === "APPROVED" ? "Đã duyệt" : "Từ chối"}
                   </button>
                 ))}
               </div>
@@ -426,7 +427,7 @@ export default function MyStoriesPage() {
                               Chương ({isLoadingCh ? "…" : (allChaptersCount ?? chapters.length)})
                               {chapters.length > 0 && <span style={{ fontSize: 12, fontWeight: 400, color: T.textMuted, marginLeft: 8 }}>· {totalWords.toLocaleString()} chữ</span>}
                             </div>
-                            <button onClick={() => setChapterModal({ storyId: story.id, chapter: null, nextOrder: (chaptersMap[story.id]?.length ?? 0) + 1 })} style={{ ...btnPrimary, fontSize: 12 }}>+ Thêm chương</button>
+                            <button onClick={() => setChapterModal({ storyId: story.id, chapter: null, nextOrder: (chaptersMap[story.id]?.length ?? 0) + 1 })} disabled={story.isCompleted} title={story.isCompleted ? "Truyện đã hoàn thành, không thể thêm chương mới" : undefined} style={{ ...btnPrimary, fontSize: 12, opacity: story.isCompleted ? 0.5 : 1, cursor: story.isCompleted ? "not-allowed" : "pointer" }}>+ Thêm chương</button>
                           </div>
                           {isLoadingCh ? (
                             <div style={{ textAlign: "center", padding: "20px 0", fontSize: 13, color: T.textMuted }}>Đang tải…</div>
@@ -468,7 +469,9 @@ export default function MyStoriesPage() {
                                           <button onClick={() => setScheduleModal({ chapterId: ch.id, title: ch.title, storyId: story.id })} style={{ ...btnOutline, fontSize: 11, padding: "4px 8px", color: T.info, borderColor: T.infoBorder }}>📅</button>
                                         </>
                                       )}
-                                      <button onClick={() => setChapterModal({ storyId: story.id, chapter: ch })} style={{ ...btnOutline, fontSize: 11, padding: "4px 8px" }}>✏️</button>
+                                      {ch.status !== "PUBLISHED" && (
+                                        <button onClick={() => setChapterModal({ storyId: story.id, chapter: ch })} style={{ ...btnOutline, fontSize: 11, padding: "4px 8px" }}>✏️</button>
+                                      )}
                                       {(ch.status === "DRAFT" || ch.status === "REJECTED") && (
                                         <button onClick={() => handleDeleteChapter(ch.id, story.id)} disabled={deletingChapter === ch.id} style={{ ...btnOutline, fontSize: 11, padding: "4px 8px", color: T.danger }}>
                                           {deletingChapter === ch.id ? "…" : "🗑"}
