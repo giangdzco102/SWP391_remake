@@ -75,7 +75,11 @@ export default function AdminDashboard() {
     if (user && !user.roles.includes("ADMIN")) router.push("/homePage");
   }, [user, router]);
 
-  const unwrap = (r: any) => r?.data ?? r ?? [];
+  const unwrap = (r: any) => {
+    const d = r?.data ?? r;
+    if (d === null || d === undefined) return [];
+    return d;
+  };
 
   const loadStats = useCallback(async () => {
     try {

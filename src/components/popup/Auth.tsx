@@ -167,7 +167,7 @@ const LoginForm = ({ onForgot }: { onForgot?: () => void }) => {
             )}
           />
           {errors.email && (
-            <div style={{ color: "#c23d3f", fontSize: 13, marginTop: 4 }}>
+            <div className="error">
               {errors.email.message}
             </div>
           )}
@@ -195,7 +195,7 @@ const LoginForm = ({ onForgot }: { onForgot?: () => void }) => {
             )}
           />
           {errors.password && (
-            <div style={{ color: "#c23d3f", fontSize: 13, marginTop: 4 }}>
+            <div className="error">
               {errors.password.message}
             </div>
           )}
@@ -249,6 +249,7 @@ const RegisterForm = ({
     formState: { errors },
     watch,
   } = useForm<RegisterFormData>({
+    mode: "onChange",
     defaultValues: {
       email: "",
       password: "",
@@ -326,7 +327,7 @@ const RegisterForm = ({
             control={control}
             rules={{
               required: "Email là bắt buộc",
-              pattern: {
+             pattern: {
                 value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
                 message: "Email không hợp lệ",
               },
@@ -349,7 +350,13 @@ const RegisterForm = ({
           <Controller
             name="phone"
             control={control}
-            rules={{ required: "Số điện thoại là bắt buộc" }}
+            rules={{
+              required: "Số điện thoại là bắt buộc",
+              pattern: {
+                value: /^(0[3|5|7|8|9])[0-9]{8}$/,
+                message: "Số điện thoại Vietnamese không hợp lệ",
+              },
+            }}
             render={({ field }) => (
               <input
                 {...field}
@@ -419,6 +426,13 @@ const RegisterForm = ({
             control={control}
             rules={{
               required: "Mật khẩu là bắt buộc",
+              validate: {
+                hasUppercase: (v: any) =>
+                  /[A-Z]/.test(v) ||
+                  "Mật khẩu phải có nhất 1 chữ cái viết hoa (uppercase)",
+                hasNumber: (v: any) =>
+                  /[0-9]/.test(v) || "Mật khẩu phải có nhất 1 chữ số (number)",
+              },
               minLength: { value: 6, message: "Ít nhất 6 ký tự" },
             }}
             render={({ field }) => (
