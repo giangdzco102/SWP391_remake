@@ -31,9 +31,11 @@ export function useHotStories(): { stories: StoryShape[]; loading: boolean } {
   useEffect(() => {
     setLoading(true);
     getStories({ size: HOT_FETCH_SIZE, sort: "viewCount,desc" })
-      .then((res: any) =>
-        setStories((res?.data ?? res ?? []).map(toStoryShape))
-      )
+      .then((res: any) => {
+        const payload = res?.data ?? res ?? {};
+        const raw: any[] = payload.content ?? payload ?? [];
+        setStories(raw.map(toStoryShape));
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -60,31 +62,20 @@ export function useNewStories(
       page: page - 1,
       sort: sortToApiParam(filters.sort),
     };
-    if (filters.genres.length === 1) params.category = filters.genres[0];
-    if (filters.genres.length > 1) params.categories = filters.genres.join(",");
+    if (filters.genres.length > 0) params.categories = filters.genres.join(",");
     if (filters.status === "done") params.status = "COMPLETED";
     if (filters.status === "ongoing") params.status = "ONGOING";
     if (filters.years.length > 0) params.year = filters.years[0];
 
     getStories(params)
       .then((res: any) => {
-        const raw: any[] = res?.data ?? res?.content ?? res ?? [];
-        const filtered = raw.map(toStoryShape).filter((s) => {
-          if (filters.genres.length > 0 && !filters.genres.includes(s.genre)) return false;
-          if (filters.status !== "all" && s.status !== filters.status) return false;
-          if (filters.years.length > 0) {
-            const y = s.updatedAt ? new Date(s.updatedAt).getFullYear() : null;
-            if (!y || !filters.years.includes(y)) return false;
-          }
-          return true;
-        });
+        const payload = res?.data ?? res ?? {};
+        const raw: any[] = payload.content ?? payload ?? [];
+        const storyShapes = raw.map(toStoryShape);
 
-        const tp = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-        setTotalPages(tp);
-
-        const start = (page - 1) * PAGE_SIZE;
-        setStories(filtered.slice(start, start + PAGE_SIZE));
-        setAllStories(filtered);
+        setStories(storyShapes);
+        setTotalPages(payload.totalPages ?? 1);
+        setAllStories(storyShapes);
       })
       .catch(() => {})
       .finally(() => setLoading(false));

@@ -4,6 +4,7 @@ import "./globals.css";
 import "@/assets/styles/style.scss";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import AntdThemeProvider from "@/components/AntdThemeProvider";
+import { AntdRegistry } from "@ant-design/nextjs-registry";
 import NotiAuth from "@/components/popup/NotiAuth";
 import Auth from "@/components/popup/Auth";
 import Loading from "./loading";
@@ -75,30 +76,32 @@ export default function RootLayout({
       <head>{generateMetaTags(SITE_METADATA)}</head>
       <body>
         <ThemeProvider>
-          <AntdThemeProvider>
-            <ToastProvider>
+          <AntdRegistry>
+            <AntdThemeProvider>
+              <ToastProvider>
 
-              {/* sidebar */}
-              <Layout className="relative">
-                <main className="bg-background">
-                  <Loading />
-                  <AuthProvider>
-                    <div className=" overflow-hidden flex flex-col">
-                      {/* header */}
-                      <Header />
-                      {children}
-                      <Footer />
-                    </div>
-                    <ProviderModal />
-                  </AuthProvider>
-                </main>
-              </Layout>
-              {/* notification auth */}
-              <NotiAuth />
-              {/* popup auth */}
-              <Auth />
-            </ToastProvider>
-          </AntdThemeProvider>
+                {/* sidebar */}
+                <Layout className="relative">
+                  <main className="bg-background">
+                    <Loading />
+                    <AuthProvider>
+                      <div className=" overflow-hidden flex flex-col">
+                        {/* header */}
+                        <Header />
+                        {children}
+                        <Footer />
+                      </div>
+                      <ProviderModal />
+                    </AuthProvider>
+                  </main>
+                </Layout>
+                {/* notification auth */}
+                <NotiAuth />
+                {/* popup auth */}
+                <Auth />
+              </ToastProvider>
+            </AntdThemeProvider>
+          </AntdRegistry>
         </ThemeProvider>
       </body>
     </html>

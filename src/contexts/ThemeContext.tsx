@@ -79,10 +79,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme(newTheme);
   };
 
-  // Prevent flash of unstyled content
-  if (!mounted) {
-    return <>{children}</>;
-  }
+  // Render providers normally; the initial 'light' state matches SSR perfectly.
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>

@@ -2,7 +2,6 @@
 
 import { ConfigProvider, theme as antdTheme } from "antd";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useState, useEffect } from "react";
 
 interface AntdThemeProviderProps {
   children: React.ReactNode;
@@ -12,26 +11,7 @@ export default function AntdThemeProvider({
   children,
 }: AntdThemeProviderProps) {
   const { theme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const isDark = theme === "dark";
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Prevent hydration mismatch by not applying theme until mounted
-  if (!mounted) {
-    return (
-      <ConfigProvider
-        theme={{
-          algorithm: antdTheme.defaultAlgorithm,
-        }}
-      >
-        {children}
-      </ConfigProvider>
-    );
-  }
-
   return (
     <ConfigProvider
       theme={{

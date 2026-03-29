@@ -26,9 +26,12 @@ export function useCheckAuth() {
           setLoading(true);
           try {
             await getMe();
-          } catch (error) {
-            console.error("Failed to get user info:", error);
-            // Nếu lỗi, xóa token không hợp lệ
+          } catch (error: any) {
+            // Không văng lỗi đỏ lóe lên màn hình Next.js (overlay) khi hết hạn token (401)
+            if (error?.response?.status !== 401) {
+              console.error("Failed to get user info:", error);
+            }
+            // Nếu lỗi (kể cả 401), xóa token không hợp lệ
             localStorage.removeItem(APP_CONFIG.ACCESS_TOKEN);
             localStorage.removeItem(APP_CONFIG.REFRESH_TOKEN);
           } finally {

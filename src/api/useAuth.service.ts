@@ -118,8 +118,11 @@ const useAuthService = (): ResultAuthService => {
         setUser(userData);
         return userData;
       }
-    } catch (error) {
-      console.error("Error fetching user data:", error);
+    } catch (error: any) {
+      // Don't log expected 401 errors to avoid Next.js overlay
+      if (error?.response?.status !== 401) {
+        console.error("Error fetching user data:", error);
+      }
       throw error; // Rethrow the error to be handled by the caller
     }
   };
