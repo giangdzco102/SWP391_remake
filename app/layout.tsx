@@ -78,21 +78,21 @@ export default function RootLayout({
           <AntdThemeProvider>
             <ToastProvider>
 
-                {/* sidebar */}
-                <Layout className="relative">
-                  <main className="bg-background">
-                    <Loading />
-                    <AuthProvider>
-                      <div className=" overflow-hidden flex flex-col">
-                        {/* header */}
-                        <Header />
-                        {children}
-                        <Footer/>
-                      </div>
-                      <ProviderModal />
-                    </AuthProvider>
-                  </main>
-                </Layout>
+              {/* sidebar */}
+              <Layout className="relative">
+                <main className="bg-background">
+                  <Loading />
+                  <AuthProvider>
+                    <div className=" overflow-hidden flex flex-col">
+                      {/* header */}
+                      <Header />
+                      {children}
+                      <Footer />
+                    </div>
+                    <ProviderModal />
+                  </AuthProvider>
+                </main>
+              </Layout>
               {/* notification auth */}
               <NotiAuth />
               {/* popup auth */}
