@@ -114,7 +114,7 @@ export function HotStoryCard({ s, rank, onClick, liked, onLike }: HotStoryCardPr
             {s.status === "done" ? "Full" : "Đang ra"}
           </span>
           <span style={{ fontSize: 9, fontWeight: 700, color: "#fff" }}>
-            Ch.{s.chapters}
+            {s.chapters} chương
           </span>
         </div>
       </div>

@@ -1,4 +1,4 @@
-﻿/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -39,7 +39,7 @@ export default function ReaderPage() {
     setSelectedChapterId,
     setSelectedStory,
   } = useNavStore();
-  const { chapters, setChapters } = useStoryStore();
+  const { chapters, setChapters, allStories, setAllStories } = useStoryStore();
   const { user } = useAuthStore();
   const { getChapter, getChaptersByStory } = useChapterService();
   const { getStoryDetail } = useStoryService();
@@ -191,6 +191,23 @@ export default function ReaderPage() {
           setChapterData(data);
           if (!selectedStory && data.storyId) {
             setSelectedStory({ id: data.storyId, title: data.storyTitle });
+          } else if (selectedStory && selectedStory.id === data.storyId && selectedChapterId !== chapterData?.id) {
+            // Tăng ảo view truyện trên Redux/Zustand store để "cập nhật dữ liệu động lướt trang" 
+            const oldViews = selectedStory.views ?? parseInt(String(selectedStory.reads || "0").replace(/K/g, '000'), 10) ?? 0;
+            const newViews = oldViews + 1;
+            const newReads = newViews >= 1000 ? `${(newViews / 1000).toFixed(1)}K` : String(newViews);
+            
+            setSelectedStory({
+              ...selectedStory,
+              reads: newReads,
+              views: newViews
+            });
+            
+            // Sync to global context (allStories) array
+            const updatedStories = allStories.map(s => 
+              s.id === data.storyId ? { ...s, reads: newReads, views: newViews } : s
+            );
+            setAllStories(updatedStories);
           }
         }
       })
