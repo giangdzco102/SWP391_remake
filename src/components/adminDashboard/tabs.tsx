@@ -2034,7 +2034,7 @@ export function SystemOpsTab({
           </div>
           <div style={{ fontSize: 22, fontWeight: 800, color: "#2563eb" }}>
             {stats?.dauMauRatio != null
-              ? `${parseFloat(stats.dauMauRatio).toFixed(4)}%`
+              ? `${(parseFloat(stats.dauMauRatio) * 100).toFixed(2)}%`  
               : "0.0000%"}
           </div>
         </div>
@@ -2113,7 +2113,7 @@ export function SystemOpsTab({
             Lỗi thanh toán
           </div>
           <div style={{ fontSize: 22, fontWeight: 800, color: errColor }}>
-            {errRate}%
+            {(errRate * 100).toFixed(2)}%
           </div>
           {errRate > 5 && (
             <div style={{ fontSize: 11, color: errColor, marginTop: 4 }}>
