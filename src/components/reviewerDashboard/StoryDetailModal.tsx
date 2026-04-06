@@ -15,9 +15,39 @@ export function StoryDetailModal({ story, onClose, onReview }: StoryDetailModalP
   const httpClient = useHttpClient();
   const [chapters, setChapters] = useState<ChapterItem[]>([]);
   const [loading, setLoading] = useState(true);
+  
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [expandChapter, setExpandChapter] = useState<number | null>(null);
+  const [fetchingChapter, setFetchingChapter] = useState<number | null>(null);
+
+  const handleToggleExpand = async (ch: ChapterItem) => {
+    if (expandChapter === ch.id) {
+      setExpandChapter(null);
+      return;
+    }
+    
+    setExpandChapter(ch.id);
+
+    // If content is already present, no need to fetch
+    if (ch.content) return;
+
+    setFetchingChapter(ch.id);
+    try {
+      const res: any = await httpClient.get(APP_CONFIG.REVIEWER.CHAPTER_DETAIL(ch.id));
+      const fullChapter = res?.data ?? res ?? {};
+      const content = fullChapter.content ?? "";
+      
+      // Update the chapters list with the fetched content
+      setChapters(prev => prev.map(item => 
+        item.id === ch.id ? { ...item, content } : item
+      ));
+    } catch (err) {
+      console.error("Failed to fetch chapter content", err);
+    } finally {
+      setFetchingChapter(null);
+    }
+  };
 
   useEffect(() => {
     httpClient.get(APP_CONFIG.REVIEWER.STORY_DETAIL(story.id))
@@ -56,7 +86,7 @@ export function StoryDetailModal({ story, onClose, onReview }: StoryDetailModalP
           {/* Left: Story info */}
           <div style={{ borderRight: `1.5px solid ${T.borderLight}`, overflowY: "auto", padding: "16px 18px" }}>
             {story.coverUrl && <img src={story.coverUrl} alt="" style={{ width: "100%", borderRadius: 12, marginBottom: 12, objectFit: "cover", maxHeight: 220 }} />}
-            <div style={{ fontSize: 13, color: T.text, lineHeight: 1.7 }}>{story.description || <span style={{ color: T.textMuted, fontStyle: "italic" }}>Chưa có mô tả.</span>}</div>
+            <div style={{ fontSize: 13, color: T.text, lineHeight: 1.7 }}>{story.summary || <span style={{ color: T.textMuted, fontStyle: "italic" }}>Chưa có mô tả.</span>}</div>
             <div style={{ marginTop: 16, fontSize: 12, color: T.textMuted }}>📊 {chapters.length} chương</div>
           </div>
           {/* Right: Chapters */}
@@ -66,19 +96,24 @@ export function StoryDetailModal({ story, onClose, onReview }: StoryDetailModalP
               chapters.length === 0 ? <div style={{ color: T.textMuted, fontStyle: "italic" }}>Không có chương.</div> :
                 chapters.map((ch) => (
                   <div key={ch.id} style={{ marginBottom: 8, border: `1px solid ${expandChapter === ch.id ? T.accentBorder : T.borderLight}`, borderRadius: 10, overflow: "hidden" }}>
-                    <button onClick={() => setExpandChapter(expandChapter === ch.id ? null : ch.id)} style={{ width: "100%", padding: "10px 14px", border: "none", background: expandChapter === ch.id ? T.accentLight : T.card, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 8 }}>
+                    <button onClick={() => handleToggleExpand(ch)} style={{ width: "100%", padding: "10px 14px", border: "none", background: expandChapter === ch.id ? T.accentLight : T.card, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 13, fontWeight: 600, color: T.text, flex: 1 }}>Ch.{ch.chapterOrder} — {ch.title}</span>
                       <span style={{ fontSize: 11, color: T.textMuted }}>{ch.coinPrice > 0 ? `🪙 ${ch.coinPrice}` : "Free"}</span>
                       <span style={{ fontSize: 11, transform: expandChapter === ch.id ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▼</span>
                     </button>
                     {expandChapter === ch.id && (
                       <div style={{ padding: "14px 16px", borderTop: `1px solid ${T.borderLight}`, fontSize: 14, color: T.text, lineHeight: 1.8, fontFamily: "'Lora',serif", maxHeight: 300, overflowY: "auto" }}>
-                        {!ch.content
-                          ? <span style={{ color: T.textMuted, fontStyle: "italic" }}>Nội dung chưa được tải.</span>
-                          : /<[a-z]/i.test(ch.content)
-                            ? <div dangerouslySetInnerHTML={{ __html: ch.content }} />
-                            : ch.content.split(/\n+/).filter(Boolean).map((p, i) => <p key={i} style={{ marginBottom: "0.7em" }}>{p}</p>)
-                        }
+                        {fetchingChapter === ch.id ? (
+                          <div style={{ color: T.textMuted, display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⌛</span> Đang tải nội dung...
+                          </div>
+                        ) : !ch.content ? (
+                          <span style={{ color: T.textMuted, fontStyle: "italic" }}>Nội dung không khả dụng.</span>
+                        ) : /<[a-z]/i.test(ch.content) ? (
+                          <div dangerouslySetInnerHTML={{ __html: ch.content }} />
+                        ) : (
+                          ch.content.split(/\n+/).filter(Boolean).map((p, i) => <p key={i} style={{ marginBottom: "0.7em" }}>{p}</p>)
+                        )}
                       </div>
                     )}
                   </div>

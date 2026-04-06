@@ -4,6 +4,7 @@ export interface StoryItem {
   authorId: number;
   authorName: string;
   description?: string;
+  summary?: string;
   coverUrl?: string;
   categoryIds?: number[];
   categoryNames?: string[];
