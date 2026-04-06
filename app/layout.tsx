@@ -1,19 +1,8 @@
 /* eslint-disable @next/next/no-page-custom-font */
-"use client";
 import "./globals.css";
 import "@/assets/styles/style.scss";
-import { ThemeProvider } from "@/contexts/ThemeContext";
-import AntdThemeProvider from "@/components/AntdThemeProvider";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
-import NotiAuth from "@/components/popup/NotiAuth";
-import Auth from "@/components/popup/Auth";
-import Loading from "./loading";
-import { ToastProvider } from "@/utils/toast-provider";
-import AuthProvider from "@/components/AuthProvider";
-import { Layout } from "antd";
-import Header from "@/components/ui/Header";
-import { ProviderModal } from "@/components/popup/ProviderModal";
-import { Footer } from "@/components/ui/Footer";
+import ClientProviders from "./ClientProviders";
 
 // Extract metadata configuration for better maintainability
 const SITE_METADATA = {
@@ -75,34 +64,9 @@ export default function RootLayout({
     <html lang="en">
       <head>{generateMetaTags(SITE_METADATA)}</head>
       <body>
-        <ThemeProvider>
-          <AntdRegistry>
-            <AntdThemeProvider>
-              <ToastProvider>
-
-                {/* sidebar */}
-                <Layout className="relative">
-                  <main className="bg-background">
-                    <Loading />
-                    <AuthProvider>
-                      <div className=" overflow-hidden flex flex-col">
-                        {/* header */}
-                        <Header />
-                        {children}
-                        <Footer />
-                      </div>
-                      <ProviderModal />
-                    </AuthProvider>
-                  </main>
-                </Layout>
-                {/* notification auth */}
-                <NotiAuth />
-                {/* popup auth */}
-                <Auth />
-              </ToastProvider>
-            </AntdThemeProvider>
-          </AntdRegistry>
-        </ThemeProvider>
+        <AntdRegistry>
+          <ClientProviders>{children}</ClientProviders>
+        </AntdRegistry>
       </body>
     </html>
   );

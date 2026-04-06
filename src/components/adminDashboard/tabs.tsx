@@ -2034,7 +2034,7 @@ export function SystemOpsTab({
           </div>
           <div style={{ fontSize: 22, fontWeight: 800, color: "#2563eb" }}>
             {stats?.dauMauRatio != null
-              ? `${(parseFloat(stats.dauMauRatio) * 100).toFixed(2)}%`  
+              ? `${parseFloat(stats.dauMauRatio).toFixed(4)}%`
               : "0.0000%"}
           </div>
         </div>

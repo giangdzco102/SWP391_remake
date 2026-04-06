@@ -424,7 +424,7 @@ export default function MyStoriesPage() {
                         <div style={{ borderTop: `1.5px solid ${T.borderLight}`, padding: "16px 20px", background: T.bg }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                             <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>
-                              Chương ({isLoadingCh ? "…" : (allChaptersCount ?? chapters.length)})
+                              Chương ({isLoadingCh ? "…" : (allChaptersCount ?? chapters.length)})  
                               {chapters.length > 0 && <span style={{ fontSize: 12, fontWeight: 400, color: T.textMuted, marginLeft: 8 }}>· {totalWords.toLocaleString()} chữ</span>}
                             </div>
                             <button onClick={() => setChapterModal({ storyId: story.id, chapter: null, nextOrder: (chaptersMap[story.id]?.length ?? 0) + 1 })} disabled={story.isCompleted} title={story.isCompleted ? "Truyện đã hoàn thành, không thể thêm chương mới" : undefined} style={{ ...btnPrimary, fontSize: 12, opacity: story.isCompleted ? 0.5 : 1, cursor: story.isCompleted ? "not-allowed" : "pointer" }}>+ Thêm chương</button>
@@ -552,7 +552,7 @@ export default function MyStoriesPage() {
             {loadingReports ? (
               <div style={{ padding: 40, textAlign: "center", color: T.textMuted }}>⏳ Đang tải…</div>
             ) : myReports.length === 0 ? (
-              <div style={{ padding: 40, textAlign: "center", color: T.textMuted }}>📢 Bạn chưa gửi báo cáo vi phạm nào.</div>
+              <div style={{ padding: 40, textAlign: "center", color: T.textMuted }}>📢 Bạn chưa gửi  vi phạm nào.</div>
             ) : myReports.map((r: any) => {
               const isResolved = r.status === "RESOLVED";
               return (
