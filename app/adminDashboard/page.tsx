@@ -30,7 +30,7 @@ import {
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, isLoading } = useAuthStore();
   const toast = useToast();
   const admin = useAdminService();
 
@@ -72,8 +72,10 @@ export default function AdminDashboard() {
   const [editRoles, setEditRoles] = useState<string[]>([]);
 
   useEffect(() => {
+    if (isLoading) return;
+    if (!user) { router.push("/?login"); return; }
     if (user && !user.roles.includes("ADMIN")) router.push("/homePage");
-  }, [user, router]);
+  }, [user, isLoading, router]);
 
   const unwrap = (r: any) => {
     const d = r?.data ?? r;
@@ -162,7 +164,7 @@ export default function AdminDashboard() {
     loadTab(tab);
   }, [tab, loadTab]);
 
-  if (!user || !user.roles.includes("ADMIN")) return null;
+  if (isLoading || !user || !user.roles.includes("ADMIN")) return null;
 
   const confirm = (message: string, onYes: () => void) =>
     setConfirmDialog({ message, onYes });

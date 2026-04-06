@@ -16,7 +16,7 @@ interface AuthActions {
 export const useAuthStore = create<AuthState & AuthActions>()((set, get) => ({
   // State
   user: null,
-  isLoading: false,
+  isLoading: true,
 
   setUser: (user: DataGetMe | null) => {
     set({ user });

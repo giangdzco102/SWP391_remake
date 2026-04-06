@@ -15,7 +15,7 @@ import { NotificationItem } from "@/components/notificationsPage/NotificationIte
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, isLoading } = useAuthStore();
   const { notifications, setNotifications, markAllRead, markOneRead, removeNotification } =
     useNotificationStore();
   const {
@@ -29,6 +29,7 @@ export default function NotificationsPage() {
   const [filter, setFilter] = useState<"all" | "unread">("all");
 
   useEffect(() => {
+    if (isLoading) return;
     if (!user) { router.push("/"); return; }
     setLoading(true);
     getNotifications()

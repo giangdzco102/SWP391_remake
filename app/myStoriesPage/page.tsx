@@ -13,10 +13,10 @@ import { useToast } from "@/hooks/use-toast";
 import { EditRequest, StoryItem, ChapterItem, WalletInfo, WalletTx } from "@/types/myStoriesPage";
 
 // Constants
-import { T, btnBase, btnPrimary, btnOutline, btnSuccess, btnWarn, btnPurple, btnDisabled, fLabel, fInput } from "@/utils/myStoriesPage.constants";
+import { T, btnBase, btnPrimary, btnOutline, btnSuccess, btnWarn, btnPurple, fInput } from "@/utils/myStoriesPage.constants";
 
 // Utils
-import { timeAgo, stripHtml } from "@/utils/myStoriesPage.utils";
+import { timeAgo } from "@/utils/myStoriesPage.utils";
 
 // Components
 import { StatusBadge } from "@/components/myStoriesPage/StatusBadge";
@@ -40,7 +40,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 
 export default function MyStoriesPage() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, isLoading } = useAuthStore();
   const storyService = useStoryService();
   const chapterService = useChapterService();
   const httpClient = useHttpClient();
@@ -135,9 +135,10 @@ export default function MyStoriesPage() {
   };
 
   useEffect(() => {
+    if (isLoading) return;
     if (!user) { router.push("/?login"); return; }
     loadStories(); loadWallet();
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user, isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (tab === "editRequests" && editRequests.length === 0) loadEditRequests();
@@ -240,8 +241,8 @@ export default function MyStoriesPage() {
 
   const handleCancelEditReq = async (reqId: number) => {
     if (!window.confirm("Huỷ yêu cầu? Coin sẽ được hoàn lại.")) return;
-    try { await httpClient.post(APP_CONFIG.EDIT_REQUEST.CANCEL(reqId), {}); toast.success("Đã huỷ yêu cầu!"); loadEditRequests(); loadWallet(); }
-    catch { toast.error("Không thể huỷ yêu cầu lúc này."); }
+    try { await httpClient.delete(APP_CONFIG.EDIT_REQUEST.CANCEL(reqId), {}); toast.success("Đã huỷ yêu cầu!"); loadEditRequests(); loadWallet(); }
+    catch (err: any) { toast.error(err?.response?.data?.message || "Không thể huỷ yêu cầu lúc này."); }
   };
 
   const handleCheckIn = async () => {

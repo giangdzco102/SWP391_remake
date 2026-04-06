@@ -15,6 +15,7 @@ export function useCheckAuth() {
   useEffect(() => {
     const checkAuth = async () => {
       if (user) {
+        setLoading(false);
         return;
       }
 
@@ -37,7 +38,11 @@ export function useCheckAuth() {
           } finally {
             setLoading(false);
           }
+        } else {
+          setLoading(false);
         }
+      } else {
+        setLoading(false);
       }
     };
 

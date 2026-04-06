@@ -24,7 +24,7 @@ import { WalletSection } from "@/components/editorDashboard/WalletSection";
    ================================================================ */
 export default function EditorDashboardPage() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, isLoading } = useAuthStore();
   const httpClient = useHttpClient();
   const toast = useToast();
 
@@ -82,6 +82,7 @@ export default function EditorDashboardPage() {
   }, [httpClient]);
 
   useEffect(() => {
+    if (isLoading) return;
     if (!user) { router.push("/?login"); return; }
     const hasEditor = user.roles?.some((r: string) => {
       const ur = r.toUpperCase();
@@ -91,7 +92,7 @@ export default function EditorDashboardPage() {
     loadOpen();
     loadAssigned();
     loadWallet();
-  }, [user]);// eslint-disable-line react-hooks/exhaustive-deps
+  }, [user, isLoading]);// eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (tab === "wallet" && walletTxs.length === 0) loadWalletTxs();
