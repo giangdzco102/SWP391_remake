@@ -75,11 +75,11 @@ export function EditorWorkModal({ request, onClose, onSubmit, onWithdraw }: { re
         </div>
 
         {/* Main content — side by side */}
-        <div style={{ flex: 1, overflow: "hidden", minHeight: 0, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
+        <div style={{ flex: 1, overflow: "hidden", minHeight: 0, display: "flex", width: "100%" }} className="w-full">
           {/* Left: Original */}
-          <div style={{ display: "flex", flexDirection: "column", borderRight: `1.5px solid ${T.borderLight}`, minHeight: 0 }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", borderRight: `1.5px solid ${T.borderLight}`, minHeight: 0, overflow: "hidden" }}>
             <div style={{ padding: "10px 16px", borderBottom: `1px solid ${T.borderLight}`, fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: "uppercase", flexShrink: 0 }}>📄 Nội dung gốc (readonly)</div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+            <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }} className="scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
               {loadingOriginal ? <div style={{ color: T.textMuted }}>Đang tải…</div> :
                 !originalContent ? <div style={{ color: T.textMuted, fontStyle: "italic" }}>Không có nội dung gốc.</div> :
                   /<[a-z]/i.test(originalContent) ?
@@ -89,14 +89,14 @@ export function EditorWorkModal({ request, onClose, onSubmit, onWithdraw }: { re
             </div>
           </div>
           {/* Right: Editor */}
-          <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
             <div style={{ padding: "10px 16px", borderBottom: `1px solid ${T.borderLight}`, fontSize: 12, fontWeight: 700, color: T.accent, textTransform: "uppercase", flexShrink: 0, display: "flex", justifyContent: "space-between" }}>
               <span>✏️ Bản chỉnh sửa</span>
               <span style={{ color: T.textMuted, fontWeight: 400 }}>{wordCount.toLocaleString()} chữ</span>
             </div>
             <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "12px 16px", minHeight: 0 }}>
               {isSubmitted ? (
-                <div style={{ flex: 1, overflowY: "auto", fontSize: 14, color: T.text, lineHeight: 1.8, fontFamily: "'Lora',serif", overflowWrap: "break-word", wordBreak: "break-word" }}
+                <div style={{ flex: 1, overflowY: "auto", fontSize: 14, color: T.text, lineHeight: 1.8, fontFamily: "'Lora',serif", overflowWrap: "break-word", wordBreak: "break-word" }} className="scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
                   dangerouslySetInnerHTML={{ __html: editedContent || "<em>(Trống)</em>" }}
                 />
               ) : (

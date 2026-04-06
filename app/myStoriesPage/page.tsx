@@ -137,11 +137,10 @@ export default function MyStoriesPage() {
   useEffect(() => {
     if (isLoading) return;
     if (!user) { router.push("/?login"); return; }
-    loadStories(); loadWallet();
+    loadStories(); loadWallet(); loadEditRequests();
   }, [user, isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (tab === "editRequests" && editRequests.length === 0) loadEditRequests();
     if (tab === "wallet" && walletTxs.length === 0) loadWalletTxs();
     if (tab === "missions") loadMissionsAndStreak();
     if (tab === "reports") loadMyReports();
@@ -439,13 +438,16 @@ export default function MyStoriesPage() {
                               {chapters.map((ch) => {
                                 const words = getChapterWordCount(ch);
                                 const readMins = Math.max(1, Math.ceil(words / 200));
+                                const hasActiveReq = editRequests.some(r => r.chapterId === ch.id && ["OPEN", "IN_PROGRESS", "SUBMITTED"].includes(r.status));
+                                const finalStatus = hasActiveReq ? "EDIT_REQUEST" : ch.status;
+
                                 return (
                                   <div key={ch.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: T.card, borderRadius: T.radiusSm, border: `1.5px solid ${T.border}` }}>
                                     <div style={{ width: 30, height: 30, borderRadius: 8, background: T.grayBg, color: T.textSec, fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{ch.chapterOrder}</div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
                                         <span style={{ fontSize: 13, fontWeight: 600, color: T.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ch.title}</span>
-                                        <StatusBadge status={ch.status} />
+                                        <StatusBadge status={finalStatus} />
                                       </div>
                                       <div style={{ fontSize: 11, color: T.textMuted, display: "flex", gap: 10 }}>
                                         <span>📝 {words.toLocaleString()} chữ</span>
@@ -457,7 +459,7 @@ export default function MyStoriesPage() {
                                       )}
                                     </div>
                                     <div style={{ display: "flex", gap: 5, flexShrink: 0, flexWrap: "wrap" }}>
-                                      {(ch.status === "DRAFT" || ch.status === "EDITED" || ch.status === "REJECTED") && (
+                                      {(ch.status === "DRAFT" || ch.status === "EDITED" || ch.status === "REJECTED") && !hasActiveReq && (
                                         <button onClick={() => handleSubmitChapter(ch.id, story.id)} disabled={submittingChapter === ch.id} style={{ ...btnWarn, fontSize: 11, padding: "4px 8px" }}>
                                           {submittingChapter === ch.id ? "…" : "📤 Nộp"}
                                         </button>
@@ -470,15 +472,15 @@ export default function MyStoriesPage() {
                                           <button onClick={() => setScheduleModal({ chapterId: ch.id, title: ch.title, storyId: story.id })} style={{ ...btnOutline, fontSize: 11, padding: "4px 8px", color: T.info, borderColor: T.infoBorder }}>📅</button>
                                         </>
                                       )}
-                                      {ch.status !== "PUBLISHED" && (
+                                      {(ch.status === "DRAFT" || ch.status === "EDITED" || ch.status === "REJECTED") && !hasActiveReq && (
                                         <button onClick={() => setChapterModal({ storyId: story.id, chapter: ch })} style={{ ...btnOutline, fontSize: 11, padding: "4px 8px" }}>✏️</button>
                                       )}
-                                      {(ch.status === "DRAFT" || ch.status === "REJECTED") && (
+                                      {(ch.status === "DRAFT" || ch.status === "REJECTED") && !hasActiveReq && (
                                         <button onClick={() => handleDeleteChapter(ch.id, story.id)} disabled={deletingChapter === ch.id} style={{ ...btnOutline, fontSize: 11, padding: "4px 8px", color: T.danger }}>
                                           {deletingChapter === ch.id ? "…" : "🗑"}
                                         </button>
                                       )}
-                                      {(ch.status === "DRAFT" || ch.status === "EDITED" || ch.status === "PUBLISHED") && (
+                                      {(ch.status === "DRAFT" || ch.status === "EDITED" || ch.status === "REJECTED") && !hasActiveReq && (
                                         <button onClick={() => setEditRequestModal(ch)} style={{ ...btnPurple, fontSize: 11, padding: "4px 8px" }}>🎨 Edit</button>
                                       )}
                                     </div>
