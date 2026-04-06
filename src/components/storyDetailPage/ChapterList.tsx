@@ -13,6 +13,7 @@ interface ChapterItem {
   locked: boolean;
   price: number;
   isPurchased: boolean;
+  status?: string;
 }
 
 interface Props {
@@ -52,8 +53,15 @@ export function ChapterList({
       </div>
 
       <div className="chapters-list">
-        {chapters.map((ch, i) => {
-          const isLocked = ch.locked && !unlockedChapters?.includes(ch.id);
+        {chapters
+          .filter((ch) => {
+            // Ẩn chương HIDDEN mà người dùng chưa mua — người đã mua vẫn xem được
+            if (ch.status === "HIDDEN" && !ch.isPurchased) return false;
+            return true;
+          })
+          .map((ch, i) => {
+          const isHiddenPurchased = ch.status === "HIDDEN" && ch.isPurchased;
+          const isLocked = ch.locked && !unlockedChapters?.includes(ch.id) && !isHiddenPurchased;
           return (
             <div
               key={ch.id}
@@ -72,6 +80,8 @@ export function ChapterList({
                       background: dk.lockedItem,
                       borderColor: dk.lockedBdr,
                     }
+                  : isHiddenPurchased
+                  ? { cursor: "pointer", opacity: 0.75 }
                   : {}
               }
             >
@@ -102,6 +112,21 @@ export function ChapterList({
                       }}
                     >
                       🔒 VIP
+                    </span>
+                  )}
+                  {isHiddenPurchased && (
+                    <span
+                      className="shrink-0 font-bold"
+                      style={{
+                        fontSize: 10,
+                        background: "#f3f4f6",
+                        color: "#6b7280",
+                        border: "1px solid #d1d5db",
+                        padding: "1px 7px",
+                        borderRadius: 10,
+                      }}
+                    >
+                      🛑 Đã bị ẩn · Đã mua
                     </span>
                   )}
                   {ch.title}

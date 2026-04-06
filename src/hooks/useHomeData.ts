@@ -32,9 +32,8 @@ export function useHotStories(): { stories: StoryShape[]; loading: boolean } {
     setLoading(true);
     getStories({ size: HOT_FETCH_SIZE, sort: "viewCount,desc" })
       .then((res: any) => {
-        const payload = res?.data ?? res ?? {};
-        const raw: any[] = payload.content ?? payload ?? [];
-        setStories(raw.map(toStoryShape));
+        const list: any[] = res?.data?.content ?? res?.data ?? res?.content ?? res ?? [];
+        setStories((Array.isArray(list) ? list : []).map(toStoryShape));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -69,13 +68,24 @@ export function useNewStories(
 
     getStories(params)
       .then((res: any) => {
-        const payload = res?.data ?? res ?? {};
-        const raw: any[] = payload.content ?? payload ?? [];
-        const storyShapes = raw.map(toStoryShape);
+        const raw: any[] = res?.data?.content ?? res?.data ?? res?.content ?? res ?? [];
+        const serverTotalPages: number = res?.data?.totalPages ?? res?.totalPages ?? 0;
+        const mapped = raw.map(toStoryShape).filter((s) => {
+          if (filters.genres.length > 0 && !filters.genres.includes(s.genre)) return false;
+          if (filters.status !== "all" && s.status !== filters.status) return false;
+          if (filters.years.length > 0) {
+            const y = s.updatedAt ? new Date(s.updatedAt).getFullYear() : null;
+            if (!y || !filters.years.includes(y)) return false;
+          }
+          return true;
+        });
 
-        setStories(storyShapes);
-        setTotalPages(payload.totalPages ?? 1);
-        setAllStories(storyShapes);
+        const tp = serverTotalPages > 0
+          ? serverTotalPages
+          : Math.max(1, Math.ceil(mapped.length / PAGE_SIZE));
+        setTotalPages(tp);
+        setStories(mapped);
+        setAllStories(mapped);
       })
       .catch(() => {})
       .finally(() => setLoading(false));

@@ -74,6 +74,7 @@ function mapChapters(list: any[], purchasedIds?: Set<number>) {
       chapterOrder: ch.chapterOrder ?? ch.chapterNumber ?? 0,
       coinPrice: ch.coinPrice ?? ch.price ?? 0,
       isPurchased: purchased,
+      status: ch.status as string | undefined,
       words: 0,
       readTime: "—",
       publishedAt: ch.publishAt ? formatVNDate(ch.publishAt) : undefined,

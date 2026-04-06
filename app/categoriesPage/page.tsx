@@ -39,7 +39,10 @@ export function CategoriesPage() {
   useEffect(() => {
     setLoading(true);
     getAllStories({ size: 200 })
-      .then((res: any) => setAllData((res?.data ?? res ?? []).map(toShape)))
+      .then((res: any) => {
+        const list: any[] = res?.data?.content ?? res?.data ?? res?.content ?? res ?? [];
+        setAllData((Array.isArray(list) ? list : []).map(toShape));
+      })
       .catch(() => { })
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps

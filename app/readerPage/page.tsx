@@ -120,6 +120,7 @@ export default function ReaderPage() {
         chapterOrder: ch.chapterOrder ?? 0,
         coinPrice: ch.coinPrice ?? 0,
         isPurchased: ch.isPurchased ?? false,
+        status: ch.status as string | undefined,
         words: 0,
         readTime: "—",
         publishedAt: ch.publishAt ? formatVNDate(ch.publishAt) : undefined,
