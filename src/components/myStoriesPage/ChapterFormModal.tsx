@@ -34,7 +34,10 @@ export function ChapterFormModal({
   const toast = useToast();
   const isEdit = !!chapter;
 
-  const [title, setTitle] = useState(chapter?.title ?? "");
+  // Tách subtitle từ title hiện tại (nếu có định dạng "Chương X: ...")
+  const getSubTitle = (fullTitle: string) => fullTitle.replace(/^Chương\s+\d+:\s*/, "");
+
+  const [subTitle, setSubTitle] = useState(chapter?.title ? getSubTitle(chapter.title) : "");
   const [content, setContent] = useState(chapter?.content ?? "");
   const [chapterOrder, setChapterOrder] = useState(
     chapter?.chapterOrder ?? nextOrder ?? 1
@@ -56,7 +59,7 @@ export function ChapterFormModal({
       .then((res: any) => {
         const data = res?.data ?? res ?? {};
         setContent(data.content ?? "");
-        if (data.title) setTitle(data.title);
+        if (data.title) setSubTitle(getSubTitle(data.title));
         if (data.chapterOrder !== undefined) setChapterOrder(data.chapterOrder);
         if (data.coinPrice !== undefined) setCoinPrice(data.coinPrice);
         if (data.publishAt) setPublishAt(data.publishAt);
@@ -70,10 +73,11 @@ export function ChapterFormModal({
 
   const handleSave = async () => {
     const plainText = stripHtml(content).trim();
-    if (!title.trim() || !plainText) return;
+    if (!plainText) return;
     setSaving(true);
     try {
-      const body: any = { title: title.trim(), content, coinPrice, chapterOrder };
+      const finalTitle = `Chương ${chapterOrder}${subTitle.trim() ? ': ' + subTitle.trim() : ''}`;
+      const body: any = { title: finalTitle, content, coinPrice, chapterOrder };
       if (publishAt) body.publishAt = publishAt;
       if (isEdit) {
         await httpClient.put(APP_CONFIG.CHAPTER.UPDATE(chapter!.id), body);
@@ -176,12 +180,25 @@ export function ChapterFormModal({
         >
           <div>
             <label style={fLabel()}>Tiêu đề chương *</label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="vd. Chương 1: Khởi Đầu Mới"
-              style={fInput()}
-            />
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span
+                style={{
+                  fontSize: 15,
+                  fontWeight: 600,
+                  color: T.text,
+                  whiteSpace: "nowrap",
+                  padding: "0 4px",
+                }}
+              >
+                Chương {chapterOrder}:
+              </span>
+              <input
+                value={subTitle}
+                onChange={(e) => setSubTitle(e.target.value)}
+                placeholder="Tên chương bổ sung (không bắt buộc)"
+                style={{ ...fInput(), flex: 1 }}
+              />
+            </div>
           </div>
 
           <div>
@@ -258,10 +275,8 @@ export function ChapterFormModal({
             </button>
             <button
               onClick={handleSave}
-              disabled={!title.trim() || !hasContent || saving}
-              style={
-                !title.trim() || !hasContent || saving ? btnDisabled : btnPrimary
-              }
+              disabled={!hasContent || saving}
+              style={!hasContent || saving ? btnDisabled : btnPrimary}
             >
               {saving
                 ? "Đang lưu…"
